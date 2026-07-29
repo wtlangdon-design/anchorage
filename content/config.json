@@ -2,6 +2,8 @@
   "_note": "Every tunable number in the game. If a number appears in a .js file, it belongs here instead. Changing anything under 'climate', 'player.speed', or any site x/z means re-running the balance check.",
 
   "world": {
+    "_scaleNote": "One number for the size of the whole world. 1 is the original 3400 m map; 0.55 shrinks it to about 1870 m across, which puts the same seventeen places closer together without moving any of them relative to each other. Everything measured in metres multiplies by this at load — sites, camps, graves, the dawn line and its speed, the grass band, the herd. Terrain detail gets finer at the same rate so the hills stay the same size relative to the map. Deliberately NOT scaled: how fast you walk, and how close you must stand to survey something — you are the same size whatever the world does.",
+    "scale": 0.55,
     "size": 3400,
     "segments": 210,
     "chartCell": 26,

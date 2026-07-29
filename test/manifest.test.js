@@ -7,11 +7,13 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { initClimate, dawnX, tempAt, lostAtT } from "../src/world/climate.js";
+import { applyWorldScale } from "../src/world/scale.js";
 import * as manifest from "../src/game/manifest.js";
 import * as story from "../src/game/story.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(join(here, "../content/config.json"), "utf8"));
+applyWorldScale(config);   // measure the world as it ships
 const storyData = JSON.parse(readFileSync(join(here, "../content/story.json"), "utf8"));
 initClimate(config.climate);
 

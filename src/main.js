@@ -23,6 +23,7 @@ import * as fauna from "./world/fauna.js";
 import * as props from "./world/props.js";
 import * as sound from "./world/sound.js";
 import * as textures from "./world/textures.js";
+import { applyWorldScale } from "./world/scale.js";
 import { initGait, poseFor } from "./player/gait.js";
 import * as rig from "./player/rig.js";
 import * as controller from "./player/controller.js";
@@ -48,6 +49,9 @@ async function boot() {
     fetch("content/config.json").then(r => r.json()),
     fetch("content/story.json").then(r => r.json())
   ]);
+  // resize the world before anything reads a number out of the config. every
+  // module below goes on reading plain values and never learns this happened.
+  applyWorldScale(config);
   init();
 }
 

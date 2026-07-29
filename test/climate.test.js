@@ -5,9 +5,11 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { initClimate, dawnX, tempAt, lostAtT, LETHAL, K, DAWN_V, DAWN0 } from "../src/world/climate.js";
+import { applyWorldScale } from "../src/world/scale.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(join(here, "../content/config.json"), "utf8"));
+applyWorldScale(config);   // measure the world as it ships
 initClimate(config.climate);
 
 let failures = 0;
