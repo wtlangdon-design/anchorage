@@ -45,8 +45,13 @@ decline nobody in them noticed, and a reveal that recontextualises the ending.
 
 - Three.js r128 from CDN. `CapsuleGeometry`, `OrbitControls`, and
   `BufferGeometryUtils` are **not** available in this build — do not use them.
-- No build step. It must run by opening `index.html`. ES modules via
-  `<script type="module">` are fine.
+- No build step, no bundler, no transpiler. The project is a folder of static
+  files that ship exactly as written. ES modules via `<script type="module">`
+  are the module system.
+- It will NOT run from `file://` — ES module imports and `fetch()` of the
+  content JSON both require an http origin. It runs by being served. GitHub
+  Pages serves `main` at root, so the live build is always
+  https://wtlangdon-design.github.io/anchorage/ and every push redeploys it.
 - No framework. No bundler. The person deploying this is non-technical and works
   from a Chromebook.
 - Every tunable number lives in `content/config.json`. If you find yourself typing
