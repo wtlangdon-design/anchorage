@@ -70,6 +70,21 @@ export function initTouch(cfg, story, deps){
   surface.addEventListener("pointerleave", onUp);
 
   // the buttons. Kept few and large; everything rarely used lives behind "···".
+  // The on-screen keyboard eats the viewport in landscape. visualViewport is
+  // the only reliable way to know it opened — window.innerHeight does not move.
+  if(typeof visualViewport !== "undefined" && visualViewport){
+    const check = () => {
+      const shrunk = visualViewport.height < innerHeight * 0.75;
+      document.body.classList.toggle("kbd", shrunk);
+      if(shrunk){
+        const el = document.activeElement;
+        if(el && el.scrollIntoView) el.scrollIntoView({ block: "center" });
+      }
+    };
+    visualViewport.addEventListener("resize", check);
+    visualViewport.addEventListener("scroll", check);
+  }
+
   // the manifest is a tap-to-expand panel on a phone
   const task = document.getElementById("task");
   if(task) task.addEventListener("pointerdown", e => {
