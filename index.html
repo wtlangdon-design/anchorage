@@ -161,6 +161,22 @@ body.touch #stick-home{display:block}
 #btn-act.idle{opacity:.28}
 #more-panel{position:absolute;right:80px;bottom:74px;display:none;flex-direction:column;gap:10px;pointer-events:auto}
 body.touch #keys{display:none}
+/* Landscape phone + on-screen keyboard leaves ~150px of viewport. When that
+   happens, strip the sheet back to the thing you are actually typing into. */
+body.kbd .overlay{padding:6px;align-items:flex-start}
+body.kbd .sheet{max-height:100%;overflow-y:auto}
+body.kbd .sheet h2,
+body.kbd .sheet p.body,
+body.kbd .sheet p.tiny,
+body.kbd .sheet .rule,
+body.kbd .sheet .hint,
+body.kbd .sheet .tabs,
+body.kbd .sheet .entry,
+body.kbd .sheet .crewrow{display:none}
+body.kbd .sheet h1{font-size:15px;margin-bottom:2px}
+body.kbd .sheet .lab{font-size:8px}
+body.kbd .sheet input[type=text]{font-size:17px;padding:3px 2px}
+body.kbd .sheet button{margin-top:8px;padding:7px 14px}
 /* mobile HUD: top-left manifest, top-centre compass, top-right readout,
    bottom-left thumb, bottom-centre gauges, bottom-right buttons. */
 body.touch #gauges{left:50%;right:auto;bottom:12px;transform:translateX(-50%);

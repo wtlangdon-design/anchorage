@@ -163,7 +163,7 @@
       "crew": "vantaa",
       "title": "I. VANTAA",
       "label": "year 41",
-      "body": "Hull plate, cut clean and square and level — the steadiest hand of any marker on this planet, and not the hand that cut the other four.<br><br><em>She was right about the world.</em><br><br><span style='color:var(--dawnlight)'>Vantaa's last entry says she was the last of the six alive. Someone buried her.</span>",
+      "body": "Hull plate, cut clean and square and level — the steadiest hand of any marker on this planet, and not the hand that cut the others.<br><br><em>She was right about the world.</em><br><br><span style='color:var(--dawnlight)'>Vantaa's last entry says she was the last of the six alive. Someone buried her.</span>",
       "reveal": "Buried by a steady hand, after writing that she was the last one alive."
     }
   },
@@ -289,7 +289,7 @@
     "logbookEmpty": "Nothing recorded yet.",
     "crewUnknownName": "— — —",
     "crewUnknownNote": "Nothing known.",
-    "crewFooter": "Manifest lists six. Five are buried.",
+    "crewFooter": "Manifest lists six. Three are buried here.",
 
     "_note_worksheet": "The crew worksheet. The player sets a fate for each of the six and commits; the game never says which one is wrong, only that the set does not hold. {n} and {label} are filled in by the game — keep them.",
     "crewWorksheetIntro": "The manifest gives you six names. What became of them is not on it. Set down only what the evidence will carry.",

@@ -484,14 +484,47 @@ export function buildPlaces(){
   });
 
   const put=o=>{o.castShadow=true;o.receiveShadow=true;scene.add(o);return o};
-  {const c=config.sites.water,y=heightAt(c.x,c.z);
-   const w=new THREE.Mesh(new THREE.CircleGeometry(14,30),
-     new THREE.MeshBasicMaterial({color:0xbcd8e0,transparent:true,opacity:.55}));
-   w.rotation.x=-Math.PI/2;w.position.set(c.x,y+.4,c.z);scene.add(w)}
-  {const c=config.sites.season,y=heightAt(c.x,c.z);
-   const f=new THREE.Mesh(new THREE.CircleGeometry(78,30),
-     new THREE.MeshLambertMaterial({color:0xdfe9ef,transparent:true,opacity:.72}));
-   f.rotation.x=-Math.PI/2;f.position.set(c.x,y+.25,c.z);scene.add(f)}
+  // Water and frost used to be flat discs dropped a few centimetres above the
+  // height at their centre. On the old plain that was fine. In a crevice the
+  // ground moves ~2m under a 14m disc, so most of it ended up underground.
+  // Water is now a level surface CLIPPED to the ground it actually covers, so
+  // it has a shoreline; frost is a sheet that follows the ground it lies on.
+  const surfaceMesh = (cx, cz, radius, level, mat, conform) => {
+    const N = 40, step = (radius * 2) / N, pos = [], idx = [], h = [];
+    for(let j = 0; j <= N; j++) for(let i = 0; i <= N; i++){
+      const x = cx - radius + i * step, z = cz - radius + j * step;
+      const g = heightAt(x, z);
+      h.push(g);
+      pos.push(x, conform ? g + level : level, z);
+    }
+    const inside = k => {
+      const i = k % (N + 1), j = (k / (N + 1)) | 0;
+      const dx = (i * step - radius), dz = (j * step - radius);
+      return dx * dx + dz * dz <= radius * radius && (conform || h[k] < level);
+    };
+    for(let j = 0; j < N; j++) for(let i = 0; i < N; i++){
+      const a = j * (N + 1) + i, b = a + 1, c2 = a + N + 1, d = c2 + 1;
+      if(inside(a) && inside(b) && inside(c2)) idx.push(a, c2, b);
+      if(inside(b) && inside(c2) && inside(d)) idx.push(b, c2, d);
+    }
+    if(!idx.length) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, mat); m.receiveShadow = true; scene.add(m); return m;
+  };
+
+  {const c = config.sites.water, W = config.props.water;
+   // sit the surface just above the lowest ground in the hollow, so it fills it
+   let lo = Infinity;
+   for(let a = 0; a < 6.283; a += .35) for(let r = 0; r <= W.radius; r += W.radius / 6)
+     lo = Math.min(lo, heightAt(c.x + Math.cos(a) * r, c.z + Math.sin(a) * r));
+   surfaceMesh(c.x, c.z, W.radius, lo + W.depth,
+     new THREE.MeshBasicMaterial({color:0xbcd8e0, transparent:true, opacity:W.opacity}), false);}
+
+  {const c = config.sites.season, F = config.props.frost;
+   surfaceMesh(c.x, c.z, F.radius, F.lift,
+     new THREE.MeshLambertMaterial({color:0xdfe9ef, transparent:true, opacity:F.opacity}), true);}
   {const c=config.sites.soil;
    for(let i=0;i<44;i++){const a=rand()*6.28,d=rand()*76,s=.5+rand()*1.2;   // TODO(lead): soil rock count 44 and 76/.5/1.2 not in config
      const b=new THREE.Mesh(roughRock(s),soilRockM);
