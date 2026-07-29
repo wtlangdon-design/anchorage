@@ -138,19 +138,83 @@ function commit(){
 }
 
 /* ---------- logbook ---------- */
+// Strings the worksheet needs. Each one reads out of story.json when it is there
+// and falls back to the text below until then, so the writer owns every word the
+// moment she adds the keys and nothing here has to change.
+const T = (key, fallback) => (story.ui && story.ui[key]) || fallback;
+
+let commitNote = "";
+
 export function openLog(){
   document.getElementById("log-sub").textContent = `${S.name} · ${S.ship} · ${S.planet}`;
   const l = document.getElementById("log-list");
-  l.innerHTML = S.log.length ? S.log.slice().reverse().map(d => `<div class="entry"><div class="nm">${esc(d.name)}</div>
-    <div class="meta">${esc(d.kind)} · ${d.h.toFixed(0)} min</div><div class="desc">${esc(d.desc).slice(0, 700)}</div></div>`).join("")
-    : `<p class="body" style="opacity:.5">${story.ui.logbookEmpty}</p>`;
-  document.getElementById("crew-list").innerHTML = storyMod.crew().map(c =>
-    `<div class="crewrow ${c.known ? "" : "unknown"}">
-      <div><div class="cn">${c.known ? esc(c.n) : story.ui.crewUnknownName}</div>
-      <div style="font-size:9px;letter-spacing:.14em;opacity:.55;text-transform:uppercase">${esc(c.r)}</div></div>
-      <div class="cx">${c.note || "<span style='opacity:.4'>" + story.ui.crewUnknownNote + "</span>"}</div></div>`).join("")
-    + `<p class="hint">${story.ui.crewFooter}</p>`;
+  // evidence, newest first: what it said, where it was standing, when it was found
+  l.innerHTML = S.log.length ? S.log.slice().reverse().map(d => {
+    const where = (typeof d.x === "number" && typeof d.z === "number")
+      ? ` · ${(d.x / 1000).toFixed(1)}k, ${(d.z / 1000).toFixed(1)}k` : "";
+    return `<div class="entry"><div class="nm">${esc(d.name)}</div>
+    <div class="meta">${esc(d.kind)}${where} · ${d.h.toFixed(0)} min</div>
+    <div class="desc">${esc(d.desc).slice(0, 700)}</div></div>`;
+  }).join("") : `<p class="body" style="opacity:.5">${story.ui.logbookEmpty}</p>`;
+  renderCrew();
   document.getElementById("logbook").classList.add("on");
+}
+
+function renderCrew(){
+  const years = storyMod.fateOptions();
+  const rows = storyMod.crew().map(c => {
+    const locked = storyMod.isLocked(c.id), got = storyMod.conclusionFor(c.id);
+    const value = !got ? "unknown" : got.fate === "survived" ? "survived" : "died:" + got.year;
+    if(locked){
+      const said = got.fate === "survived" ? T("crewFateSurvived", "outlived the others")
+        : T("crewFateDiedTemplate", "died in {label}").replace("{label}", () => yearLabel(got.year, years));
+      return `<div class="crewrow locked">
+        <div><div class="cn">${esc(c.n)}</div>
+        <div style="font-size:9px;letter-spacing:.14em;opacity:.55;text-transform:uppercase">${esc(c.r)}</div></div>
+        <div class="cx"><span class="fate-locked">${esc(said)}</span></div></div>`;
+    }
+    const opts = [`<option value="unknown"${value === "unknown" ? " selected" : ""}>${esc(T("crewFateUnknown", "— not established —"))}</option>`,
+      `<option value="survived"${value === "survived" ? " selected" : ""}>${esc(T("crewFateSurvived", "outlived the others"))}</option>`]
+      .concat(years.map(y => {
+        const v = "died:" + y.year;
+        const label = T("crewFateDiedTemplate", "died in {label}").replace("{label}", () => y.label);
+        return `<option value="${v}"${value === v ? " selected" : ""}>${esc(label)}</option>`;
+      }));
+    return `<div class="crewrow">
+      <div><div class="cn">${esc(c.n)}</div>
+      <div style="font-size:9px;letter-spacing:.14em;opacity:.55;text-transform:uppercase">${esc(c.r)}</div></div>
+      <div class="cx"><select class="fate" data-crew="${c.id}">${opts.join("")}</select></div></div>`;
+  }).join("");
+
+  const need = storyMod.minConclusions();
+  document.getElementById("crew-list").innerHTML =
+    `<p class="hint" style="margin-bottom:12px">${T("crewWorksheetIntro",
+      "The manifest gives you six names. What became of them is not on it. Set down only what the evidence will carry.")}</p>`
+    + rows
+    + `<div id="crew-commit"><button id="crew-ok">${esc(T("crewCommitButton", "Enter these into the record"))}</button>
+       <span id="crew-note" class="hint">${commitNote}</span></div>`
+    + `<p class="hint">${story.ui.crewFooter}</p>`
+    + (years.length ? "" : `<p class="hint" style="opacity:.45">${T("crewNoYearsYet",
+        "No dates yet. The markers carry them.")}</p>`);
+
+  document.querySelectorAll("#crew-list select.fate").forEach(sel =>
+    sel.addEventListener("change", () => { storyMod.setConclusion(sel.dataset.crew, sel.value); commitNote = ""; }));
+  const btn = document.getElementById("crew-ok");
+  if(btn) btn.onclick = () => {
+    const r = storyMod.commitConclusions();
+    // never say WHICH one is wrong — that is the whole rule
+    commitNote = r.ok
+      ? T("crewCommitAccepted", "Entered. They stand.")
+      : r.reason === "few"
+        ? T("crewCommitNeedMore", "Not enough to be sure of. Set down at least {n}.").replace("{n}", () => r.need)
+        : T("crewCommitWrong", "Something in this set does not hold. Nothing has been entered.");
+    renderCrew();
+  };
+}
+
+function yearLabel(year, years){
+  const hit = years.find(y => y.year === year);
+  return hit ? hit.label : String(year);
 }
 
 /* ---------- survey start / interrupt / tick ---------- */

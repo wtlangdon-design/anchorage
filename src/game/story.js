@@ -25,7 +25,10 @@ export function initStory(config, story, deps){
   giftTemplate = story.toasts.giftTemplate;
   giftAlreadyTemplate = story.toasts.giftAlreadyHaveTemplate;
 
-  CREW = story.crew.map(c => ({ id: c.id, n: c.name, r: c.role, known: false, note: "" }));
+  // Names and roles come off the orbital manifest, so they were never the mystery.
+  // What happened to each of them is: that is the worksheet, and the game never
+  // fills it in for the player.
+  CREW = story.crew.map(c => ({ id: c.id, n: c.name, r: c.role }));
 
   CAMPS = CAMP_ORDER.map(id => {
     const cc = config.camps[id], sc = story.camps[id];
@@ -63,6 +66,68 @@ export function initStory(config, story, deps){
     rev: ["lind", story.shelter.confession.reveal]  // TODO(lead): crew id not in story
   };
   afterReadToast = story.shelter.afterReadToast;
+
+  // The answer key is not written down anywhere. It is derived from the graves
+  // themselves: each marker names a crew member and a year, and the one member of
+  // six with no marker is the one who was still walking. Edit a grave label in
+  // story.json and the truth follows it — there is no second copy to fall out of
+  // step, and nothing in the code states the conclusion the player is chasing.
+  TRUTH = {};
+  for(const g of GRAVES){
+    const year = parseInt(String(g.l).replace(/[^0-9]/g, ""), 10);
+    if(g.who && isFinite(year)) TRUTH[g.who] = { fate: "died", year, label: g.l };
+  }
+  for(const c of CREW) if(!TRUTH[c.id]) TRUTH[c.id] = { fate: "survived", year: null, label: "" };
+
+  CONCLUSIONS = {}; LOCKED = {};
+  minPerCommit = (config.deduction && config.deduction.minPerCommit) || 3;
+}
+
+/* ---------------- the worksheet ----------------
+   Reading something records evidence. It never records a conclusion. The player
+   sets a fate against each name themselves and commits a set of them; the game
+   answers only "all of these are right" or "something here is wrong", and never
+   which one. That refusal is the whole mechanism — told which entry was wrong,
+   a player would binary-search the answer instead of reading the graves. */
+
+let TRUTH = {}, CONCLUSIONS = {}, LOCKED = {}, minPerCommit = 3;
+
+// Fate options are earned, not given: a year only becomes selectable once the
+// player has stood at the marker that states it.
+export function fateOptions(){
+  const years = GRAVES.filter(g => g.read)
+    .map(g => ({ year: parseInt(String(g.l).replace(/[^0-9]/g, ""), 10), label: g.l }))
+    .filter(o => isFinite(o.year))
+    .sort((a, b) => a.year - b.year);
+  const seen = new Set();
+  return years.filter(o => !seen.has(o.year) && seen.add(o.year));
+}
+
+export function conclusionFor(id){ return CONCLUSIONS[id] || null; }
+export function isLocked(id){ return !!LOCKED[id]; }
+export function lockedCount(){ return Object.keys(LOCKED).length; }
+export function minConclusions(){ return minPerCommit; }
+
+// value is "unknown" | "survived" | "died:<year>"
+export function setConclusion(id, value){
+  if(LOCKED[id]) return;
+  if(value === "unknown"){ delete CONCLUSIONS[id]; return; }
+  if(value === "survived"){ CONCLUSIONS[id] = { fate: "survived", year: null }; return; }
+  const year = parseInt(String(value).split(":")[1], 10);
+  if(isFinite(year)) CONCLUSIONS[id] = { fate: "died", year };
+}
+
+// All-or-nothing, and deliberately mute about which entry failed.
+export function commitConclusions(){
+  const pending = Object.keys(CONCLUSIONS).filter(id => !LOCKED[id]);
+  if(pending.length < minPerCommit) return { ok: false, reason: "few", need: minPerCommit, have: pending.length };
+  const allRight = pending.every(id => {
+    const c = CONCLUSIONS[id], t = TRUTH[id];
+    return t && c.fate === t.fate && (c.fate !== "died" || c.year === t.year);
+  });
+  if(!allRight) return { ok: false, reason: "wrong", have: pending.length };
+  for(const id of pending) LOCKED[id] = true;
+  return { ok: true, locked: pending.length, total: lockedCount() };
 }
 
 // HANDOFF interface: look up the readable text/gift for a camp/grave/shelter id.
@@ -76,10 +141,10 @@ export function read(id){
 export function crew(){ return CREW; }
 export function knowsTruth(){ return S.knowTruth; }
 
-// ref 217
-export function reveal(id, note){
-  const c = CREW.find(c => c.id === id);
-  c.known = true; if(note) c.note = note;
+// Reading something files it as evidence: what it said, where it was standing,
+// and how far into the descent it was found. It does not conclude anything.
+function file(name, kind, body, x, z){
+  S.log.push({ name, kind, desc: String(body).replace(/<[^>]+>/g, " "), h: S.t / 60, x, z });
 }
 
 // ref 774-778: unread grave, then unread camp, then the unlogged shelter.
@@ -95,15 +160,15 @@ export function targetReadable(){
 
 // ref 819-823
 export function readGrave(g){
-  g.read = true; reveal(g.rev[0], g.rev[1]);
+  g.read = true;
   showPanel(ui.kickerGraveMarker, `${g.t} — ${g.l}`, ui.subtitleNotYourSurvey, g.b);
-  S.log.push({ name: g.t, kind: ui.logKindGrave, desc: g.b.replace(/<[^>]+>/g, " "), h: S.t / 60 });
+  file(`${g.t} — ${g.l}`, ui.logKindGrave, g.b, g.x, g.z);
   renderManifest();
 }
 
 // ref 825-835
 export function readCamp(cp){
-  cp.read = true; (cp.rev || []).forEach(r => reveal(r[0], r[1]));
+  cp.read = true;
   let gift = "";
   if(cp.gives){ const c = manifest.crit(cp.gives);
     if(!c.done){ manifest.complete(cp.gives, "meridian", c.name || "(Meridian archive)");
@@ -114,17 +179,17 @@ export function readCamp(cp){
     else gift = `<div class="rule"></div><p class="body" style="opacity:.6;font-size:14px">${giftAlreadyTemplate.replace("{name}", esc(c.n.toLowerCase()))}</p>`;
   }
   showPanel(ui.kickerRecoveredRecord, cp.t, ui.subtitleNotYourSurvey, cp.b, gift);
-  S.log.push({ name: cp.t, kind: ui.logKindRecord, desc: cp.b.replace(/<[^>]+>/g, " "), h: S.t / 60 });
+  file(cp.t, ui.logKindRecord, cp.b, cp.x, cp.z);
   renderManifest();
 }
 
 // ref 837-844
 export function readLast(){
-  LAST.read = true; S.knowTruth = true; reveal(CONFESSION.rev[0], CONFESSION.rev[1]);
+  LAST.read = true; S.knowTruth = true;
   showPanel(ui.kickerShelter, LAST.t, ui.subtitleNotOnManifest, LAST.b,
     `<div class="rule"></div><h1 style="font-size:19px">${CONFESSION.t}</h1>
      <p class="body">${CONFESSION.b}</p>`);
-  S.log.push({ name: CONFESSION.t, kind: ui.logKindConfession, desc: CONFESSION.b.replace(/<[^>]+>/g, " "), h: S.t / 60 });
+  file(CONFESSION.t, ui.logKindConfession, CONFESSION.b, LAST.x, LAST.z);
   renderManifest();
   setTimeout(() => toast(afterReadToast, 13000), 900);
 }

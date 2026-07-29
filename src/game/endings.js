@@ -52,7 +52,8 @@ export function sendIt(mode, got){
     .replace("{count}", got.length).replace("{mine}", mine).replace("{recovered}", recovered);
   const unanswered = lost.length
     ? sum.unansweredTemplate.replace("{list}", lost.map(c => esc(c.n)).join(", ")) : "";
-  const crewLine = sum.crewTemplate.replace("{known}", storyMod.crew().filter(c => c.known).length);
+  // what the player worked out and committed, not what the game handed them
+  const crewLine = sum.crewTemplate.replace("{known}", storyMod.lockedCount());
   const neverFound = S.knowTruth ? "" : "<br>" + sum.neverFoundSixth;
 
   showMsg(`

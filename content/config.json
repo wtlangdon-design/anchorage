@@ -240,6 +240,11 @@
     "tickSpacingDegrees": 10
   },
 
+  "deduction": {
+    "_note": "The Meridian worksheet. minPerCommit is how many fates must be entered before the record will accept them — the point of it being more than one is that a player cannot test a single guess at a time and walk the answer out of the game. Three is the Obra Dinn number.",
+    "minPerCommit": 3
+  },
+
   "textures": {
     "_note": "Every texture is drawn in code at load — there are no image files. Sizes are pixels per side: a 512 map costs about 1.4 MB on the graphics card, a 256 map about 350 KB. If the game runs slowly it halves all of these automatically (render.downgrade.textureScale) and redraws them. Setting 'enabled' false turns every generated map off and falls back to plain colours.",
     "enabled": true,
