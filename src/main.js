@@ -21,6 +21,7 @@ import * as sky from "./world/sky.js";
 import * as grass from "./world/grass.js";
 import * as fauna from "./world/fauna.js";
 import * as props from "./world/props.js";
+import * as sound from "./world/sound.js";
 import { initGait, poseFor } from "./player/gait.js";
 import * as rig from "./player/rig.js";
 import * as controller from "./player/controller.js";
@@ -114,7 +115,11 @@ function init() {
 
   panels.initPanels(config, story_data, {
     S, manifest, storyMod: story,
-    toast: hud.toast, esc: hud.esc, mmss: hud.mmss, renderManifest: hud.renderManifest, rand, lostAtT
+    toast: hud.toast, esc: hud.esc, mmss: hud.mmss, renderManifest: hud.renderManifest, rand, lostAtT,
+    // built from inside the "Step outside" click — browsers only allow it there
+    startAudio: () => sound.initAudio(config, {
+      heightAt: terrain.heightAt, tempAt, getSoundfield: compass.soundfield
+    })
   });
 
   // oxygen refills at any camp or the shelter (ref 1140: CAMPS.concat([LAST]))
@@ -135,7 +140,8 @@ function init() {
       transmit: endings.transmit,
       closeOverlay: panels.closeOverlay,
       cancelSurvey: panels.cancelSurvey,
-      toggleFps: hud.toggleFps
+      toggleFps: hud.toggleFps,
+      toggleMute: sound.toggleMute
     }
   });
 
@@ -262,5 +268,7 @@ function animate() {
 
   compass.drawCompass();                     // ref 1218
   compass.drawSound();                       // ref 1218
+  // after drawSound, so the ears use the herd bearing and the null it just wrote
+  sound.updateAudio(S, dt);
   renderer.render(scene, cam);               // ref 1219
 }

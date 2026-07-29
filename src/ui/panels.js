@@ -8,7 +8,7 @@
 // Numbers come from config, prose/UI strings from story. Zero behaviour change.
 
 let config, story, S, manifest, storyMod;
-let toast, esc, mmss, renderManifest, rand, lostAtT;
+let toast, esc, mmss, renderManifest, rand, lostAtT, startAudio;
 
 let bstep = 0, bs = null, pending = null;
 
@@ -17,6 +17,7 @@ export function initPanels(cfg, storyArg, deps){
   S = deps.S; manifest = deps.manifest; storyMod = deps.storyMod;
   toast = deps.toast; esc = deps.esc; mmss = deps.mmss;
   renderManifest = deps.renderManifest; rand = deps.rand; lostAtT = deps.lostAtT;
+  startAudio = deps.startAudio;
 
   bs = document.getElementById("bsheet");
 
@@ -89,6 +90,9 @@ export function brief(){
     <div class="hint">${st.hint}</div>
     <button id="bnx">${st.button}</button>`;
     const go = () => { S.planet = document.getElementById("i-p").value.trim() || st.defaultPlanetName;
+      // the audio context has to be created inside the gesture that starts the
+      // game, or the browser refuses it. it fails silently if it fails at all.
+      if(startAudio) startAudio();
       document.getElementById("briefing").classList.remove("on"); S.started = true;
       toast(story.toasts.viewHint, 6000);
       setTimeout(transmission, config.timing.fleetTransmissionDelayMs); };

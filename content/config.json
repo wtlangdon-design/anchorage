@@ -238,6 +238,59 @@
     "tickSpacingDegrees": 10
   },
 
+  "audio": {
+    "_note": "Everything you hear is made from filtered noise at run time — there are no sound files. Gains are 0..1 and they add up, so raising several at once is how you get distortion. The wind is meant to sit under everything and only be noticed when it stops. Mute is V.",
+    "masterGain": 0.9,
+    "noiseSeconds": 3,
+    "smoothing": {
+      "_note": "Seconds for a level to travel most of the way to its target. Small is twitchy, large is syrupy. 'null' is deliberately quicker than the rest — the silence should arrive faster than it leaves.",
+      "wind": 0.45,
+      "herd": 0.6,
+      "null": 0.14,
+      "mute": 0.08,
+      "pan": 0.25
+    },
+    "wind": {
+      "_note": "The floor. 'gain' is the level on flat, cool ground; elevation and heat add to it. Gusts are two slow sines beating against each other so the bed never loops audibly.",
+      "gain": 0.05,
+      "lowpassHz": 430,
+      "lowpassQ": 0.6,
+      "highpassHz": 60,
+      "elevationStart": 40,
+      "elevationRange": 95,
+      "elevationGain": 0.045,
+      "elevationLowpassAdd": 260,
+      "heatStart": 30,
+      "heatRange": 40,
+      "heatGain": 0.03,
+      "gustRate": 0.055,
+      "gustDepth": 0.35
+    },
+    "herd": {
+      "_note": "Low-passed noise, panned by the same bearing the soundfield strip draws. 'curve' above 1 keeps it felt rather than heard until you are close: at half range it is a quarter as loud. Range itself comes from striders.audibleRange.",
+      "gain": 0.32,
+      "curve": 1.8,
+      "lowpassHz": 85,
+      "lowpassSpreadHz": 70,
+      "lowpassQ": 0.7
+    },
+    "foot": {
+      "_note": "One burst per footfall, fired off the gait phase so it lands with the foot rather than on a timer. 1.3g is in these numbers: low filter, slow decay, weight. 'phaseOffset' slides the hit earlier or later in the stride.",
+      "phaseOffset": 1.5708,
+      "minSpeed": 0.6,
+      "burstSeconds": 0.055,
+      "attack": 0.006,
+      "filterQ": 0.9,
+      "variation": 0.12,
+      "walk": { "gain": 0.13, "filterHz": 200, "decay": 0.19 },
+      "sprint": { "gain": 0.2, "filterHz": 265, "decay": 0.13 }
+    },
+    "null": {
+      "_note": "The ashwaiter silence. At full null everything is multiplied by zero — actual silence, not a quiet mix. 'curve' above 1 makes the drop bite earlier as you approach the den.",
+      "curve": 1.6
+    }
+  },
+
   "timing": {
     "fleetTransmissionDelayMs": 120000,
     "manifestRefreshInterval": 0.4,

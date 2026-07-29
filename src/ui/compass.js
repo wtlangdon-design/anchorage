@@ -65,11 +65,17 @@ export function drawCompass(){
   cx.strokeStyle = "rgba(255,233,192,.55)"; cx.beginPath(); cx.moveTo(w / 2, 0); cx.lineTo(w / 2, h); cx.stroke();
 }
 
+// What drawSound() worked out this frame, kept so world/sound.js can hear exactly
+// what the strip drew rather than computing the herd a second time and drifting.
+const field = { herdAngle: 0, herdAmp: 0, herdDistance: Infinity };
+export function soundfield(){ return field; }
+
 export function drawSound(){
   const [w, h, d] = fit(sfc); s2.setTransform(d, 0, 0, d, 0, 0); s2.clearRect(0, 0, w, h);
   const src = [];
   const hx = dawnX(S.t) + config.striders.bandOffset, hz = config.striders.herdZ, hd = Math.hypot(hx - S.px, hz - S.pz);
   src.push({ a: Math.atan2(-(hz - S.pz), hx - S.px), amp: Math.max(0, 1 - hd / config.striders.audibleRange) * .95 });
+  field.herdAngle = src[0].a; field.herdAmp = src[0].amp; field.herdDistance = hd;
   let nul = 0;
   getDens().forEach(dn => { if(tempAt(dn.x, S.t) < config.ashwaiters.activeAboveTemp) return;
     const dd = Math.hypot(dn.x - S.px, dn.z - S.pz);
