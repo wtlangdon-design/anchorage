@@ -510,4 +510,33 @@ export function buildPlaces(){
   for(let i=0;i<config.terrain.scatterRocks.count;i++){const x=(rand()-.5)*SIZE*config.terrain.scatterRocks.spreadFraction,z=(rand()-.5)*SIZE*config.terrain.scatterRocks.spreadFraction,s=config.terrain.scatterRocks.minScale+rand()*config.terrain.scatterRocks.scaleRange;
     const b=new THREE.Mesh(roughRock(s),rockM);
     b.position.set(x,heightAt(x,z)+s*.4,z);b.rotation.set(rand()*3,rand()*3,rand()*3);put(b)}
+
+  // The collapse at each end of the crevice.
+  //
+  // These are the same rough rocks as everywhere else, at boulder scale, sat on
+  // the end slope so that the thing stopping you is a heap of fallen rock you can
+  // see rather than a hillside that merely happens to be steep. They are only
+  // decoration — nothing in this game has collision, so the terrain underneath is
+  // what actually blocks, and it does (see the apron-then-face profile in
+  // terrain.js). Drawn last so every rock, camp and grave placed above keeps the
+  // exact position it had before this pile existed.
+  {
+    const RF = config.terrain.canyon.rockfall, CY = config.terrain.canyon;
+    const halfL = CY.length / 2, halfW = CY.width / 2;
+    const reach = (halfW + CY.wallRun) * RF.bandSpread;
+    for(const side of [1, -1]){
+      for(let i = 0; i < RF.count; i++){
+        const x = (rand() - .5) * 2 * reach;
+        // biased toward the outer part of the band, so the pile is deepest where
+        // the ground is already climbing and thins out into the canyon
+        const f = rand();
+        const z = side * (halfL - RF.bandDepth * 0.35 + f * f * RF.bandDepth * 1.5);
+        const sc = RF.minScale + rand() * RF.scaleRange;
+        const b = new THREE.Mesh(roughRock(sc), rockM);
+        b.position.set(x, heightAt(x, z) + sc * (1 - RF.sink), z);
+        b.rotation.set(rand() * 3, rand() * 3, rand() * 3);
+        put(b);
+      }
+    }
+  }
 }

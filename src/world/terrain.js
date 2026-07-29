@@ -104,6 +104,8 @@ export function initTerrain(cfg, story, deps){
     wallH: c.wallHeight, crestVary: c.crestVary, crestF: c.crestFrequency,
     meanderA: c.meanderAmp, meanderF: c.meanderFrequency,
     endRun: c.endRun, invEndRun: 1 / Math.max(1e-6, c.endRun), endH: c.endHeight,
+    talusF: c.talusFraction, talusH: c.talusHeight,
+    endTalusF: c.endTalusFraction, endTalusH: c.endTalusHeight, endRough: c.endRoughness,
     floorF: c.floorFrequency, floorRelief: c.floorRelief, floorOct: c.floorOctaves
   };
   const cl = config.climate;
@@ -140,6 +142,27 @@ export function shadeAt(x, z){
 const smooth = t => t * t * (3 - 2 * t);
 const sat = t => t < 0 ? 0 : t > 1 ? 1 : t;
 
+// The wall of a crevice, as a fraction of its full height across the run.
+//
+// A smoothstep is the wrong shape here and it is what made this read as a bowl:
+// it leaves the floor curving gently upward for the first third of the run, so
+// the flat ground appears to narrow and the walls appear to lean in. Real split
+// rock does the opposite — a short apron of fallen scree at the foot, and then
+// the face. So: a straight ramp for talusFraction of the run rising talusHeight
+// of the wall, then a square root, which is near-vertical where it meets the
+// apron and eases off only at the crest.
+//
+// That shape is also much harder to climb than the smoothstep was. The gradient
+// immediately above the apron is several hundred percent, against a climb limit
+// of 0.8, so the player is stopped at the foot of the wall rather than partway up
+// it. Math.sqrt, not Math.pow — this runs thousands of times a frame.
+function face(t, talusF, talusH){
+  if(t <= 0) return 0;
+  if(t >= 1) return 1;
+  if(t < talusF) return talusH * (t / talusF);
+  return talusH + (1 - talusH) * Math.sqrt((t - talusF) / (1 - talusF));
+}
+
 // The canyon.
 //
 // It runs north-south — along z — because the dawn line sweeps west along x, so
@@ -160,8 +183,9 @@ export function heightAt(x, z){
   const cx = CY.meanderA * Math.sin(z * CY.meanderF);   // 0 by default; see config
   const ax = Math.abs(x - cx);
 
-  // wall: flat floor out to halfW, then up over wallRun to the crest
-  const w = smooth(sat((ax - CY.halfW) * CY.invWallRun));
+  // wall: flat floor out to halfW, a few metres of scree, then the face
+  const wt = sat((ax - CY.halfW) * CY.invWallRun);
+  const w = face(wt, CY.talusF, CY.talusH);
   // The crest is not level — it rises and falls along the canyon, which is what
   // gives the shadow it throws a shape instead of a straight edge.
   //
@@ -175,10 +199,15 @@ export function heightAt(x, z){
   const crest = CY.wallH * (1 + CY.crestVary * (cv < -1 ? -1 : cv > 1 ? 1 : cv));
   let h = w * crest;
 
-  // both ends close, so the canyon is a room
-  const e = smooth(sat((Math.abs(z) - CY.halfL) * CY.invEndRun));
-  const end = e * CY.endH;
-  if(end > h) h = end;
+  // Both ends are closed by collapse. Same apron-then-face shape, with a rougher
+  // apron so it heaps rather than ramps — the boulders props.js piles on top are
+  // what make it read as fallen rock, but this is what actually stops you.
+  const et = sat((Math.abs(z) - CY.halfL) * CY.invEndRun);
+  if(et > 0){
+    const lump = 1 + CY.endRough * fbm(x * 0.02, 4.7, 2);
+    const end = face(et, CY.endTalusF, CY.endTalusH) * CY.endH * lump;
+    if(end > h) h = end;
+  }
 
   // floor relief, fading out as the wall takes over
   h += fbm(x * CY.floorF, z * CY.floorF, CY.floorOct) * CY.floorRelief * (1 - w * 0.75);
