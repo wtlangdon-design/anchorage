@@ -86,6 +86,9 @@ export function setWind(t){
   if(gShader)gShader.uniforms.uT.value=t;
 }
 
-export function applyDowngrade(){
-  grass.count=Math.floor(grass.count*config.render.downgrade.grassMultiplier);grass.instanceMatrix.needsUpdate=true;
+// Render-only: the blades were all generated, we simply stop drawing some of
+// them. Generation is untouched, so the world is identical on every device.
+export function applyDowngrade(mult){
+  const m = typeof mult === "number" ? mult : config.render.downgrade.grassMultiplier;
+  grass.count=Math.max(1,Math.floor(grass.count*m));grass.instanceMatrix.needsUpdate=true;
 }

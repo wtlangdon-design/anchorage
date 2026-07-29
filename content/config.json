@@ -557,5 +557,26 @@
       "pixelRatio": 1,
       "textureScale": 0.5
     }
+  },
+  "mobile": {
+    "_note": "What a phone starts at, applied immediately instead of waiting to measure a stutter the player has already seen. These are RENDER-ONLY reductions: the world is still generated in full, so a phone and a desktop see the same rocks in the same places \u2014 only fewer of them are drawn. Set 'force' to true or false to override the automatic detection while testing on a desktop.",
+    "force": null,
+    "maxPixelRatio": 1.5,
+    "grassMultiplier": 0.3,
+    "striderMultiplier": 0.4,
+    "dustMultiplier": 0.25,
+    "textureScale": 0.5,
+    "shadowMapSize": 1024,
+    "disableShadows": false,
+    "fogDensityMultiplier": 1.35,
+    "stick": {
+      "_note": "The left thumb stick. radius is how far from where you first touched counts as full deflection; sprintAt is the fraction of that travel where walking becomes sprinting, because there is no shift key on a phone. deadZone stops a resting thumb from drifting.",
+      "radius": 68,
+      "deadZone": 0.14,
+      "sprintAt": 0.8,
+      "sideFraction": 0.45
+    },
+    "lookSensitivity": 0.006,
+    "pitchSensitivity": 0.005
   }
 }

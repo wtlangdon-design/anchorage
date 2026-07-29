@@ -9,6 +9,23 @@ let THREE, S, cam, getPlayer, getHands, heightAt, toast, visorEl, actions;
 const keys={};
 let drag=false,lx=0,ly=0;
 
+// The thumb stick, when there is one. It reports its own speed because there is
+// no shift key on a phone: pushing past mobile.stick.sprintAt is the sprint.
+const stick={x:0,z:0,on:false,sprint:false};
+export function setStick(x,z,sprint){
+  stick.x=x; stick.z=z; stick.sprint=!!sprint;
+  stick.on=(x!==0||z!==0);
+}
+// Looking, from whatever is doing the looking. The mouse path passes its own
+// sensitivities; touch passes the mobile ones, which are a little higher because
+// a thumb travels less than a mouse.
+export function applyLook(dx,dy,lookSens,pitchSens){
+  const c=config.player.camera;
+  S.mouse=true;
+  S.camYaw-=dx*(lookSens||c.lookSensitivity);
+  S.camPitch=Math.max(c.minPitch,Math.min(c.maxPitch,S.camPitch+dy*(pitchSens||c.pitchSensitivity)));
+}
+
 export function initController(cfg, st, deps){
   config = cfg;
   story = st;
@@ -43,9 +60,8 @@ export function initController(cfg, st, deps){
   addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false});
   addEventListener("mousedown",e=>{if(e.target.tagName==="CANVAS"&&!document.querySelector(".overlay.on")){drag=true;lx=e.clientX;ly=e.clientY}});
   addEventListener("mouseup",()=>drag=false);
-  addEventListener("mousemove",e=>{if(!drag)return;S.mouse=true;
-    S.camYaw-=(e.clientX-lx)*camCfg.lookSensitivity;
-    S.camPitch=Math.max(camCfg.minPitch,Math.min(camCfg.maxPitch,S.camPitch+(e.clientY-ly)*camCfg.pitchSensitivity));
+  addEventListener("mousemove",e=>{if(!drag)return;
+    applyLook(e.clientX-lx,e.clientY-ly);
     lx=e.clientX;ly=e.clientY});
 }
 
@@ -59,12 +75,15 @@ export function clearKeys(){ for(const k in keys)keys[k]=false; }
 // dead. Worst case that is three heightAt calls a frame.
 export function updateMovement(dt){
   const p=config.player;
-  let fx=0,fz=0;
-  if(keys.w||keys.arrowup)fz+=1;
-  if(keys.s||keys.arrowdown)fz-=1;
-  if(keys.a||keys.arrowleft)fx-=1;
-  if(keys.d||keys.arrowright)fx+=1;
-  const mag=Math.hypot(fx,fz),spd=keys.shift?p.sprintSpeed:p.walkSpeed;
+  let fx=0,fz=0,running=keys.shift;
+  if(stick.on){ fx=stick.x; fz=stick.z; running=stick.sprint; }
+  else{
+    if(keys.w||keys.arrowup)fz+=1;
+    if(keys.s||keys.arrowdown)fz-=1;
+    if(keys.a||keys.arrowleft)fx-=1;
+    if(keys.d||keys.arrowright)fx+=1;
+  }
+  const mag=Math.hypot(fx,fz),spd=running?p.sprintSpeed:p.walkSpeed;
   if(mag>0){
     if(S.surveying){actions.cancelSurvey()}
     fx/=mag;fz/=mag;
@@ -81,7 +100,7 @@ export function updateMovement(dt){
     else if(walkable(S.px+dx,S.pz)){S.px+=dx}          // slide along the wall
     else if(walkable(S.px,S.pz+dz)){S.pz+=dz}
     S.heading=Math.atan2(wx,wz);S.speed+=(spd-S.speed)*p.acceleration;
-    S.bob+=dt*(keys.shift?p.bobRateRun:p.bobRateWalk);
+    S.bob+=dt*(running?p.bobRateRun:p.bobRateWalk);
     if(!S.mouse){const want=Math.atan2(-wz,wx);
       let dd=((want-S.camYaw+Math.PI*3)%(Math.PI*2))-Math.PI;
       S.camYaw+=dd*Math.min(1,dt*config.player.camera.autoTurnRate)}

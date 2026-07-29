@@ -35,12 +35,14 @@ import * as hud from "./ui/hud.js";
 import * as compass from "./ui/compass.js";
 import * as chart from "./ui/chart.js";
 import * as panels from "./ui/panels.js";
+import * as touch from "./ui/touch.js";
 
 const THREE = window.THREE;
 
 let renderer, scene, cam, sun;
 let config, story_data, S, SUNDIR;
 let SUN_COS = 1, SUN_SIN = 0;
+let onMobile = false;
 const SUN_D = 520;
 
 boot();
@@ -60,6 +62,8 @@ async function boot() {
 function init() {
   // ---- renderer / scene / camera (ref 353-364) ----
   renderer = new THREE.WebGLRenderer({ antialias: true });
+  // A phone reports 3x and will melt trying to honour it, so the cap is hard and
+  // it is decided before anything is drawn rather than after a stutter.
   renderer.setPixelRatio(Math.min(devicePixelRatio, config.render.maxPixelRatio));
   renderer.setSize(innerWidth, innerHeight);
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -88,6 +92,22 @@ function init() {
     seen: new Uint8Array(GW * GW), seenCount: 0,
     surveying: null, progress: 0, null_: 0, bob: 0, grassAt: -9999, knowTruth: false, shade: 0
   };
+
+  // Work out what we are running on before anything is sized or built. The
+  // controls are the same code either way — Pointer Events — so this only decides
+  // what is shown and how much of the world is drawn.
+  onMobile = touch.initTouch(config, story_data, {
+    S, controller,
+    actions: {
+      interact, openChart: chart.openChart, openLog: panels.openLog,
+      transmit: endings.transmit, toggleMute: sound.toggleMute, toggleFps: hud.toggleFps
+    }
+  });
+  if (onMobile) {
+    renderer.setPixelRatio(Math.min(devicePixelRatio, config.mobile.maxPixelRatio));
+    if (config.mobile.disableShadows) renderer.shadowMap.enabled = false;
+    scene.fog.density *= config.mobile.fogDensityMultiplier;
+  }
 
   // ---- pure cores ----
   initClimate(config.climate);
@@ -185,7 +205,9 @@ function init() {
   // one warm key (the fixed low sun) against two cool fills — that separation is
   // what gives the ground shape; matching their colour flattens it.
   sun = new THREE.DirectionalLight(Number(config.render.sunColour), config.render.sunIntensity);
-  sun.castShadow = true; sun.shadow.mapSize.set(config.render.shadowMapSize, config.render.shadowMapSize);
+  sun.castShadow = true;
+  const shadowSize = onMobile ? config.mobile.shadowMapSize : config.render.shadowMapSize;
+  sun.shadow.mapSize.set(shadowSize, shadowSize);
   const d = config.render.shadowCameraExtent;
   sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
   sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
@@ -200,6 +222,17 @@ function init() {
     renderer.setSize(innerWidth, innerHeight);
     cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();
   });
+
+  // The phone profile is applied here, after every build, and it only ever
+  // reduces what is DRAWN — never what was generated. A phone and a desktop
+  // therefore walk the same canyon with the same rocks in the same places.
+  if (onMobile) {
+    const m = config.mobile;
+    grass.applyDowngrade(m.grassMultiplier);
+    fauna.applyDowngrade(m.striderMultiplier);
+    sky.applyDowngrade(m.dustMultiplier);
+    textures.setQuality(m.textureScale);
+  }
 
   // there is no other view: the visor is always on and the gloves are always up
   document.getElementById("visor").style.display = "block";
@@ -290,7 +323,9 @@ function animate() {
   hud.updateGauges();                        // ref 1199
   hud.updateReadouts(gy);                    // ref 1200-1207
   hud.updateHeat();                          // ref 1208
-  hud.updatePrompt(currentTarget());         // ref 1210-1216
+  const tgt = currentTarget();
+  hud.updatePrompt(tgt);                     // ref 1210-1216
+  touch.updateTouchPrompt(tgt);
 
   compass.drawCompass();                     // ref 1218
   compass.drawSound();                       // ref 1218

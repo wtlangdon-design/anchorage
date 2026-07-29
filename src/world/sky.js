@@ -209,6 +209,13 @@ export function buildGlare(){
   });
 }
 
+// Render-only: the particle positions are all still there, we draw fewer.
+export function applyDowngrade(mult){
+  if(!dust || !dust.geometry) return;
+  const n = Math.max(1, Math.floor(config.render.dustCount * mult));
+  dust.geometry.setDrawRange(0, n);
+}
+
 export function updateDust(px, pz, gy, t){
   if(dust){dust.position.set(Math.round(px/40)*40,gy,Math.round(pz/40)*40);
     dust.rotation.y=t*.02}

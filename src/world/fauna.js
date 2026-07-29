@@ -52,6 +52,13 @@ export function updateStriders(t){
     im.instanceMatrix.needsUpdate=true});
 }
 
+// Render-only, as with the grass: every strider was generated and still walks in
+// the simulation, the herd is just drawn thinner.
+export function applyDowngrade(mult){
+  const n = Math.max(1, Math.floor(config.striders.count * mult));
+  strider.forEach(im => { im.count = n; });
+}
+
 export function buildDenMeshes(){
   DENS.forEach(d=>{const y=heightAt(d.x,d.z);
     const m=new THREE.Mesh(new THREE.SphereGeometry(2.6,10,6),
