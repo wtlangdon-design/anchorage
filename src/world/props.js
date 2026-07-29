@@ -311,7 +311,7 @@ function engraving(u, v, gi) {
   }
   for (let r = 0; r < ROWS.length; r++) {
     const R = ROWS[r];
-    if (Math.abs(v - R.v) > R.half * 1.9) continue;
+    if (Math.abs(v - R.v) > R.half * P.rowBand) continue;
     const cw = (1 - P.margin * 2) / R.cells;
     const c0 = Math.floor((u - P.margin) / cw);
     for (let c = c0 - 1; c <= c0 + 1; c++) {
@@ -325,9 +325,9 @@ function engraving(u, v, gi) {
       const w = R.w * (1 + (h1 - 0.5) * P.jitterW * jit);
       const up = mark(u, v, cx - lean * hh, cy - hh, cx + lean * hh, cy + hh, w, c * 13 + r, sd, G.breaks);
       if (up > best) best = up;
-      if (h2 > 0.42) {
+      if (h2 > P.crossChance) {
         const y = cy + (h3 - 0.5) * hh;
-        const cr = mark(u, v, cx - cw * 0.30, y, cx + cw * 0.28, y, w * 0.9, c * 13 + r + 64, sd, G.breaks);
+        const cr = mark(u, v, cx - cw * P.crossLeft, y, cx + cw * P.crossRight, y, w * 0.9, c * 13 + r + 64, sd, G.breaks);
         if (cr > best) best = cr;
       }
     }
@@ -364,7 +364,7 @@ function plateHeight(u, v, gi) {
   h -= Math.pow(tex.fbmTile(u, v, P.pitPeriod, 2, sd + 3), P.pitSharp)
      * (P.corrFloor + G.age * P.corrSpan) * P.pitGain;
   h -= engraving(u, v, gi) * G.cut * P.cutGain;
-  return h * (0.45 + 0.55 * e);
+  return h * (P.edgeFloor + (1 - P.edgeFloor) * e);
 }
 
 /* -------------------------------------------------------------- build ------ */
@@ -408,7 +408,7 @@ export function buildPlaces(){
       const metal = M.metalClean + (M.metalCorroded - M.metalClean) * cor;
       px[i] = 255;
       px[i + 1] = Math.min(1, rough) * 255;
-      px[i + 2] = Math.max(0, metal * (1 - p.line * 0.25)) * 255;
+      px[i + 2] = Math.max(0, metal * (1 - p.line * M.linePolish)) * 255;
       px[i + 3] = 255;
     }), metalRep);
 
@@ -424,11 +424,11 @@ export function buildPlaces(){
   const metal=new THREE.MeshStandardMaterial({color:0xffffff,roughness:M.roughness,metalness:M.metalness,
     map:metalMap,normalMap:metalNormal,roughnessMap:metalWear,metalnessMap:metalWear,dithering:true});
   metal.normalScale.set(M.normalScale,M.normalScale);
-  const dishM=new THREE.MeshStandardMaterial({color:M.dishColour,roughness:M.roughness,metalness:M.metalness,
+  const dishM=new THREE.MeshStandardMaterial({color:M.dishTint,roughness:M.roughness,metalness:M.metalness,
     map:metalMap,normalMap:metalNormal,roughnessMap:metalWear,metalnessMap:metalWear,
     side:THREE.DoubleSide,dithering:true});
-  dishM.normalScale.set(M.normalScale*0.6,M.normalScale*0.6);
-  const shelterM=new THREE.MeshStandardMaterial({color:M.shelterColour,roughness:M.shelterRoughness,
+  dishM.normalScale.set(M.normalScale*M.dishNormalScale,M.normalScale*M.dishNormalScale);
+  const shelterM=new THREE.MeshStandardMaterial({color:M.shelterTint,roughness:M.shelterRoughness,
     metalness:M.shelterMetalness,map:metalMap,normalMap:metalNormal,roughnessMap:metalWear,
     metalnessMap:metalWear,dithering:true});
   shelterM.normalScale.set(M.normalScale,M.normalScale);
@@ -443,8 +443,8 @@ export function buildPlaces(){
       tex.fillPixels(size,(x,y,px,i)=>{
         const u=x/size,v=y/size,cor=plateCorrosion(u,v,gi),gr=engraving(u,v,gi)*G.cut;
         px[i]=clamp01(1-gr*PL.grooveAO-cor*PL.corrAO)*255;
-        px[i+1]=clamp01(PL.grooveRough*gr+(0.52+0.48*cor))*255;
-        px[i+2]=clamp01((1-0.78*cor)*(1-gr*PL.grooveMetal))*255;
+        px[i+1]=clamp01(PL.grooveRough*gr+(PL.roughFloor+PL.roughSpan*cor))*255;
+        px[i+2]=clamp01((1-PL.metalLoss*cor)*(1-gr*PL.grooveMetal))*255;
         px[i+3]=255;
       }),{});
     plateMix.copy(plateClean).lerp(plateOxide,G.age);
