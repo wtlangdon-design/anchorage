@@ -238,6 +238,27 @@
     "tickSpacingDegrees": 10
   },
 
+  "textures": {
+    "_note": "Every texture is drawn in code at load — there are no image files. Sizes are pixels per side: a 512 map costs about 1.4 MB on the graphics card, a 256 map about 350 KB. If the game runs slowly it halves all of these automatically (render.downgrade.textureScale) and redraws them. Setting 'enabled' false turns every generated map off and falls back to plain colours.",
+    "enabled": true,
+    "anisotropy": 4,
+    "sizes": {
+      "suitPanel": 512,
+      "suitFabric": 256,
+      "suitWear": 256,
+      "visor": 256,
+      "ground": 512,
+      "groundNormal": 512,
+      "rock": 256,
+      "rockNormal": 256,
+      "metal": 256,
+      "metalNormal": 256,
+      "plate": 256,
+      "plateNormal": 256,
+      "glare": 256
+    }
+  },
+
   "audio": {
     "_note": "Everything you hear is made from filtered noise at run time — there are no sound files. Gains are 0..1 and they add up, so raising several at once is how you get distortion. The wind is meant to sit under everything and only be noticed when it stops. Mute is V.",
     "masterGain": 0.9,
@@ -321,7 +342,8 @@
       "fpsThreshold": 32,
       "disableShadows": true,
       "grassMultiplier": 0.5,
-      "pixelRatio": 1
+      "pixelRatio": 1,
+      "textureScale": 0.5
     }
   }
 }

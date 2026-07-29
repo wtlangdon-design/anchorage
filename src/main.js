@@ -22,6 +22,7 @@ import * as grass from "./world/grass.js";
 import * as fauna from "./world/fauna.js";
 import * as props from "./world/props.js";
 import * as sound from "./world/sound.js";
+import * as textures from "./world/textures.js";
 import { initGait, poseFor } from "./player/gait.js";
 import * as rig from "./player/rig.js";
 import * as controller from "./player/controller.js";
@@ -83,6 +84,10 @@ function init() {
   // ---- pure cores ----
   initClimate(config.climate);
   initGait(config.gait);
+  // must come before any build: the modules paint their maps as they build.
+  // Textures use their own hash, never the world PRNG, so this cannot disturb
+  // the draw order below.
+  textures.initTextures(THREE, config, { maxAnisotropy: renderer.capabilities.getMaxAnisotropy() });
 
   // ---- module init (no PRNG draws happen here; each just stashes what it needs) ----
   const worldDeps = { THREE, scene, cam, S, rand, fbm, heightAt: terrain.heightAt, dawnX, tempAt };
@@ -226,6 +231,8 @@ function animate() {
         if (dg.disableShadows) renderer.shadowMap.enabled = false;
         grass.applyDowngrade();
         renderer.setPixelRatio(dg.pixelRatio);
+        // redraw every generated map at half size, in place
+        textures.setQuality(dg.textureScale);
       }
     }
   }
