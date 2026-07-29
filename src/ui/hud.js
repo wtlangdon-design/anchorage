@@ -10,6 +10,7 @@
 // an explicit t, so callers here pass S.t.
 
 let config, story, S, manifest, storyMod, dawnX, tempAt, lostAtT;
+let fpsEl = null;
 
 export function initHud(cfg, storyArg, deps){
   config = cfg; story = storyArg;
@@ -18,6 +19,30 @@ export function initHud(cfg, storyArg, deps){
 
   document.getElementById("keys").innerHTML = story.ui.keyHints;
   document.querySelector("#task .hdr span").textContent = story.ui.manifestHeader;
+  fpsEl = document.getElementById("fps");
+}
+
+/* ---------- fps readout (F) ----------
+   A measuring tool, not part of the game: off by default, and it reports the
+   worst frame in each sample window as well as the average, because a steady 58
+   with a 22 in it is a stutter you would otherwise not see. */
+let fpsOn = false, fpsFrames = 0, fpsElapsed = 0, fpsWorst = Infinity;
+export function toggleFps(){
+  fpsOn = !fpsOn;
+  fpsEl.style.display = fpsOn ? "block" : "none";
+  fpsFrames = 0; fpsElapsed = 0; fpsWorst = Infinity;
+  if(!fpsOn) fpsEl.textContent = "";
+}
+export function updateFps(dt){
+  if(!fpsOn) return;
+  fpsFrames++; fpsElapsed += dt;
+  if(dt > 0) fpsWorst = Math.min(fpsWorst, 1 / dt);
+  const window_ = config.render.fpsSampleMs / 1000;
+  if(fpsElapsed >= window_){
+    const avg = fpsFrames / fpsElapsed;
+    fpsEl.textContent = `${avg.toFixed(0)} fps · min ${isFinite(fpsWorst) ? fpsWorst.toFixed(0) : "—"}`;
+    fpsFrames = 0; fpsElapsed = 0; fpsWorst = Infinity;
+  }
 }
 
 /* ---------- shared text helpers (imported by the other ui/game modules) ---------- */

@@ -30,21 +30,30 @@ export function heightAt(x,z){
   return h;
 }
 
+// The ground colour is baked into the mesh here, once, at load. It costs nothing
+// per frame — all of it is vertex data by the time the game is running.
 export function buildTerrain(){
+  const P=config.terrain.palette, D=P.slopeSampleDistance;
   const geo=new THREE.PlaneGeometry(SIZE,SIZE,SEG,SEG);geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position,col=[];
   for(let i=0;i<pos.count;i++){
     const x=pos.getX(i),z=pos.getZ(i),y=heightAt(x,z);pos.setY(i,y);
     // slope: steep ground shows rock, flat ground holds ash
-    const gx=heightAt(x+6,z)-heightAt(x-6,z), gz=heightAt(x,z+6)-heightAt(x,z-6);
-    const slope=Math.min(1,Math.hypot(gx,gz)/9);
-    const dust=fbm(x*.018,z*.018,2)*.5+.5;
-    const fine=fbm(x*.09,z*.09,2)*.5+.5;
-    let r=.150+dust*.070+fine*.030, g=.130+dust*.058+fine*.026, b=.108+dust*.044+fine*.022;
+    const gx=heightAt(x+D,z)-heightAt(x-D,z), gz=heightAt(x,z+D)-heightAt(x,z-D);
+    const slope=Math.min(1,Math.hypot(gx,gz)/P.slopeScale);
+    const dust=fbm(x*P.dustFrequency,z*P.dustFrequency,2)*.5+.5;
+    const fine=fbm(x*P.fineFrequency,z*P.fineFrequency,2)*.5+.5;
+    // one very slow drift across the whole map, so a wide view is not one flat tone
+    const broad=fbm(x*P.broadFrequency+7,z*P.broadFrequency-3,P.broadOctaves)*.5+.5;
+    let r=P.ash[0]+dust*P.dustGain[0]+fine*P.fineGain[0]+broad*P.broadWarm[0];
+    let g=P.ash[1]+dust*P.dustGain[1]+fine*P.fineGain[1]+broad*P.broadWarm[1];
+    let b=P.ash[2]+dust*P.dustGain[2]+fine*P.fineGain[2]+broad*P.broadWarm[2];
     // exposed rock, cooler and darker
-    r=r*(1-slope*.55)+.118*slope; g=g*(1-slope*.55)+.108*slope; b=b*(1-slope*.55)+.104*slope;
-    const hi=Math.min(1,Math.max(0,(y-46)/70));
-    r+=hi*.040;g+=hi*.038;b+=hi*.042;
+    r=r*(1-slope*P.rockBlend)+P.rock[0]*slope;
+    g=g*(1-slope*P.rockBlend)+P.rock[1]*slope;
+    b=b*(1-slope*P.rockBlend)+P.rock[2]*slope;
+    const hi=Math.min(1,Math.max(0,(y-P.highStart)/P.highRange));
+    r+=hi*P.highLift[0];g+=hi*P.highLift[1];b+=hi*P.highLift[2];
     col.push(r,g,b);
   }
   geo.setAttribute("color",new THREE.Float32BufferAttribute(col,3));

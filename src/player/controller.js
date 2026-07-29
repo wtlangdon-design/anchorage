@@ -30,6 +30,8 @@ export function initController(cfg, st, deps){
     const k=e.key.toLowerCase();
     if(["w","a","s","d"," ","arrowup","arrowdown","arrowleft","arrowright"].includes(k))e.preventDefault();
     keys[k]=true;
+    // the fps readout is a measuring tool, so it toggles even with an overlay up
+    if(k==="f"){actions.toggleFps();return}
     if(document.querySelector(".overlay.on")){if(k==="escape")actions.closeOverlay();return}
     if(k==="e")actions.interact();
     if(k==="l")actions.openLog();

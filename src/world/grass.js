@@ -25,11 +25,17 @@ function bladeGeometry(){
   g.setIndex(idx);g.computeVertexNormals();return g;
 }
 
+// GLSL wants "1.0", never "1" — config numbers go into the shader through these.
+const f = n => Number(n).toFixed(5);
+const v3 = a => `vec3(${f(a[0])},${f(a[1])},${f(a[2])})`;
+
 export function buildGrass(){
-  const mat=new THREE.MeshLambertMaterial({color:0x8fae5e,side:THREE.DoubleSide});
+  const C=config.grass.colour;
+  const mat=new THREE.MeshLambertMaterial({color:Number(C.material),side:THREE.DoubleSide});
   mat.onBeforeCompile=sh=>{sh.uniforms.uT={value:0};
-    sh.vertexShader="uniform float uT;\n"+sh.vertexShader.replace("#include <begin_vertex>",
+    sh.vertexShader="uniform float uT;\nvarying float vBladeY;\n"+sh.vertexShader.replace("#include <begin_vertex>",
     `#include <begin_vertex>
+     vBladeY=position.y;
      float bk=pow(max(transformed.y,0.0),2.0);
      #ifdef USE_INSTANCING
        float ph=instanceMatrix[3][0]*0.11+instanceMatrix[3][2]*0.083;
@@ -38,6 +44,11 @@ export function buildGrass(){
      #endif
      transformed.x+=sin(uT*1.9+ph)*0.16*bk;
      transformed.z+=cos(uT*1.3+ph*1.4)*0.10*bk;`);
+    // root-to-tip shading. The bottom of a blade sits in the shade of the blades
+    // around it; without this the band reads as flat green paper from a distance.
+    sh.fragmentShader="varying float vBladeY;\n"+sh.fragmentShader.replace("#include <color_fragment>",
+    `#include <color_fragment>
+     diffuseColor.rgb*=mix(${v3(C.root)},vec3(1.0),clamp(vBladeY/max(${f(C.rootHeight)},0.001),0.0,1.0));`);
     gShader=sh};
   grass=new THREE.InstancedMesh(bladeGeometry(),mat,GRASS_MAX);
   grass.frustumCulled=false;scene.add(grass);refillGrass(S.t);
@@ -58,7 +69,9 @@ function refillGrass(t){
     const s=config.grass.minScale+rand()*config.grass.scaleRange;
     sc.set(s*(.85+rand()*.3),s*(.8+rand()*.55),s);                  // TODO(lead): scale-variance .85+rand*.3 / .8+rand*.55 not in config
     m.compose(v,q,sc);grass.setMatrixAt(n,m);
-    if(grass.setColorAt){const k=.72+rand()*.5;col.setRGB(.56*k,.70*k,.36*k);grass.setColorAt(n,col)}   // TODO(lead): colour .72+rand*.5 & setRGB coeffs not in config
+    // exactly one draw here, as in the reference — the blade tint jitter
+    if(grass.setColorAt){const C=config.grass.colour,k=C.jitterBase+rand()*C.jitterRange;
+      col.setRGB(C.tint[0]*k,C.tint[1]*k,C.tint[2]*k);grass.setColorAt(n,col)}
     n++;
   }
   grass.count=n;grass.instanceMatrix.needsUpdate=true;

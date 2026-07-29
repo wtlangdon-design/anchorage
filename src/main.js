@@ -134,7 +134,8 @@ function init() {
       openChart: chart.openChart,
       transmit: endings.transmit,
       closeOverlay: panels.closeOverlay,
-      cancelSurvey: panels.cancelSurvey
+      cancelSurvey: panels.cancelSurvey,
+      toggleFps: hud.toggleFps
     }
   });
 
@@ -161,15 +162,18 @@ function init() {
   sky.buildGlare();                       // no draws
 
   // ---- lights (ref 367-375) ----
-  sun = new THREE.DirectionalLight(0xffcf9a, config.render.sunIntensity);
+  // one warm key (the fixed low sun) against two cool fills — that separation is
+  // what gives the ground shape; matching their colour flattens it.
+  sun = new THREE.DirectionalLight(Number(config.render.sunColour), config.render.sunIntensity);
   sun.castShadow = true; sun.shadow.mapSize.set(config.render.shadowMapSize, config.render.shadowMapSize);
   const d = config.render.shadowCameraExtent;
   sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
   sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
   sun.shadow.camera.near = 1; sun.shadow.camera.far = 1500; sun.shadow.bias = config.render.shadowBias;
   scene.add(sun); scene.add(sun.target);
-  scene.add(new THREE.HemisphereLight(0x6e86ab, 0x2b2018, config.render.hemisphereIntensity));
-  const bounce = new THREE.DirectionalLight(0x5f7ba8, config.render.bounceIntensity);
+  scene.add(new THREE.HemisphereLight(Number(config.render.hemisphereSky), Number(config.render.hemisphereGround),
+    config.render.hemisphereIntensity));
+  const bounce = new THREE.DirectionalLight(Number(config.render.bounceColour), config.render.bounceIntensity);
   bounce.position.set(-600, 300, 300); scene.add(bounce);
 
   addEventListener("resize", () => {
@@ -250,6 +254,7 @@ function animate() {
   sky.updateDust(S.px, S.pz, gy, S.t);       // ref 1195-1196
   fauna.updateStriders(S.t);                 // ref 1197
 
+  hud.updateFps(dt);                         // measuring tool, toggled with F
   hud.updateGauges();                        // ref 1199
   hud.updateReadouts(gy);                    // ref 1200-1207
   hud.updateHeat();                          // ref 1208

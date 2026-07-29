@@ -14,18 +14,31 @@ export function initSky(cfg, story, deps){
   SUNDIR = { x:config.world.sunDirection.x, z:config.world.sunDirection.z };
 }
 
+// GLSL wants "1.0", never "1" — every number that goes into a shader string is
+// formatted through these, so a whole number in config.json cannot break the build.
+const f = n => Number(n).toFixed(5);
+const v3 = a => `vec3(${f(a[0])},${f(a[1])},${f(a[2])})`;
+
 export function buildSky(){
+  const K = config.sky;
   const mat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
     uniforms:{sd:{value:new THREE.Vector3(SUNDIR.x,.055,SUNDIR.z).normalize()}},
     vertexShader:`varying vec3 vP;void main(){vP=normalize(position);
       gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
     fragmentShader:`varying vec3 vP;uniform vec3 sd;
-      void main(){float up=clamp(vP.y*1.55+.05,0.,1.);
-      float s=clamp(dot(normalize(vP),sd),0.,1.);
-      vec3 c=mix(mix(vec3(.42,.375,.33),vec3(.13,.148,.19),smoothstep(0.,.30,up)),
-                 vec3(.028,.042,.072),smoothstep(.26,.92,up));
-      c+=vec3(1.,.78,.44)*pow(s,5.)*(1.-up*.70);
-      c+=vec3(.90,.52,.26)*pow(s,1.5)*.46*(1.-up*.86);
+      void main(){
+      vec3 dir=normalize(vP);
+      float up=clamp(dir.y*${f(K.upScale)}+${f(K.upBias)},0.,1.);
+      float s=clamp(dot(dir,sd),0.,1.);
+      vec3 c=mix(mix(${v3(K.horizon)},${v3(K.mid)},smoothstep(0.,.30,up)),
+                 ${v3(K.zenith)},smoothstep(.26,.92,up));
+      // the air thickens toward the horizon. this colour is the fog colour, which
+      // is what makes the ground fade into the sky instead of ending at a line.
+      c=mix(c,${v3(K.haze)},pow(1.-up,${f(K.hazePower)})*${f(K.hazeAmount)});
+      c+=${v3(K.sunCore)}*pow(s,5.)*(1.-up*.70);
+      c+=${v3(K.sunWash)}*pow(s,1.5)*.46*(1.-up*.86);
+      // a gradient this smooth bands on 8-bit displays; one pixel of noise hides it
+      c+=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)*${f(K.dither)};
       gl_FragColor=vec4(c,1.);}`});
   scene.add(new THREE.Mesh(new THREE.SphereGeometry(4800,32,20),mat));
   const disc=new THREE.Mesh(new THREE.CircleGeometry(78,36),

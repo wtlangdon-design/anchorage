@@ -55,6 +55,8 @@ canvas{display:block}
 #pbar{height:3px;background:rgba(143,198,212,.18);margin-top:7px;width:190px;position:relative;display:none}
 #pbar i{position:absolute;inset:0 auto 0 0;background:var(--dawnlight);width:0}
 #keys{right:14px;top:14px;font-size:9px;letter-spacing:.12em;opacity:.34;line-height:1.8;text-align:right}
+#fps{position:absolute;right:14px;top:104px;font-size:10px;letter-spacing:.1em;opacity:.5;
+  text-align:right;display:none;font-variant-numeric:tabular-nums;color:var(--signal)}
 #toast{position:fixed;left:50%;bottom:158px;transform:translateX(-50%);z-index:6;
   font-family:var(--serif);font-size:18px;font-style:italic;color:var(--dawnlight);
   opacity:0;transition:opacity .6s;text-align:center;max-width:660px;text-shadow:0 2px 16px #000;pointer-events:none}
@@ -135,6 +137,7 @@ button.danger:hover{background:var(--bad);color:#05070B}
     W A S D — WALK &nbsp; SHIFT — SPRINT<br>DRAG — LOOK &nbsp; C — VIEW<br>
     E — SURVEY / READ<br>M — CHART &nbsp; L — LOGBOOK<br>T — TRANSMIT
   </div>
+  <div id="fps"></div>
 </div>
 <div id="visor"></div>
 <div id="heat"></div>
