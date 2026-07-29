@@ -51,9 +51,13 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
   ok("camp/grave/shelter positions scale",
      near(c.camps.c1.x, base.camps.c1.x * s) && near(c.graves.g5.z, base.graves.g5.z * s) && near(c.shelter.x, base.shelter.x * s));
   ok("spawn scales", near(c.player.spawn.x, base.player.spawn.x * s));
-  ok("ridge and basin scale in position and extent",
-     near(c.terrain.ridge.x, base.terrain.ridge.x * s) && near(c.terrain.ridge.length, base.terrain.ridge.length * s)
-     && near(c.terrain.basin.radius, base.terrain.basin.radius * s));
+  ok("the canyon scales in every horizontal dimension",
+     near(c.terrain.canyon.length, base.terrain.canyon.length * s)
+     && near(c.terrain.canyon.width, base.terrain.canyon.width * s)
+     && near(c.terrain.canyon.wallRun, base.terrain.canyon.wallRun * s));
+  ok("canyon wall HEIGHT scales too, so the room stays a room",
+     near(c.terrain.canyon.wallHeight, base.terrain.canyon.wallHeight * s)
+     && near(c.terrain.canyon.endHeight, base.terrain.canyon.endHeight * s));
   ok("den spread scales", near(c.ashwaiters.denSpreadX.range, base.ashwaiters.denSpreadX.range * s));
   ok("strider spread and herd z scale",
      near(c.striders.spreadX, base.striders.spreadX * s) && near(c.striders.herdZ, base.striders.herdZ * s));
@@ -68,7 +72,7 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
      c.player.walkSpeed === base.player.walkSpeed && c.player.sprintSpeed === base.player.sprintSpeed);
   ok("survey durations are untouched", c.sites.soil.duration === base.sites.soil.duration);
   ok("vertical scale is untouched",
-     c.terrain.baseAmplitude === base.terrain.baseAmplitude && c.terrain.ridge.height === base.terrain.ridge.height);
+     c.terrain.baseAmplitude === base.terrain.baseAmplitude);
 }
 
 // 4. THE INVARIANT THAT MATTERS: because dawn0 and dawnVelocity scale with the
@@ -111,6 +115,22 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
   ok("grass band scales with the world (keeps refillGrass draw-invariant)",
      near(ratio(x => x.grass.spawnWidth), s) && near(ratio(x => x.grass.falloffSigma), s)
      && near(ratio(x => x.grass.bandOffset), s) && near(ratio(x => x.world.size), s));
+}
+
+// 6. The canyon has to stay a room at every scale. The wall's steepest grade is
+//    1.5*crest/wallRun at the LOWEST crest; if that ever falls to the climb limit
+//    the player walks out. Both terms scale together, so this holds at any scale —
+//    but it stops holding the moment someone raises crestVary or wallRun.
+{
+  for (const scale of [1, 0.55, 2]) {
+    const c = load(); c.world.scale = scale; applyWorldScale(c);
+    const cy = c.terrain.canyon;
+    const steepest = 1.5 * cy.wallHeight * (1 - cy.crestVary) / cy.wallRun;
+    ok(`at scale ${scale} the wall stays unclimbable (grade is scale-invariant)`, steepest > c.player.maxClimbGrade * 1.2,
+       `steepest wall grade ${steepest.toFixed(2)} vs climb limit ${c.player.maxClimbGrade}`);
+    ok(`at scale ${scale} the wall line is straight (a meander is a ramp out)`, cy.meanderAmp === 0,
+       `meanderAmp ${cy.meanderAmp}`);
+  }
 }
 
 if (failures) { console.error(`\nscale.test.js: ${failures} failure(s)`); process.exit(1); }

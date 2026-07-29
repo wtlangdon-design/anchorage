@@ -38,7 +38,7 @@
 const SCALED = [
   "world.size", "world.chartCell",
 
-  "player.spawn.x", "player.spawn.z", "player.boundaryMargin",
+  "player.spawn.x", "player.spawn.z",
 
   // the six findings — positions only. Their radii are how close you must stand,
   // which is a property of the surveyor, not of the map.
@@ -54,11 +54,19 @@ const SCALED = [
 
   "shelter.x", "shelter.z",
 
-  // Ridge and basin: position AND horizontal extent. Scaling the position but not
-  // the length would leave the ridge spanning half a smaller map — the analytic
-  // equivalent of the inverse-frequency rule applied to the noise.
-  "terrain.ridge.x", "terrain.ridge.z", "terrain.ridge.length", "terrain.ridge.width",
-  "terrain.basin.x", "terrain.basin.z", "terrain.basin.radius",
+  // The canyon: every horizontal dimension of it, so scale 1 is the nominal
+  // 600 x 250 and any other scale is the same room at a different size. Wall and
+  // end HEIGHT are vertical and stay put, so a smaller canyon is a deeper one.
+  // The canyon scales as a unit — HEIGHT INCLUDED, which is the one deliberate
+  // exception to "vertical never scales". The wall's steepest grade is
+  // 1.5*crest/wallRun, so scaling the run without the height flattens it: at
+  // scale 2 the walls fell to grade 0.52 against a 0.8 climb limit and the room
+  // stopped being a room. Scaling both keeps that ratio, and therefore the
+  // containment, identical at every scale.
+  "terrain.canyon.length", "terrain.canyon.width",
+  "terrain.canyon.wallRun", "terrain.canyon.wallHeight",
+  "terrain.canyon.endRun", "terrain.canyon.endHeight",
+  "terrain.canyon.meanderAmp",
 
   // backdrop hills sit outside the map and must stay outside it
   "terrain.farHills.minDistance", "terrain.farHills.distanceRange",
@@ -82,6 +90,7 @@ const SCALED = [
 const INVERSE = [
   "terrain.baseFrequency", "terrain.detailFrequency",
   "terrain.palette.dustFrequency", "terrain.palette.fineFrequency", "terrain.palette.broadFrequency",
+  "terrain.canyon.meanderFrequency", "terrain.canyon.crestFrequency", "terrain.canyon.floorFrequency",
   // k is the day-side gradient in degrees per metre. nightSlope is exactly the
   // same quantity on the cold side, so it has to steepen with it — otherwise a
   // shrunk world reads the same temperature in the light and 1/scale times colder

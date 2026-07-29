@@ -90,28 +90,69 @@ function groundRoughness(u, v) {
 }
 
 let THREE, scene, rand, fbm, config;
-let SIZE, SEG, RIDGE, BASIN;
+let SIZE, SEG, CY;
 
 export function initTerrain(cfg, story, deps){
   THREE = deps.THREE; scene = deps.scene; rand = deps.rand; fbm = deps.fbm;
   config = cfg;
   SIZE = config.world.size; SEG = config.world.segments;
-  const r = config.terrain.ridge;
-  RIDGE = { x:r.x, z:r.z, len:r.length, ang:r.angle, h:r.height, w:r.width, falloffPower:r.falloffPower };
-  const b = config.terrain.basin;
-  BASIN = { x:b.x, z:b.z, r:b.radius, d:b.depth };
+  const c = config.terrain.canyon;
+  // precomputed once so heightAt does no config lookups and no divisions
+  CY = {
+    halfW: c.width / 2, halfL: c.length / 2,
+    wallRun: c.wallRun, invWallRun: 1 / Math.max(1e-6, c.wallRun),
+    wallH: c.wallHeight, crestVary: c.crestVary, crestF: c.crestFrequency,
+    meanderA: c.meanderAmp, meanderF: c.meanderFrequency,
+    endRun: c.endRun, invEndRun: 1 / Math.max(1e-6, c.endRun), endH: c.endHeight,
+    floorF: c.floorFrequency, floorRelief: c.floorRelief, floorOct: c.floorOctaves
+  };
 }
 
-function ridgeH(x,z){const dx=x-RIDGE.x,dz=z-RIDGE.z,ca=Math.cos(RIDGE.ang),sa=Math.sin(RIDGE.ang);
-  const al=dx*ca+dz*sa,ac=-dx*sa+dz*ca;
-  return RIDGE.h*Math.max(0,1-Math.pow(Math.abs(al)/RIDGE.len,RIDGE.falloffPower))*Math.exp(-(ac*ac)/(2*RIDGE.w*RIDGE.w))}
+const smooth = t => t * t * (3 - 2 * t);
+const sat = t => t < 0 ? 0 : t > 1 ? 1 : t;
 
-export function heightAt(x,z){
-  let h=fbm(x*config.terrain.baseFrequency,z*config.terrain.baseFrequency,config.terrain.octaves)*config.terrain.baseAmplitude
-    +fbm(x*config.terrain.detailFrequency+config.terrain.detailOffset.x,z*config.terrain.detailFrequency+config.terrain.detailOffset.z,config.terrain.detailOctaves)*config.terrain.detailAmplitude
-    +ridgeH(x,z);
-  const bd=Math.hypot(x-BASIN.x,z-BASIN.z);
-  h-=BASIN.d*Math.exp(-(bd*bd)/(2*BASIN.r*BASIN.r));
+// The canyon.
+//
+// It runs north-south — along z — because the dawn line sweeps west along x, so
+// this way the heat crosses the canyon's 250 m width instead of running the length
+// of it. That is the whole reason for the orientation: it makes the west wall the
+// last cover on the map, since the lethal edge arrives from the east (low x) and
+// the sun sits at +x, throwing that wall's shadow back across the floor.
+//
+// Called thousands of times a frame, so it is five noise samples and no more:
+// three for the floor, two for the crest line. Everything else is arithmetic.
+export function heightAt(x, z){
+  // The wall line is STRAIGHT in x, and it has to be. A meandering wall is a ramp:
+  // stand at a fixed x on the floor and walk along z, and the wall slides under you
+  // and lifts you out of the canyon at a grade of about 0.25 — gentle enough to
+  // walk. Blocking that would need a meander amplitude near 84 m in a 250 m
+  // canyon. So the canyon gets its shape from the crest height instead, which can
+  // vary freely because it never changes where the steep part starts.
+  const cx = CY.meanderA * Math.sin(z * CY.meanderF);   // 0 by default; see config
+  const ax = Math.abs(x - cx);
+
+  // wall: flat floor out to halfW, then up over wallRun to the crest
+  const w = smooth(sat((ax - CY.halfW) * CY.invWallRun));
+  // The crest is not level — it rises and falls along the canyon, which is what
+  // gives the shadow it throws a shape instead of a straight edge.
+  //
+  // fbm() here is the WORLD generator's fbm, which is SIGNED and roughly -1..1 —
+  // not textures.js's fbmTile, which is 0..1. Treating it as 0..1 collapsed the
+  // crest to about 6 m at z=72 and opened a walkable ramp straight out of the
+  // canyon. It is clamped as well as centred so that the lowest possible crest is
+  // wallHeight*(1-crestVary), which is what makes the wall unclimbable by
+  // construction rather than by luck.
+  const cv = fbm(0.37, z * CY.crestF, 2);
+  const crest = CY.wallH * (1 + CY.crestVary * (cv < -1 ? -1 : cv > 1 ? 1 : cv));
+  let h = w * crest;
+
+  // both ends close, so the canyon is a room
+  const e = smooth(sat((Math.abs(z) - CY.halfL) * CY.invEndRun));
+  const end = e * CY.endH;
+  if(end > h) h = end;
+
+  // floor relief, fading out as the wall takes over
+  h += fbm(x * CY.floorF, z * CY.floorF, CY.floorOct) * CY.floorRelief * (1 - w * 0.75);
   return h;
 }
 

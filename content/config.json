@@ -1,64 +1,140 @@
 {
   "_note": "Every tunable number in the game. If a number appears in a .js file, it belongs here instead. Changing anything under 'climate', 'player.speed', or any site x/z means re-running the balance check.",
-
   "world": {
-    "_scaleNote": "One number for the size of the whole world. 1 is the original 3400 m map; 0.55 shrinks it to about 1870 m across, which puts the same seventeen places closer together without moving any of them relative to each other. Everything measured in metres multiplies by this at load — sites, camps, graves, the dawn line and its speed, the grass band, the herd. Terrain detail gets finer at the same rate so the hills stay the same size relative to the map. Deliberately NOT scaled: how fast you walk, and how close you must stand to survey something — you are the same size whatever the world does.",
-    "scale": 0.55,
-    "size": 3400,
+    "_scaleNote": "One number for the size of the whole world. 1 is the nominal canyon: 600 m from end to end, 250 m across. Everything measured in metres multiplies by this at load. Deliberately NOT scaled: how fast you walk, how close you must stand to survey something, and anything vertical \u2014 you are the same size whatever the world does.",
+    "scale": 1.0,
+    "size": 900,
     "segments": 210,
-    "chartCell": 26,
-    "sunDirection": { "x": 1, "z": 0 }
+    "chartCell": 8,
+    "sunDirection": {
+      "x": 1,
+      "z": 0
+    }
   },
-
   "terrain": {
     "noiseSeed": 7731,
     "baseFrequency": 0.0008,
     "baseAmplitude": 44,
     "detailFrequency": 0.0038,
     "detailAmplitude": 7,
-    "detailOffset": { "x": 30, "z": -11 },
+    "detailOffset": {
+      "x": 30,
+      "z": -11
+    },
     "octaves": 5,
     "detailOctaves": 3,
-    "ridge": { "x": -620, "z": -780, "length": 950, "angle": 0.62, "height": 130, "width": 200, "falloffPower": 2.2 },
-    "basin": { "x": 150, "z": 900, "radius": 300, "depth": 28 },
-    "farHills": { "count": 18, "minDistance": 2100, "distanceRange": 1600, "minHeight": 90, "heightRange": 240, "minRadius": 280, "radiusRange": 440 },
-    "scatterRocks": { "count": 250, "minScale": 0.6, "scaleRange": 3, "spreadFraction": 0.92 },
-
+    "farHills": {
+      "count": 18,
+      "minDistance": 950,
+      "distanceRange": 700,
+      "minHeight": 90,
+      "heightRange": 240,
+      "minRadius": 150,
+      "radiusRange": 260
+    },
+    "scatterRocks": {
+      "count": 180,
+      "minScale": 0.6,
+      "scaleRange": 3,
+      "spreadFraction": 0.92
+    },
     "palette": {
-      "_note": "Ground colour, baked into the terrain mesh once at load. Costs nothing at runtime — change these freely. Each triple is r,g,b in 0..1. 'ash' is the flat ground, 'rock' is what steep slopes show, 'broadWarm' drifts the tone slowly across the map so large areas are not one flat colour.",
-      "ash": [0.163, 0.138, 0.110],
+      "_note": "Ground colour, baked into the terrain mesh once at load. Costs nothing at runtime \u2014 change these freely. Each triple is r,g,b in 0..1. 'ash' is the flat ground, 'rock' is what steep slopes show, 'broadWarm' drifts the tone slowly across the map so large areas are not one flat colour.",
+      "ash": [
+        0.163,
+        0.138,
+        0.11
+      ],
       "dustFrequency": 0.018,
-      "dustGain": [0.070, 0.058, 0.044],
+      "dustGain": [
+        0.07,
+        0.058,
+        0.044
+      ],
       "fineFrequency": 0.09,
-      "fineGain": [0.030, 0.026, 0.022],
+      "fineGain": [
+        0.03,
+        0.026,
+        0.022
+      ],
       "broadFrequency": 0.0022,
       "broadOctaves": 2,
-      "broadWarm": [0.034, 0.020, 0.004],
-      "rock": [0.101, 0.098, 0.101],
+      "broadWarm": [
+        0.034,
+        0.02,
+        0.004
+      ],
+      "rock": [
+        0.101,
+        0.098,
+        0.101
+      ],
       "rockBlend": 0.62,
       "slopeSampleDistance": 6,
       "slopeScale": 9,
       "highStart": 46,
       "highRange": 70,
-      "highLift": [0.040, 0.038, 0.042]
+      "highLift": [
+        0.04,
+        0.038,
+        0.042
+      ]
+    },
+    "canyon": {
+      "_note": "The canyon. It runs north-south (along z) so the dawn line, which sweeps west along x, crosses its width rather than its length. length/width are the floor; wallRun is how far the wall takes to reach wallHeight, so a short run is a cliff. Vertical numbers are not touched by world.scale. TWO NUMBERS KEEP YOU IN: 1.5*wallHeight*(1-crestVary)/wallRun must stay above player.maxClimbGrade, or the wall becomes climbable. And meanderAmp must stay 0 \u2014 a wall line that wanders in x is a diagonal ramp out of the canyon, because the wall slides under you as you walk along z.",
+      "length": 600,
+      "width": 250,
+      "wallRun": 62,
+      "wallHeight": 58,
+      "crestVary": 0.26,
+      "crestFrequency": 0.0042,
+      "meanderAmp": 0,
+      "meanderFrequency": 0.0068,
+      "endRun": 54,
+      "endHeight": 64,
+      "floorFrequency": 0.011,
+      "floorRelief": 3.4,
+      "floorOctaves": 3
     }
   },
-
   "sky": {
-    "_note": "The sky gradient, baked into the sky shader at load. Triples are r,g,b in 0..1. 'haze' should stay close to render.fogColour — that match is what makes the ground fade into the sky instead of ending at a visible line. 'dither' hides banding in the gradient on 8-bit screens; set it to 0 to switch that off.",
-    "horizon": [0.44, 0.385, 0.330],
-    "mid": [0.130, 0.148, 0.190],
-    "zenith": [0.026, 0.038, 0.068],
-    "haze": [0.435, 0.378, 0.322],
+    "_note": "The sky gradient, baked into the sky shader at load. Triples are r,g,b in 0..1. 'haze' should stay close to render.fogColour \u2014 that match is what makes the ground fade into the sky instead of ending at a visible line. 'dither' hides banding in the gradient on 8-bit screens; set it to 0 to switch that off.",
+    "horizon": [
+      0.44,
+      0.385,
+      0.33
+    ],
+    "mid": [
+      0.13,
+      0.148,
+      0.19
+    ],
+    "zenith": [
+      0.026,
+      0.038,
+      0.068
+    ],
+    "haze": [
+      0.435,
+      0.378,
+      0.322
+    ],
     "hazeAmount": 0.34,
     "hazePower": 3.0,
-    "sunCore": [1.0, 0.78, 0.44],
-    "sunWash": [0.90, 0.52, 0.26],
+    "sunCore": [
+      1.0,
+      0.78,
+      0.44
+    ],
+    "sunWash": [
+      0.9,
+      0.52,
+      0.26
+    ],
     "dither": 0.0045,
     "upScale": 1.55,
     "upBias": 0.05
   },
-
   "climate": {
     "_note": "The whole clock. dawn0 is where the dawn line starts in metres; dawnVelocity is metres per second. lethal is the temperature that kills a site. A site at x becomes lost at (x + (lethal + 12) / k - dawn0) / dawnVelocity seconds.",
     "dawn0": -900,
@@ -71,14 +147,15 @@
     "maxTemp": 78,
     "lethalMargin": 12
   },
-
   "player": {
-    "spawn": { "x": -900, "z": 430 },
+    "spawn": {
+      "x": 4,
+      "z": 278
+    },
     "walkSpeed": 4.2,
     "sprintSpeed": 9.0,
     "acceleration": 0.16,
     "deceleration": 0.22,
-    "boundaryMargin": 40,
     "bobRateWalk": 8.5,
     "bobRateRun": 13,
     "camera": {
@@ -87,22 +164,16 @@
       "far": 9000,
       "startYaw": 3.14159265,
       "startPitch": 0.16,
-      "startDistance": 6.2,
-      "minDistance": 2.6,
-      "maxDistance": 15,
       "minPitch": -0.42,
       "maxPitch": 0.8,
       "lookSensitivity": 0.005,
       "pitchSensitivity": 0.004,
-      "zoomSensitivity": 0.01,
       "autoTurnRate": 1.3,
-      "firstPersonEyeHeight": 1.74,
-      "thirdPersonLookHeight": 1.45,
-      "thirdPersonMinClearance": 1.5,
-      "thirdPersonHeightOffset": 1.85
-    }
+      "firstPersonEyeHeight": 1.74
+    },
+    "_climbNote": "maxClimbGrade is the steepest ground the suit will take, as a rise over run: 0.8 is about 39 degrees. The canyon walls are far steeper than this, which is what keeps you in the canyon \u2014 there is no invisible wall anywhere in this game.",
+    "maxClimbGrade": 0.8
   },
-
   "gait": {
     "_note": "The elbow base bend of 0.30 rad is load-bearing. A straight arm reads as a robot. gait.test.js asserts it never goes below this.",
     "runThreshold": 6,
@@ -124,7 +195,6 @@
     "torsoLiftAmount": 0.035,
     "bodyTurnRate": 9
   },
-
   "suit": {
     "waterDrainBase": 0.04,
     "waterDrainPerDegreeAbove": 0.011,
@@ -142,22 +212,29 @@
     "gaugeWarnBelow": 38,
     "gaugeBadBelow": 18
   },
-
   "grass": {
-    "maxBlades": 19000,
-    "bandOffset": -300,
-    "spawnWidth": 1500,
-    "falloffSigma": 470,
-    "refillThreshold": 110,
+    "maxBlades": 15000,
+    "bandOffset": -110,
+    "spawnWidth": 560,
+    "falloffSigma": 190,
+    "refillThreshold": 40,
     "minScale": 0.34,
     "scaleRange": 0.46,
     "colour": {
       "_note": "Blade colour. 'tint' is the per-blade base (multiplied by a random 0.72-1.22 so no two blades match); 'root' is what the bottom of each blade is multiplied by, which is what gives the band depth instead of reading as flat green paper. 'rootHeight' is how far up the blade the root colour has faded out (0..1).",
       "material": "0x8fae5e",
-      "tint": [0.50, 0.60, 0.34],
+      "tint": [
+        0.5,
+        0.6,
+        0.34
+      ],
       "jitterBase": 0.72,
       "jitterRange": 0.5,
-      "root": [0.52, 0.50, 0.40],
+      "root": [
+        0.52,
+        0.5,
+        0.4
+      ],
       "rootHeight": 0.55
     },
     "windSpeedX": 1.9,
@@ -165,25 +242,30 @@
     "windAmplitudeX": 0.16,
     "windAmplitudeZ": 0.1
   },
-
   "striders": {
-    "count": 150,
-    "bandOffset": -230,
-    "herdZ": -1050,
-    "spreadX": 340,
-    "zStart": -1700,
-    "zRange": 1400,
+    "count": 90,
+    "bandOffset": -120,
+    "herdZ": -430,
+    "spreadX": 300,
+    "zStart": -520,
+    "zRange": 175,
     "bobRate": 0.85,
     "bobAmplitude": 0.42,
-    "audibleRange": 2400,
-    "closeRange": 650
+    "audibleRange": 900,
+    "closeRange": 320,
+    "_note": "The migration crosses the plateau beyond the north rim, not the canyon floor. herdZ/zStart/zRange are out past the end of the canyon; the animals are fifteen metres tall, so from the floor you see them over the rim before you hear where they are."
   },
-
   "ashwaiters": {
     "_note": "Currently a damage radius, not a creature. Known issue 2 in HANDOFF.",
-    "denCount": 26,
-    "denSpreadX": { "min": -1600, "range": 2700 },
-    "denSpreadZ": { "min": -1500, "range": 3100 },
+    "denCount": 14,
+    "denSpreadX": {
+      "min": -118,
+      "range": 236
+    },
+    "denSpreadZ": {
+      "min": -292,
+      "range": 584
+    },
     "activeAboveTemp": 34,
     "damageRadius": 9,
     "damageRate": 13,
@@ -191,55 +273,124 @@
     "soundNullRadius": 75,
     "soundNullThreshold": 0.35
   },
-
   "sites": {
     "_note": "The six findings. Prose for each lives in story.json under the same id. duration is seconds of holding still to complete the survey.",
-    "soil":   { "x": -1300, "z": -250,  "radius": 26,  "duration": 3.2 },
-    "water":  { "x": -1000, "z": 430,   "radius": 24,  "duration": 2.8 },
-    "rad":    { "x": -620,  "z": -780,  "radius": 48,  "duration": 3.0 },
-    "bio":    { "x": 0,     "z": -1050, "radius": 130, "duration": 3.6, "followsBand": true },
-    "site":   { "x": 150,   "z": 900,   "radius": 70,  "duration": 4.0 },
-    "season": { "x": 430,   "z": -560,  "radius": 30,  "duration": 3.2 }
+    "soil": {
+      "x": -60,
+      "z": 245,
+      "radius": 26,
+      "duration": 3.2
+    },
+    "water": {
+      "x": 35,
+      "z": 178,
+      "radius": 24,
+      "duration": 2.8
+    },
+    "rad": {
+      "x": -86,
+      "z": 58,
+      "radius": 48,
+      "duration": 3.0
+    },
+    "bio": {
+      "x": 0,
+      "z": -248,
+      "radius": 130,
+      "duration": 3.6,
+      "followsBand": true
+    },
+    "site": {
+      "x": 12,
+      "z": -38,
+      "radius": 70,
+      "duration": 4.0
+    },
+    "season": {
+      "x": 94,
+      "z": -158,
+      "radius": 30,
+      "duration": 3.2
+    }
   },
-
   "camps": {
     "_note": "The Meridian chain. Each camp is further north than the last. 'gives' names the site it answers from their archive, or null.",
-    "c1": { "x": -1200, "z": -1150, "radius": 30, "gives": "soil" },
-    "c2": { "x": -600,  "z": -450,  "radius": 30, "gives": "season" },
-    "c3": { "x": -150,  "z": 200,   "radius": 30, "gives": "rad" },
-    "c4": { "x": 250,   "z": 850,   "radius": 30, "gives": "water" },
-    "c5": { "x": 650,   "z": 1350,  "radius": 34, "gives": null }
+    "c1": {
+      "x": -42,
+      "z": 256,
+      "radius": 30,
+      "gives": "soil"
+    },
+    "c2": {
+      "x": 26,
+      "z": 132,
+      "radius": 30,
+      "gives": "season"
+    },
+    "c3": {
+      "x": -16,
+      "z": 2,
+      "radius": 30,
+      "gives": "rad"
+    },
+    "c4": {
+      "x": 46,
+      "z": -134,
+      "radius": 30,
+      "gives": "water"
+    },
+    "c5": {
+      "x": -30,
+      "z": -250,
+      "radius": 34,
+      "gives": null
+    }
   },
-
   "graves": {
     "_note": "Never marked on the compass or the chart. Finding them is the discovery.",
-    "g1": { "x": -1050, "z": -820,  "radius": 16 },
-    "g2": { "x": -320,  "z": -90,   "radius": 16 },
-    "g3": { "x": 190,   "z": 560,   "radius": 16 },
-    "g4": { "x": 520,   "z": 1100,  "radius": 16 },
-    "g5": { "x": 760,   "z": 1420,  "radius": 18 }
+    "g1": {
+      "x": -76,
+      "z": 202,
+      "radius": 16
+    },
+    "g2": {
+      "x": 58,
+      "z": 74,
+      "radius": 16
+    },
+    "g3": {
+      "x": -58,
+      "z": -62,
+      "radius": 16
+    },
+    "g4": {
+      "x": 70,
+      "z": -188,
+      "radius": 16
+    },
+    "g5": {
+      "x": -54,
+      "z": -276,
+      "radius": 18
+    }
   },
-
   "shelter": {
     "_note": "The sixth camp. Only appears on the compass after camp five is read, and then only as '?'.",
-    "x": 1150,
-    "z": 1560,
+    "x": 22,
+    "z": -292,
     "radius": 34
   },
-
   "chart": {
-    "_note": "The chart is drawn as ink, not as filled squares: contour lines and hachures (the short downhill strokes ruled across a slope) carry the elevation, and everything unwalked is left blank. 'wobble' numbers are how unsteady the hand is, in pixels — 0 everywhere gives a clean drafted chart, higher gives a rougher field sketch. Nothing here is random: the same chart always draws the same way, so the PNG you export is the chart you were looking at.",
-    "revealBaseRadius": 70,
+    "_note": "The chart is drawn as ink, not as filled squares: contour lines and hachures (the short downhill strokes ruled across a slope) carry the elevation, and everything unwalked is left blank. 'wobble' numbers are how unsteady the hand is, in pixels \u2014 0 everywhere gives a clean drafted chart, higher gives a rougher field sketch. Nothing here is random: the same chart always draws the same way, so the PNG you export is the chart you were looking at.",
+    "revealBaseRadius": 46,
     "revealPerMetreElevation": 2.0,
     "revealElevationThreshold": 42,
     "contourThreshold": 62,
-    "gridSpacing": 500,
-
-    "contourInterval": 12,
+    "gridSpacing": 100,
+    "contourInterval": 6,
     "contourMajorEvery": 5,
     "contourWidth": 0.7,
     "strokeWobble": 0.9,
-
     "hachureMinSlope": 0.045,
     "hachureSlopeSpan": 0.22,
     "hachureMax": 3,
@@ -247,20 +398,16 @@
     "hachureLong": 0.5,
     "hachureWidth": 0.55,
     "hachureAlpha": 0.5,
-
     "edgeWidth": 0.9,
     "edgeWobble": 1.5,
     "edgeAlpha": 0.55,
     "edgeGapChance": 0.28,
-
     "gridWidth": 0.5,
     "gridWobble": 0.6,
     "dashScale": 1,
     "labelSize": 11,
-
     "exportScale": 3,
     "exportMaxPixels": 4000,
-
     "palette": {
       "_note": "Ink on ground. Swap 'ground' for a pale paper tone and the ink colours for dark ones if you ever want it to read as paper rather than as a field display.",
       "ground": "#070A10",
@@ -281,19 +428,16 @@
       "player": "#8FC6D4"
     }
   },
-
   "compass": {
     "visibleArc": 1.25,
     "tickSpacingDegrees": 10
   },
-
   "deduction": {
-    "_note": "The Meridian worksheet. minPerCommit is how many fates must be entered before the record will accept them — the point of it being more than one is that a player cannot test a single guess at a time and walk the answer out of the game. Three is the Obra Dinn number.",
+    "_note": "The Meridian worksheet. minPerCommit is how many fates must be entered before the record will accept them \u2014 the point of it being more than one is that a player cannot test a single guess at a time and walk the answer out of the game. Three is the Obra Dinn number.",
     "minPerCommit": 3
   },
-
   "textures": {
-    "_note": "Every texture is drawn in code at load — there are no image files. Sizes are pixels per side: a 512 map costs about 1.4 MB on the graphics card, a 256 map about 350 KB. If the game runs slowly it halves all of these automatically (render.downgrade.textureScale) and redraws them. Setting 'enabled' false turns every generated map off and falls back to plain colours.",
+    "_note": "Every texture is drawn in code at load \u2014 there are no image files. Sizes are pixels per side: a 512 map costs about 1.4 MB on the graphics card, a 256 map about 350 KB. If the game runs slowly it halves all of these automatically (render.downgrade.textureScale) and redraws them. Setting 'enabled' false turns every generated map off and falls back to plain colours.",
     "enabled": true,
     "anisotropy": 4,
     "sizes": {
@@ -312,13 +456,12 @@
       "glare": 256
     }
   },
-
   "audio": {
-    "_note": "Everything you hear is made from filtered noise at run time — there are no sound files. Gains are 0..1 and they add up, so raising several at once is how you get distortion. The wind is meant to sit under everything and only be noticed when it stops. Mute is V.",
+    "_note": "Everything you hear is made from filtered noise at run time \u2014 there are no sound files. Gains are 0..1 and they add up, so raising several at once is how you get distortion. The wind is meant to sit under everything and only be noticed when it stops. Mute is V.",
     "masterGain": 0.9,
     "noiseSeconds": 3,
     "smoothing": {
-      "_note": "Seconds for a level to travel most of the way to its target. Small is twitchy, large is syrupy. 'null' is deliberately quicker than the rest — the silence should arrive faster than it leaves.",
+      "_note": "Seconds for a level to travel most of the way to its target. Small is twitchy, large is syrupy. 'null' is deliberately quicker than the rest \u2014 the silence should arrive faster than it leaves.",
       "wind": 0.45,
       "herd": 0.6,
       "null": 0.14,
@@ -357,25 +500,31 @@
       "attack": 0.006,
       "filterQ": 0.9,
       "variation": 0.12,
-      "walk": { "gain": 0.13, "filterHz": 200, "decay": 0.19 },
-      "sprint": { "gain": 0.2, "filterHz": 265, "decay": 0.13 }
+      "walk": {
+        "gain": 0.13,
+        "filterHz": 200,
+        "decay": 0.19
+      },
+      "sprint": {
+        "gain": 0.2,
+        "filterHz": 265,
+        "decay": 0.13
+      }
     },
     "null": {
-      "_note": "The ashwaiter silence. At full null everything is multiplied by zero — actual silence, not a quiet mix. 'curve' above 1 makes the drop bite earlier as you approach the den.",
+      "_note": "The ashwaiter silence. At full null everything is multiplied by zero \u2014 actual silence, not a quiet mix. 'curve' above 1 makes the drop bite earlier as you approach the den.",
       "curve": 1.6
     }
   },
-
   "timing": {
     "fleetTransmissionDelayMs": 120000,
     "manifestRefreshInterval": 0.4,
     "toastDefaultMs": 4600
   },
-
   "render": {
     "maxPixelRatio": 1.7,
     "toneMappingExposure": 1.1,
-    "fogDensity": 0.00062,
+    "fogDensity": 0.0016,
     "fogColour": "0x6f6154",
     "shadowMapSize": 2048,
     "shadowCameraExtent": 200,

@@ -78,7 +78,7 @@ function init() {
   S = {
     t: 0, integrity: 100, water: 100, oxy: 100,
     px: sp.x, pz: sp.z, heading: Math.PI, speed: 0,
-    camYaw: camCfg.startYaw, camPitch: camCfg.startPitch, camDist: camCfg.startDistance, fp: false,
+    camYaw: camCfg.startYaw, camPitch: camCfg.startPitch, fp: true,
     name: "", ship: "", planet: "",
     log: [], started: false, dead: false, mouse: false, ended: false,
     seen: new Uint8Array(GW * GW), seenCount: 0,
@@ -195,6 +195,11 @@ function init() {
     renderer.setSize(innerWidth, innerHeight);
     cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();
   });
+
+  // there is no other view: the visor is always on and the gloves are always up
+  document.getElementById("visor").style.display = "block";
+  rig.getHands().visible = true;
+  rig.getPlayer().visible = false;
 
   hud.renderManifest();
   animate();

@@ -555,7 +555,7 @@ export function buildHands(){
   const face = new THREE.Mesh(new THREE.PlaneGeometry(.072, .032), M.display);
   face.position.set(0, .030, .05); face.rotation.x = -Math.PI / 2.4; R.add(face);
 
-  hands.add(R); hands.add(L); hands.visible = false; cam.add(hands); scene.add(cam);
+  hands.add(R); hands.add(L); hands.visible = true; cam.add(hands); scene.add(cam);
 }
 
 // Assign the joint angles gait.js already computed. No gait math lives here.
