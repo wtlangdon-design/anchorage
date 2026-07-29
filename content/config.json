@@ -10,7 +10,7 @@
       "x": 1,
       "z": 0
     },
-    "_sunNote": "sunElevationDeg drives three things at once and they must not drift apart: where the DirectionalLight sits, where the sun is drawn in the sky, and how far the west wall throws its shadow across the floor. Below about 13 degrees a 58 m wall shadows the whole 250 m canyon and shade stops meaning anything; raise it and the shaded stripe narrows. 22 leaves roughly half the floor in sun.",
+    "_sunNote": "sunElevationDeg drives three things at once and they must not drift apart: where the DirectionalLight sits, where the sun is drawn in the sky, and how far the west wall throws its shadow across the floor. The shadow a wall casts is height/tan(elevation) measured from its CREST, and the west crest now stands at x=230 \u2014 west.toe plus west.run \u2014 so the shaded stripe is roughly (230 - 78/tan(elev)) back to the floor's western edge. At 22 degrees that is about a quarter of the floor, which is where it was before the crevice was reshaped. Lower this and the stripe widens until shade stops meaning anything; raise it and it narrows to nothing. If you change west.height or west.toe, re-run npm run balance and check the shaded percentage rather than guessing.",
     "sunElevationDeg": 22
   },
   "terrain": {
@@ -83,33 +83,114 @@
       ]
     },
     "canyon": {
-      "_note": "The crevice: a split in the rock, not a bowl. The floor is flat out to width/2, then a short scree apron (talusFraction of the run, rising talusHeight of the wall), and then the rock simply goes up. A smoothstep here read as a bowl because it left the floor curving gently upward; the apron-then-cliff profile is what a split actually looks like and it is far harder to climb. Vertical numbers are not touched by world.scale. WHAT KEEPS YOU IN: the cliff's gradient just above the apron, not the wall's average \u2014 it is several hundred percent there. meanderAmp must stay 0; a wall line that wanders in x is a diagonal ramp out.",
+      "_note": "The crevice: a split in the rock, not a bowl. TWO LAYERS, and the split between them is the whole design. The OUTER wall (west.toe / east.toe and the run, height and talus beside them) is the thing that keeps you in, and its toe line is a STRAIGHT LINE IN X that no other number here is allowed to move. The BUTTRESS in front of it carries every irregular thing \u2014 the pinching and opening, the notches, the wandering axis, the choke at the south end \u2014 and it is capped in height, so riding it up gets you a ledge and never a way out. WHY IT IS BUILT THIS WAY, because it is not obvious and it was measured: a wall line that moves in x as you walk along z is a diagonal ramp, and the square-root face does NOT stop it. Stand still on the wall while the wall slides sideways under you and the grade you feel is the wall's own grade times how fast the line moves. At about 0.03 metres of sideways drift per metre of length \u2014 far less than any interesting shape needs \u2014 that is a walkable 0.2, and a flood fill walked straight out of an earlier version of this crevice on exactly that route, gaining eight metres over a hundred metres of length without ever climbing anything. Pinning the containment toe and putting all the shape in a capped buttress in front of it is what buys the irregularity back.",
       "length": 600,
       "width": 250,
-      "wallRun": 62,
-      "wallHeight": 58,
-      "crestVary": 0.26,
+      "_widthNote": "width is the NOMINAL floor width and is only used for reporting; the real floor edge at any z is west.toe minus the west buttress's thickness there, and likewise east. The buttress thickness is what widthVary swings, on a 3-octave field so the crevice pinches and opens on several scales at once instead of breathing like a sine wave. widthShare on each wall decides how much of that swing that side takes, so the two sides never move together. GAIN, and this catches everyone: the world's value-noise fbm does not swing plus or minus one \u2014 in practice it reaches about plus or minus 0.28 for three octaves. The gain brings each field up to full range so that the clamp in terrain.js is a real bound and widthVary/crestVary mean what they say. Raise a gain and the field spends longer pinned at its clamp, which flattens the extremes into plateaus.",
+      "widthVary": 1.1,
+      "widthFrequency": 0.0057,
+      "widthOctaves": 3,
+      "widthGain": 3.6,
+      "axisWander": 16,
       "crestFrequency": 0.0042,
-      "meanderAmp": 0,
-      "meanderFrequency": 0.0068,
-      "endRun": 54,
-      "endHeight": 64,
+      "crestGain": 3.0,
+      "_notchNote": "Side channels: places where the buttress is simply missing, so the floor runs back to the foot of the main cliff and dead-ends against it. Placed by one octave of noise read at a different LEVEL on each wall, so the two sides never notch at the same z and there is no list of features for heightAt to loop over. halfWidth is in noise units and sets how much length each notch spans; depth is the fraction of the buttress it removes. The main wall behind is untouched \u2014 that is what makes a notch a dead end rather than a door.",
+      "notch": {
+        "frequency": 0.0061,
+        "gain": 3.6,
+        "halfWidth": 0.22,
+        "depth": 0.94
+      },
+      "_chokeNote": "The south end closes by narrowing: the buttresses swell over the last stretch until the floor between them is only `leave` metres wide on each side. The north end does not \u2014 it is closed by collapse (see northEnd). Same result, different cause. start must stay north of anything placed at high z or a site ends up inside a buttress; spawn sits at z=240.",
+      "choke": {
+        "start": 214,
+        "run": 86,
+        "leave": 12
+      },
+      "_westNote": "The west wall (+x) is the one that matters: the sun sits at +x, so this is the wall that throws the shaded stripe back across the floor, and the stripe at its foot is the last survivable ground on the map. It gets the dramatic profile \u2014 a short apron, a tall face whose gradient stays above the climb limit all the way to the crest, and a tall buttress in front of it. toe is where the containment face begins and is the one number in this block that must not be made to depend on z.",
+      "west": {
+        "toe": 186,
+        "run": 44,
+        "height": 78,
+        "talusFraction": 0.2,
+        "talusHeight": 0.1,
+        "crestVary": 0.26,
+        "widthShare": 1.0,
+        "notchLevel": 0.34,
+        "buttress": {
+          "run": 62,
+          "height": 24,
+          "talusFraction": 0.16,
+          "talusHeight": 0.12,
+          "crestVary": 0.22
+        }
+      },
+      "_eastNote": "The east wall (-x) is a talus slope: a long, walkable scree rising about fifteen metres, and only then the cliff. It is lower, it is set further back, and its crest line rides a different combination of the noise fields so the two walls do not rise and fall together. Walking up the scree is meant to be worth doing and is not a way out \u2014 the face above it still starts with a square root. Its buttress is deliberately LOW: keep it under talusHeight*height, about fifteen metres, so that standing on top of it never starts you higher up the main face than the scree would have.",
+      "east": {
+        "toe": 202,
+        "run": 86,
+        "height": 56,
+        "talusFraction": 0.44,
+        "talusHeight": 0.32,
+        "crestVary": 0.18,
+        "widthShare": 0.58,
+        "notchLevel": -0.4,
+        "buttress": {
+          "run": 78,
+          "height": 12,
+          "talusFraction": 0.4,
+          "talusHeight": 0.34,
+          "crestVary": 0.18
+        }
+      },
+      "_endNote": "The two ends do not match. North is the collapse \u2014 a rough, heaped face with boulders piled on it (see rockfall). South is the smooth narrowing the choke above has already begun. roughness is the lumpiness of the face; 0 is smooth. Both toe lines are straight in z for the same reason the wall toes are straight in x.",
+      "northEnd": {
+        "run": 48,
+        "height": 68,
+        "talusFraction": 0.34,
+        "talusHeight": 0.16,
+        "roughness": 0.34
+      },
+      "southEnd": {
+        "run": 64,
+        "height": 56,
+        "talusFraction": 0.14,
+        "talusHeight": 0.09,
+        "roughness": 0.0
+      },
+      "_floorNote": "The floor is broken but walkable. crossFall tips it across its width and the direction reverses along the length. The channel is a shallow braid of two threads wandering down the crevice on the slow field. The relief is then terraced into benchSteps low benches \u2014 the harder beds the water left standing \u2014 with benchEdge as the fraction of a step the riser occupies: 1 is the untouched ramp, smaller is a sharper bench, and below about 0.5 the risers stop being walkable. All of these are vertical or dimensionless and are NOT touched by world.scale, the same rule floorRelief already followed.",
       "floorFrequency": 0.011,
       "floorRelief": 3.4,
       "floorOctaves": 3,
-      "talusFraction": 0.18,
-      "talusHeight": 0.12,
-      "endTalusFraction": 0.24,
-      "endTalusHeight": 0.18,
-      "endRoughness": 0.28,
+      "crossFall": 0.016,
+      "benchSteps": 4,
+      "benchEdge": 0.62,
+      "channel": {
+        "amplitude": 46,
+        "width": 30,
+        "depth": 1.6,
+        "splitOffset": 0.55,
+        "secondWidth": 19,
+        "secondDepth": 0.7
+      },
       "rockfall": {
-        "_note": "The collapse that closes each end. These are the existing rough rocks at boulder scale, piled on the end slope so the block reads as fallen rock rather than as a hillside. They are decoration: the terrain underneath is what actually stops you, because nothing in this game has collision.",
+        "_note": "The collapse that closes the NORTH end only \u2014 the south end chokes out instead, so there is nothing fallen there. These are the existing rough rocks at boulder scale, piled on the end slope so the block reads as fallen rock rather than as a hillside. They are decoration: the terrain underneath is what actually stops you, because nothing in this game has collision.",
         "count": 64,
         "minScale": 2.2,
         "scaleRange": 7.0,
         "bandDepth": 54,
         "bandSpread": 0.98,
         "sink": 0.32
+      },
+      "_screeNote": "Fallen material at the foot of the walls, in props.js. Each piece finds the foot of whichever wall stands at its z, measures how steep the rock above it is, and is kept with probability min(1, grade*steepBias)^steepPower \u2014 so the debris explains the cliff it came from: heavy under the west face, almost nothing under the east scree, which is not steep enough to shed anything. count is how many are CONSIDERED; roughly half of them survive that test and become meshes, and each one is a draw call, so raising it costs frame time. reach is how far out from the foot they spread.",
+      "scree": {
+        "count": 180,
+        "minScale": 0.45,
+        "scaleRange": 2.6,
+        "reach": 26,
+        "steepBias": 1.3,
+        "steepPower": 2,
+        "sink": 0.34
       }
     }
   },

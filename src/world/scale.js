@@ -55,18 +55,32 @@ const SCALED = [
   "shelter.x", "shelter.z",
 
   // The canyon: every horizontal dimension of it, so scale 1 is the nominal
-  // 600 x 250 and any other scale is the same room at a different size. Wall and
-  // end HEIGHT are vertical and stay put, so a smaller canyon is a deeper one.
+  // 600 x 250 and any other scale is the same room at a different size.
   // The canyon scales as a unit — HEIGHT INCLUDED, which is the one deliberate
-  // exception to "vertical never scales". The wall's steepest grade is
-  // 1.5*crest/wallRun, so scaling the run without the height flattens it: at
-  // scale 2 the walls fell to grade 0.52 against a 0.8 climb limit and the room
-  // stopped being a room. Scaling both keeps that ratio, and therefore the
-  // containment, identical at every scale.
-  "terrain.canyon.length", "terrain.canyon.width",
-  "terrain.canyon.wallRun", "terrain.canyon.wallHeight",
-  "terrain.canyon.endRun", "terrain.canyon.endHeight",
-  "terrain.canyon.meanderAmp",
+  // exception to "vertical never scales". The wall's steepest sustained grade is
+  // proportional to height/run, so scaling the run without the height flattens
+  // it: at scale 2 the walls fell to grade 0.52 against a 0.8 climb limit and the
+  // room stopped being a room. Scaling both keeps that ratio, and therefore the
+  // containment, identical at every scale. Everything dimensionless — the width
+  // and crest variation fractions, the talus fractions, the notch's noise-space
+  // half-width, the choke amount, the cross-fall grade, the bench shape — is
+  // scale-free already and is deliberately absent from both tables.
+  //
+  // The FLOOR's vertical detail (floorRelief, channel.depth) is NOT here, for
+  // the same reason it never was: it is surface texture on the ground you stand
+  // on, not part of the room, and a half-size world should not get half-size
+  // benches under the player's feet.
+  "terrain.canyon.length", "terrain.canyon.width", "terrain.canyon.axisWander",
+  "terrain.canyon.west.toe", "terrain.canyon.west.run", "terrain.canyon.west.height",
+  "terrain.canyon.west.buttress.run", "terrain.canyon.west.buttress.height",
+  "terrain.canyon.east.toe", "terrain.canyon.east.run", "terrain.canyon.east.height",
+  "terrain.canyon.east.buttress.run", "terrain.canyon.east.buttress.height",
+  "terrain.canyon.northEnd.run", "terrain.canyon.northEnd.height",
+  "terrain.canyon.southEnd.run", "terrain.canyon.southEnd.height",
+  "terrain.canyon.choke.start", "terrain.canyon.choke.run", "terrain.canyon.choke.leave",
+  "terrain.canyon.channel.amplitude", "terrain.canyon.channel.width",
+  "terrain.canyon.channel.secondWidth",
+  "terrain.canyon.scree.reach",
 
   // backdrop hills sit outside the map and must stay outside it
   "terrain.farHills.minDistance", "terrain.farHills.distanceRange",
@@ -90,7 +104,8 @@ const SCALED = [
 const INVERSE = [
   "terrain.baseFrequency", "terrain.detailFrequency",
   "terrain.palette.dustFrequency", "terrain.palette.fineFrequency", "terrain.palette.broadFrequency",
-  "terrain.canyon.meanderFrequency", "terrain.canyon.crestFrequency", "terrain.canyon.floorFrequency",
+  "terrain.canyon.widthFrequency", "terrain.canyon.crestFrequency",
+  "terrain.canyon.notch.frequency", "terrain.canyon.floorFrequency",
   // k is the day-side gradient in degrees per metre. nightSlope is exactly the
   // same quantity on the cold side, so it has to steepen with it — otherwise a
   // shrunk world reads the same temperature in the light and 1/scale times colder

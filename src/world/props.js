@@ -1,11 +1,16 @@
 // world/props.js — the placed things: site markers, Meridian camps, graves,
 // the shelter, and the scattered rocks.
 //
-// Ported verbatim from the reference (lines 533-592). The den meshes at 593-596
-// belong to fauna.js and are NOT here. Every mesh dimension and position is art
-// and stays inline. The visual pass changed materials, the maps behind them, and
-// the shape noise inside roughRock — no mesh was added, removed or moved, and
-// buildPlaces() still makes exactly the same 1904 rand() draws in the same order.
+// Ported from the reference (lines 533-592). The den meshes at 593-596 belong to
+// fauna.js and are NOT here. Every mesh dimension and position is art and stays
+// inline; only the numbers that describe a PLACE live in config.
+//
+// buildPlaces() is the last thing in the world's PRNG order, which is why the
+// two piles at the bottom of this file — the north-end collapse and the wall-foot
+// scree — can be retuned without moving a single rock, blade or strider placed
+// before them. Both draw a fixed number of rand()s per candidate, including the
+// scree's keep-or-drop test, so their draw counts do not depend on the shape of
+// the walls either.
 //
 // Three facts this file is built around:
 //
@@ -13,8 +18,9 @@
 //     computeVertexNormals() at the end of roughRock already produces per-face
 //     normals — the rocks are flat-shaded whether or not you ask for it, and
 //     setting flatShading would change nothing. All the surface therefore has to
-//     come from a normal map, which is the cheap way anyway: 44 + 25 + 250 = 319
-//     rock meshes share two materials and two maps between them.
+//     come from a normal map, which is the cheap way anyway: every rock in the
+//     world — soil samples, cairns, scatter, the collapse, the wall-foot scree —
+//     shares two materials and two maps between them.
 //  2. Those same rocks have a spherical UV unwrap with a seam and two poles. Any
 //     map on them is stretched at the poles and meets itself at the seam, so the
 //     rock normal map is DELIBERATELY fine-grained and low-contrast: nothing in
@@ -534,32 +540,75 @@ export function buildPlaces(){
     const b=new THREE.Mesh(roughRock(s),rockM);
     b.position.set(x,heightAt(x,z)+s*.4,z);b.rotation.set(rand()*3,rand()*3,rand()*3);put(b)}
 
-  // The collapse at each end of the crevice.
+  // The collapse at the NORTH end of the crevice — and only the north end. The
+  // south end chokes out instead: the buttresses swell until the floor between
+  // them is a slot, and nothing fell there, so there is nothing lying about.
+  // Two ends, two causes, and this is half of what tells them apart.
   //
   // These are the same rough rocks as everywhere else, at boulder scale, sat on
   // the end slope so that the thing stopping you is a heap of fallen rock you can
   // see rather than a hillside that merely happens to be steep. They are only
   // decoration — nothing in this game has collision, so the terrain underneath is
-  // what actually blocks, and it does (see the apron-then-face profile in
-  // terrain.js). Drawn last so every rock, camp and grave placed above keeps the
+  // what actually blocks, and it does (see the stacked faces in terrain.js).
+  // Drawn before the scree so every rock, camp and grave placed above keeps the
   // exact position it had before this pile existed.
   {
     const RF = config.terrain.canyon.rockfall, CY = config.terrain.canyon;
-    const halfL = CY.length / 2, halfW = CY.width / 2;
-    const reach = (halfW + CY.wallRun) * RF.bandSpread;
-    for(const side of [1, -1]){
-      for(let i = 0; i < RF.count; i++){
-        const x = (rand() - .5) * 2 * reach;
-        // biased toward the outer part of the band, so the pile is deepest where
-        // the ground is already climbing and thins out into the canyon
-        const f = rand();
-        const z = side * (halfL - RF.bandDepth * 0.35 + f * f * RF.bandDepth * 1.5);
-        const sc = RF.minScale + rand() * RF.scaleRange;
-        const b = new THREE.Mesh(roughRock(sc), rockM);
-        b.position.set(x, heightAt(x, z) + sc * (1 - RF.sink), z);
-        b.rotation.set(rand() * 3, rand() * 3, rand() * 3);
-        put(b);
+    const halfL = CY.length / 2;
+    const reach = Math.max(CY.west.toe, CY.east.toe) * RF.bandSpread;
+    for(let i = 0; i < RF.count; i++){
+      const x = (rand() - .5) * 2 * reach;
+      // biased toward the outer part of the band, so the pile is deepest where
+      // the ground is already climbing and thins out into the crevice
+      const f = rand();
+      const z = -(halfL - RF.bandDepth * 0.35 + f * f * RF.bandDepth * 1.5);
+      const sc = RF.minScale + rand() * RF.scaleRange;
+      const b = new THREE.Mesh(roughRock(sc), rockM);
+      b.position.set(x, heightAt(x, z) + sc * (1 - RF.sink), z);
+      b.rotation.set(rand() * 3, rand() * 3, rand() * 3);
+      put(b);
+    }
+  }
+
+  // Fallen material at the foot of the walls, so the debris explains the cliff
+  // above it rather than the ground merely being littered.
+  //
+  // Placement is rejection-free — it has to be, because a rejection loop would
+  // consume a different number of rand() draws depending on the shape of the
+  // walls and every rock in the world downstream would move. So each piece picks
+  // a z, walks OUTWARD from the axis to find the foot of the wall on that side,
+  // and sits a short way up it. The weighting is the point: `steepBias` raises
+  // the probability of landing under a steep face against a shallow one, using
+  // the local wall gradient measured from heightAt itself, so almost nothing
+  // gathers under the east scree and the heaviest talus lies under the west.
+  {
+    const SC = config.terrain.canyon.scree, CY = config.terrain.canyon;
+    const halfL = CY.length / 2;
+    for(let i = 0; i < SC.count; i++){
+      const z = (rand() - .5) * 2 * (halfL - 8);
+      const west = rand() < .5;
+      const sgn = west ? 1 : -1, toe = west ? CY.west.toe : CY.east.toe;
+      // march in from the containment toe until the ground drops to the floor:
+      // that is the foot of whatever wall is standing here, buttress or cliff
+      let foot = toe;
+      for(let k = 0; k < 24; k++){
+        const a = toe - k * (toe / 24);
+        if(heightAt(sgn * a, z) < 2.5){ foot = a; break; }
       }
+      // how steep is the wall just above this foot? that is what decides whether
+      // there is anything lying here at all
+      const grade = (heightAt(sgn * (foot + 12), z) - heightAt(sgn * foot, z)) / 12;
+      let keep = Math.min(1, grade * SC.steepBias);
+      keep = Math.pow(keep, SC.steepPower);              // sharpens steep vs shallow
+      const d = rand() * SC.reach;                       // always drawn: see above
+      const s = SC.minScale + rand() * SC.scaleRange;    // always drawn
+      const spin = [rand() * 3, rand() * 3, rand() * 3]; // always drawn
+      if(rand() > keep) continue;                        // always drawn, then judged
+      const x = sgn * (foot + d);
+      const b = new THREE.Mesh(roughRock(s * (1 - .5 * d / SC.reach)), rockM);
+      b.position.set(x, heightAt(x, z) + s * (1 - SC.sink), z);
+      b.rotation.set(spin[0], spin[1], spin[2]);
+      put(b);
     }
   }
 }

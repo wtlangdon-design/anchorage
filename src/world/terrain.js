@@ -6,10 +6,10 @@
 // the PRNG draw order are all exactly as ported — the visual pass added surface
 // maps to the two materials and nothing else.
 //
-// Why the ground needs maps at all: the mesh is 3400 m across 210 segments, so
-// vertices sit ~16 m apart. Geometrically it is a smooth sheet, and up close it
-// has no surface of its own. Everything you feel underfoot is the normal map,
-// raked by the low fixed sun.
+// Why the ground needs maps at all: the mesh is world.size across world.segments,
+// so vertices sit several metres apart. Geometrically it is a smooth sheet, and up
+// close it has no surface of its own. Everything you feel underfoot is the normal
+// map, raked by the low fixed sun.
 //
 // Two r128 facts this file is built around, both verified against the r128 build
 // and both easy to trip over later:
@@ -30,7 +30,7 @@ import * as tex from "./textures.js";
 // Nothing here touches the world PRNG: `seed` below is the texture hash's seed,
 // unrelated to terrain.noiseSeed, and changing it cannot move a rock.
 const TUNING = {
-  tileMetres: 20,        // one texture tile per 20 m of ground -> repeat 170
+  tileMetres: 20,        // one texture tile per 20 m of ground
 
   // --- normal map: three bands of relief inside one tile, plus scour lines.
   // Periods are whole cells across the tile, so 4 = 5 m features, 56 = 36 cm.
@@ -97,16 +97,39 @@ export function initTerrain(cfg, story, deps){
   config = cfg;
   SIZE = config.world.size; SEG = config.world.segments;
   const c = config.terrain.canyon;
-  // precomputed once so heightAt does no config lookups and no divisions
+  const inv = v => 1 / Math.max(1e-6, v);
+  const wall = s => ({
+    toe: s.toe, invRun: inv(s.run), height: s.height,
+    talusF: s.talusFraction, talusH: s.talusHeight,
+    crestVary: s.crestVary, share: s.widthShare, notchLevel: s.notchLevel,
+    bRun: s.buttress.run, bHeight: s.buttress.height,
+    bTalusF: s.buttress.talusFraction, bTalusH: s.buttress.talusHeight,
+    bCrestVary: s.buttress.crestVary,
+    // the thickness the choke drives this buttress to: everything but `leave`
+    chokeTo: s.toe - c.choke.leave
+  });
+  const end = s => ({
+    invRun: inv(s.run), height: s.height,
+    talusF: s.talusFraction, talusH: s.talusHeight, rough: s.roughness
+  });
+  // precomputed once so heightAt does no config lookups, no divisions and no
+  // property walks. Every reciprocal in here is a division heightAt does not do.
   CY = {
-    halfW: c.width / 2, halfL: c.length / 2,
-    wallRun: c.wallRun, invWallRun: 1 / Math.max(1e-6, c.wallRun),
-    wallH: c.wallHeight, crestVary: c.crestVary, crestF: c.crestFrequency,
-    meanderA: c.meanderAmp, meanderF: c.meanderFrequency,
-    endRun: c.endRun, invEndRun: 1 / Math.max(1e-6, c.endRun), endH: c.endHeight,
-    talusF: c.talusFraction, talusH: c.talusHeight,
-    endTalusF: c.endTalusFraction, endTalusH: c.endTalusHeight, endRough: c.endRoughness,
-    floorF: c.floorFrequency, floorRelief: c.floorRelief, floorOct: c.floorOctaves
+    halfL: c.length / 2,
+    widthF: c.widthFrequency, widthOct: c.widthOctaves,
+    widthVary: c.widthVary, widthGain: c.widthGain,
+    axisWander: c.axisWander,
+    crestF: c.crestFrequency, crestGain: c.crestGain,
+    notchF: c.notch.frequency, notchGain: c.notch.gain,
+    invNotchHalf: inv(c.notch.halfWidth), notchDepth: c.notch.depth,
+    chokeStart: c.choke.start, invChokeRun: inv(c.choke.run),
+    wallW: wall(c.west), wallE: wall(c.east),
+    endN: end(c.northEnd), endS: end(c.southEnd),
+    floorF: c.floorFrequency, floorRelief: c.floorRelief, floorOct: c.floorOctaves,
+    crossFall: c.crossFall, benchSteps: c.benchSteps, invBenchEdge: inv(c.benchEdge),
+    chanAmp: c.channel.amplitude, invChanW: inv(c.channel.width),
+    chanDepth: c.channel.depth, chanSplit: c.channel.splitOffset,
+    invChanW2: inv(c.channel.secondWidth), chanDepth2: c.channel.depth * c.channel.secondDepth
   };
   const cl = config.climate;
   SH = {
@@ -141,6 +164,11 @@ export function shadeAt(x, z){
 
 const smooth = t => t * t * (3 - 2 * t);
 const sat = t => t < 0 ? 0 : t > 1 ? 1 : t;
+// fbm() is the WORLD generator's noise: SIGNED and roughly -1..1, but only
+// roughly. Every term below is clamped before it is used, so each one has a
+// guaranteed worst case and the wall's containment is a property of the
+// arithmetic rather than of how far the noise happened to swing.
+const clampS = t => t < -1 ? -1 : t > 1 ? 1 : t;
 
 // The wall of a crevice, as a fraction of its full height across the run.
 //
@@ -163,54 +191,144 @@ function face(t, talusF, talusH){
   return talusH + (1 - talusH) * Math.sqrt((t - talusF) / (1 - talusF));
 }
 
+// Quantise 0..1 into `n` flat levels joined by soft risers — the low benches of
+// harder rock the erosion left standing. invEdge is 1/benchEdge: the riser
+// occupies benchEdge of a level, so its slope is the underlying slope times
+// 1.5*invEdge and the floor stops being walkable somewhere below benchEdge 0.5.
+// Math.floor and a smoothstep; no branch the CPU cannot predict.
+function terrace(t, n, invEdge){
+  const s = t * n, i = Math.floor(s);
+  const f = (s - i - 0.5) * invEdge + 0.5;
+  if(f <= 0) return i / n;
+  if(f >= 1) return (i + 1) / n;
+  return (i + f * f * (3 - 2 * f)) / n;
+}
+
 // The canyon.
 //
 // It runs north-south — along z — because the dawn line sweeps west along x, so
-// this way the heat crosses the canyon's 250 m width instead of running the length
-// of it. That is the whole reason for the orientation: it makes the west wall the
-// last cover on the map, since the lethal edge arrives from the east (low x) and
-// the sun sits at +x, throwing that wall's shadow back across the floor.
+// this way the heat crosses the crevice's width (nominally 250 m, in practice
+// anywhere from about 130 to 350) instead of running the length of it. That is
+// the whole reason for the orientation: it makes the west wall the last cover on
+// the map, since the lethal edge arrives from the east (low x) and the sun sits
+// at +x, throwing that wall's shadow back across the floor.
 //
-// Called thousands of times a frame, so it is five noise samples and no more:
-// three for the floor, two for the crest line. Everything else is arithmetic.
+// TWO LAYERS, and the split between them is the whole design.
+//
+//   the OUTER wall keeps you in. Its toe line is a STRAIGHT LINE IN X — west.toe
+//   and east.toe — and nothing is allowed to make it depend on z. Its crest
+//   height varies freely, because height variation along a fixed line cannot
+//   change where the steep part starts.
+//
+//   the BUTTRESS in front of it carries every irregular thing: the pinching and
+//   opening, the notches, the wandering axis, the choke at the south end. It is
+//   capped in height, and its OUTER edge is pinned to the outer wall's toe, so
+//   riding it up gets you a ledge and never a way past the face behind it.
+//
+// WHY, because it is not obvious and it was measured. A wall line that moves in
+// x as you walk along z is a diagonal ramp, and the square-root face does NOT
+// stop it. Stand still on the wall while the line slides sideways under you and
+// the grade you feel is the wall's own grade times how fast the line moves —
+// about 0.03 m of drift per metre of length is enough to make that a walkable
+// 0.2. A flood fill under the controller's own walkable() test walked straight
+// out of an earlier version of this crevice on exactly that route: onto the east
+// scree at 15 m, a hundred metres north at a fixed x while the wall swept under
+// it, and over the crest at 48 m without ever climbing anything. The toe pin is
+// what buys the irregularity back.
+//
+// Called thousands of times a frame. FOUR noise samples on the floor, five under
+// an end. Everything else is arithmetic, and every field below is a function of
+// z alone and read once, which is why three separate features can ride each one.
 export function heightAt(x, z){
-  // The wall line is STRAIGHT in x, and it has to be. A meandering wall is a ramp:
-  // stand at a fixed x on the floor and walk along z, and the wall slides under you
-  // and lifts you out of the canyon at a grade of about 0.25 — gentle enough to
-  // walk. Blocking that would need a meander amplitude near 84 m in a 250 m
-  // canyon. So the canyon gets its shape from the crest height instead, which can
-  // vary freely because it never changes where the steep part starts.
-  const cx = CY.meanderA * Math.sin(z * CY.meanderF);   // 0 by default; see config
-  const ax = Math.abs(x - cx);
+  // ---- the three fields ---------------------------------------------------
+  //   wv  width: 3 octaves, so the crevice pinches and opens on several scales
+  //       at once and never settles into a period the eye can follow.
+  //   cv  the slow field: the west crest line, the axis wander and the channel's
+  //       course all ride it. One sample, three jobs.
+  //   nv  notches: one octave, read at a different LEVEL on each wall so the two
+  //       sides never notch at the same z, and so there is no list to loop over.
+  // The gains are there because this fbm swings about +/-0.28, not +/-1; they
+  // bring each field up to full range so the clamps below are real bounds.
+  const wv = clampS(fbm(z * CY.widthF, 5.1, CY.widthOct) * CY.widthGain);
+  const cv = clampS(fbm(0.37, z * CY.crestF, 2) * CY.crestGain);
+  const nv = clampS(fbm(z * CY.notchF, 71.3, 1) * CY.notchGain);
 
-  // wall: flat floor out to halfW, a few metres of scree, then the face
-  const wt = sat((ax - CY.halfW) * CY.invWallRun);
-  const w = face(wt, CY.talusF, CY.talusH);
-  // The crest is not level — it rises and falls along the canyon, which is what
-  // gives the shadow it throws a shape instead of a straight edge.
+  const W = x >= 0 ? CY.wallW : CY.wallE;        // +x is west: the wall that shades
+  const ax = x >= 0 ? x : -x;
+
+  // ---- the buttress: everything irregular, capped in height ----------------
+  // Its thickness is what the width field actually swings. A notch is simply the
+  // buttress going missing, so the floor runs back to the foot of the main cliff
+  // and dead-ends against it. The choke is the buttresses swelling until they
+  // nearly meet.
+  const nr = sat(1 - Math.abs(nv - W.notchLevel) * CY.invNotchHalf);
+  const notch = nr * nr * (3 - 2 * nr);
+  const ck = sat((z - CY.chokeStart) * CY.invChokeRun);
+  let thick = W.bRun * (1 + CY.widthVary * wv * W.share) * (1 - CY.notchDepth * notch);
+  // the choke LERPS the thickness to "everything but `leave` metres of floor",
+  // rather than adding to it — added, a wide place at the south end would close
+  // past the axis and the floor would come out negative
+  thick += (W.chokeTo - thick) * ck * ck * (3 - 2 * ck);
+  if(thick < 4) thick = 4;                       // never divide by nothing
+  // the axis wander slides the buttress bodily, inner and outer edge together
+  const axb = ax - (x >= 0 ? CY.axisWander * cv : -CY.axisWander * cv);
+  const bf = face(1 - (W.toe - axb) / thick, W.bTalusF, W.bTalusH);
+  const bh = W.bHeight * (1 + W.bCrestVary * (W === CY.wallW ? wv : cv));
+
+  // ---- the outer wall: fixed toe, free crest, and it rises FROM the buttress -
+  // Not max(buttress, wall) — STACKED. Taking the max leaves the buttress's top
+  // standing proud past the outer toe as a flat shelf, and a shelf is a way to
+  // start the face above it from twenty-nine metres up instead of from the
+  // floor. The flood fill found exactly that at the south end and walked out
+  // over it. Stacked, the outer face begins at whatever the buttress left and
+  // ends at the crest, so there is no shelf anywhere and no height the player
+  // can bring to the face that the face did not already account for.
+  const ot = sat((ax - W.toe) * W.invRun);
+  // The crest is not level — it rises and falls along the crevice, which is what
+  // gives the shadow it throws a shape instead of a straight edge. The two walls
+  // read different combinations of the two slow fields, so they do not rise and
+  // fall together. Clamped above, so the lowest possible crest is
+  // height*(1-crestVary) and the wall is unclimbable by construction rather than
+  // by luck.
+  const crest = W.height * (1 + W.crestVary * (W === CY.wallW ? cv : (wv - cv) * 0.5));
+  let h = bf * bh + face(ot, W.talusF, W.talusH) * (crest - bh);
+  const w = bf;                                  // how far into rock we are, 0..1
+
+  // ---- the ends, which do not match ---------------------------------------
+  // North is the collapse: a lumpy heap, and props.js piles boulders on it.
+  // South is the smooth narrowing the choke above has already begun. Same
+  // result, different cause. The face underneath is what actually stops you.
   //
-  // fbm() here is the WORLD generator's fbm, which is SIGNED and roughly -1..1 —
-  // not textures.js's fbmTile, which is 0..1. Treating it as 0..1 collapsed the
-  // crest to about 6 m at z=72 and opened a walkable ramp straight out of the
-  // canyon. It is clamped as well as centred so that the lowest possible crest is
-  // wallHeight*(1-crestVary), which is what makes the wall unclimbable by
-  // construction rather than by luck.
-  const cv = fbm(0.37, z * CY.crestF, 2);
-  const crest = CY.wallH * (1 + CY.crestVary * (cv < -1 ? -1 : cv > 1 ? 1 : cv));
-  let h = w * crest;
-
-  // Both ends are closed by collapse. Same apron-then-face shape, with a rougher
-  // apron so it heaps rather than ramps — the boulders props.js piles on top are
-  // what make it read as fallen rock, but this is what actually stops you.
-  const et = sat((Math.abs(z) - CY.halfL) * CY.invEndRun);
+  // Stacked for the same reason the outer wall is: the end LIFTS whatever is
+  // already here up towards its own crest rather than replacing it, so arriving
+  // at the end along the top of a buttress does not skip the part of the face
+  // that does the blocking. Where the wall is already higher than the end, the
+  // end does nothing.
+  const E = z < 0 ? CY.endN : CY.endS;
+  const et = sat((Math.abs(z) - CY.halfL) * E.invRun);
   if(et > 0){
-    const lump = 1 + CY.endRough * fbm(x * 0.02, 4.7, 2);
-    const end = face(et, CY.endTalusF, CY.endTalusH) * CY.endH * lump;
-    if(end > h) h = end;
+    const lump = E.rough > 0 ? 1 + E.rough * fbm(x * 0.02, 4.7, 2) : 1;
+    const top = E.height * lump;
+    if(top > h) h += (top - h) * face(et, E.talusF, E.talusH);
   }
 
-  // floor relief, fading out as the wall takes over
-  h += fbm(x * CY.floorF, z * CY.floorF, CY.floorOct) * CY.floorRelief * (1 - w * 0.75);
+  // ---- the floor ----------------------------------------------------------
+  const fm = 1 - w * 0.75;                       // all of it fades into the wall
+  // cross-fall: never level across its width, and the direction it tips reverses
+  // along the length. Rides the width field, so it costs nothing.
+  h += CY.crossFall * x * wv * fm;
+  // a braided channel, two threads, wandering on the slow field. Parabolic, not
+  // a cusp: flat along its own bed, steepest on the banks, nowhere steep enough
+  // to be an obstacle.
+  const chx = CY.chanAmp * cv;
+  const u1 = (x - chx) * CY.invChanW, q1 = 1 - u1 * u1;
+  const u2 = (x + chx * CY.chanSplit) * CY.invChanW2, q2 = 1 - u2 * u2;
+  let cut = q1 > 0 ? q1 * q1 * CY.chanDepth : 0;
+  if(q2 > 0){ const c2 = q2 * q2 * CY.chanDepth2; if(c2 > cut) cut = c2; }
+  h -= cut * fm;
+  // relief, terraced into low benches — the harder beds left standing
+  const fr = fbm(x * CY.floorF, z * CY.floorF, CY.floorOct);
+  h += (terrace(fr * 0.5 + 0.5, CY.benchSteps, CY.invBenchEdge) * 2 - 1) * CY.floorRelief * fm;
   return h;
 }
 
@@ -219,9 +337,9 @@ export function heightAt(x, z){
 //
 // The vertex palette carries every scale above ~450 m (palette.broadFrequency),
 // plus the slope and elevation blends. The maps below carry everything below one
-// tile. There is deliberately NO colour map: at repeat 170 a colour map repeats
-// 170 times across the plain, and colour is the channel the eye picks a repeat out
-// of fastest, so it would put a visible grid on the one surface that fills the
+// tile. There is deliberately NO colour map: a colour map would repeat dozens of
+// times across the plain, and colour is the channel the eye picks a repeat out of
+// fastest, so it would put a visible grid on the one surface that fills the
 // screen. Grain comes from relief instead — the sun rakes in low from +x, which is
 // the light a normal map reads best under, and it converts that relief into tone
 // for free without touching the tuned palette.
@@ -260,7 +378,7 @@ export function buildTerrain(){
   geo.computeVertexNormals();
 
   // PlaneGeometry UVs run 0..1 across the whole SIZE, so the repeat count is the
-  // number of tiles across the map: 3400 / 20 = 170.
+  // number of tiles across the map: world.size / tileMetres.
   const rep = SIZE / TUNING.tileMetres;
   const normalMap = tex.normalTexture("groundNormal", tex.sizeFor("groundNormal", 512),
     groundHeight, TUNING.normalStrength, { repeat: [rep, rep] });

@@ -54,10 +54,13 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
   ok("the canyon scales in every horizontal dimension",
      near(c.terrain.canyon.length, base.terrain.canyon.length * s)
      && near(c.terrain.canyon.width, base.terrain.canyon.width * s)
-     && near(c.terrain.canyon.wallRun, base.terrain.canyon.wallRun * s));
+     && near(c.terrain.canyon.west.toe, base.terrain.canyon.west.toe * s)
+     && near(c.terrain.canyon.west.run, base.terrain.canyon.west.run * s)
+     && near(c.terrain.canyon.east.buttress.run, base.terrain.canyon.east.buttress.run * s));
   ok("canyon wall HEIGHT scales too, so the room stays a room",
-     near(c.terrain.canyon.wallHeight, base.terrain.canyon.wallHeight * s)
-     && near(c.terrain.canyon.endHeight, base.terrain.canyon.endHeight * s));
+     near(c.terrain.canyon.west.height, base.terrain.canyon.west.height * s)
+     && near(c.terrain.canyon.west.buttress.height, base.terrain.canyon.west.buttress.height * s)
+     && near(c.terrain.canyon.northEnd.height, base.terrain.canyon.northEnd.height * s));
   ok("den spread scales", near(c.ashwaiters.denSpreadX.range, base.ashwaiters.denSpreadX.range * s));
   ok("strider spread and herd z scale",
      near(c.striders.spreadX, base.striders.spreadX * s) && near(c.striders.herdZ, base.striders.herdZ * s));
@@ -117,19 +120,72 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
      && near(ratio(x => x.grass.bandOffset), s) && near(ratio(x => x.world.size), s));
 }
 
-// 6. The canyon has to stay a room at every scale. The wall's steepest grade is
-//    1.5*crest/wallRun at the LOWEST crest; if that ever falls to the climb limit
-//    the player walks out. Both terms scale together, so this holds at any scale —
-//    but it stops holding the moment someone raises crestVary or wallRun.
+// 6. THE ROOM. The crevice has to stay a room at every scale, and after the
+//    reshaping there are exactly two properties that make it one. Both are
+//    checked here because both have already been broken once.
+//
+//    (a) AT THE OUTER TOE — the fixed line in x where the containment face
+//        starts — the ground must never stand higher than the buttress cap.
+//        Anything higher is a shelf, and a shelf lets the player begin the face
+//        part-way up it instead of at its foot. An earlier version let the
+//        buttress plateau run out past the toe and a flood fill walked out over
+//        it at the south end. This is measured against heightAt, not assumed.
+//
+//    (b) FROM THAT CAP, the face above must still have a band the player cannot
+//        cross: steeper than the climb limit over a realistic step, and wider
+//        than one step so it cannot be jumped in a single frame. The face is a
+//        square root, so the sampled grade falls as the step grows — the check
+//        uses a sprint stride, the largest step the controller ever takes.
 {
+  const STRIDE = 0.5;                       // sprint 9 m/s at a bad 18 fps
   for (const scale of [1, 0.55, 2]) {
     const c = load(); c.world.scale = scale; applyWorldScale(c);
-    const cy = c.terrain.canyon;
-    const steepest = 1.5 * cy.wallHeight * (1 - cy.crestVary) / cy.wallRun;
-    ok(`at scale ${scale} the wall stays unclimbable (grade is scale-invariant)`, steepest > c.player.maxClimbGrade * 1.2,
-       `steepest wall grade ${steepest.toFixed(2)} vs climb limit ${c.player.maxClimbGrade}`);
-    ok(`at scale ${scale} the wall line is straight (a meander is a ramp out)`, cy.meanderAmp === 0,
-       `meanderAmp ${cy.meanderAmp}`);
+    const cy = c.terrain.canyon, limit = c.player.maxClimbGrade;
+    for (const side of ["west", "east"]) {
+      const W = cy[side], B = W.buttress;
+      const cap = B.height * (1 + B.crestVary);              // tallest the buttress gets
+      const drop = W.height * (1 - W.crestVary) - cap;       // shortest face above it
+      const A = (1 - W.talusHeight) / (2 * (1 - W.talusFraction));
+      const toeGrade = drop * (1 - W.talusHeight)
+                     * Math.sqrt(STRIDE / (W.run * (1 - W.talusFraction))) / STRIDE;
+      const bandWide = W.run * (1 - W.talusFraction)
+                     * Math.pow(A * drop / (limit * W.run), 2);
+      ok(`scale ${scale} ${side}: the face above the buttress is unclimbable`,
+         toeGrade > limit * 1.5,
+         `sampled grade ${toeGrade.toFixed(2)} over a ${STRIDE} m stride vs limit ${limit}`);
+      ok(`scale ${scale} ${side}: the unclimbable band is wider than one stride`,
+         bandWide > STRIDE * 3,
+         `band is ${bandWide.toFixed(1)} m wide`);
+    }
+  }
+}
+
+// 6b. and the toe line itself, measured. This is the property every irregular
+//     thing in the crevice is allowed to exist because of: the buttress in front
+//     may wander as much as it likes, but at x = toe the rock is never higher
+//     than the cap the buttress is allowed to reach.
+{
+  globalThis.document = globalThis.document || { createElement: () => ({
+    width: 0, height: 0,
+    getContext: () => ({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+                         putImageData() {} }) }) };
+  const noise = await import("../src/world/noise.js");
+  const terrain = await import("../src/world/terrain.js");
+  const c = load();
+  noise.initNoise(c.terrain.noiseSeed);
+  terrain.initTerrain(c, {}, { THREE: null, scene: null, rand: noise.rand, fbm: noise.fbm });
+  const cy = c.terrain.canyon, halfL = cy.length / 2;
+  for (const side of ["west", "east"]) {
+    const W = cy[side], B = W.buttress, sgn = side === "west" ? 1 : -1;
+    // the cap, plus what the floor's own relief and cross-fall can add on top
+    const allowed = B.height * (1 + B.crestVary) + cy.floorRelief + 4;
+    let worst = -Infinity, worstZ = 0;
+    for (let z = -halfL; z <= halfL; z += 3) {
+      const y = terrain.heightAt(sgn * W.toe, z);
+      if (y > worst) { worst = y; worstZ = z; }
+    }
+    ok(`no shelf at the ${side} toe: ground there stays under the buttress cap`,
+       worst <= allowed, `${worst.toFixed(1)} m at z=${worstZ}, cap+slack is ${allowed.toFixed(1)} m`);
   }
 }
 
