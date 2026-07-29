@@ -7,7 +7,7 @@
 // change: the reference's DOM writes (panel(), renderManifest()) become calls to
 // the ui functions handed in via deps.
 
-let S, manifest, showPanel, renderManifest, esc, toast, ui, shadeAt;
+let S, manifest, showPanel, renderManifest, esc, toast, ui, shadeAt, openWorksheet;
 let giftTemplate = "", giftAlreadyTemplate = "";
 
 export let CREW = [], CAMPS = [], GRAVES = [], LAST = null, CONFESSION = null;
@@ -22,6 +22,7 @@ export function initStory(config, story, deps){
   // readLast schedules a toast; the reference used the global toast().
   toast = deps.toast;
   shadeAt = deps.shadeAt || (() => 0);
+  openWorksheet = deps.openWorksheet || null;
   ui = story.ui;
   giftTemplate = story.toasts.giftTemplate;
   giftAlreadyTemplate = story.toasts.giftAlreadyHaveTemplate;
@@ -83,6 +84,7 @@ export function initStory(config, story, deps){
 
   CONCLUSIONS = {}; LOCKED = {};
   minPerCommit = (config.deduction && config.deduction.minPerCommit) || 3;
+  openingGrave = (config.deduction && config.deduction.openingGrave) || null;
 }
 
 /* ---------------- the worksheet ----------------
@@ -92,7 +94,7 @@ export function initStory(config, story, deps){
    which one. That refusal is the whole mechanism — told which entry was wrong,
    a player would binary-search the answer instead of reading the graves. */
 
-let TRUTH = {}, CONCLUSIONS = {}, LOCKED = {}, minPerCommit = 3;
+let TRUTH = {}, CONCLUSIONS = {}, LOCKED = {}, minPerCommit = 3, openingGrave = null;
 
 // Fate options are earned, not given: a year only becomes selectable once the
 // player has stood at the marker that states it.
@@ -160,10 +162,23 @@ export function targetReadable(){
   return null;
 }
 
-// ref 819-823
+// ref 819-823.
+//
+// One marker behaves differently: the one the player lands beside. Reading it
+// enters that single fate into the record and opens the sheet, so the first thing
+// they ever see of the crew is one row filled and five blank. That hole is the
+// hook and it points down the canyon, because that is where the rest of them are.
+// Every other marker in the game still concludes nothing.
 export function readGrave(g){
+  const first = openingGrave && g.id === openingGrave && !LOCKED[g.who];
   g.read = true;
-  showPanel(ui.kickerGraveMarker, `${g.t} — ${g.l}`, ui.subtitleNotYourSurvey, g.b);
+  if(first && TRUTH[g.who]){
+    const t = TRUTH[g.who];
+    CONCLUSIONS[g.who] = { fate: t.fate, year: t.year };
+    LOCKED[g.who] = true;
+  }
+  showPanel(ui.kickerGraveMarker, `${g.t} — ${g.l}`, ui.subtitleNotYourSurvey, g.b, "",
+            first ? openWorksheet : null);
   file(`${g.t} — ${g.l}`, ui.logKindGrave, g.b, g.x, g.z);
   renderManifest();
 }

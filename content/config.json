@@ -156,8 +156,8 @@
   },
   "player": {
     "spawn": {
-      "x": 4,
-      "z": 278
+      "x": -70,
+      "z": 211
     },
     "walkSpeed": 4.2,
     "sprintSpeed": 9.0,
@@ -169,7 +169,7 @@
       "fov": 64,
       "near": 0.15,
       "far": 9000,
-      "startYaw": 3.14159265,
+      "startYaw": 2.1588,
       "startPitch": 0.16,
       "minPitch": -0.42,
       "maxPitch": 0.8,
@@ -441,7 +441,9 @@
   },
   "deduction": {
     "_note": "The Meridian worksheet. minPerCommit is how many fates must be entered before the record will accept them \u2014 the point of it being more than one is that a player cannot test a single guess at a time and walk the answer out of the game. Three is the Obra Dinn number.",
-    "minPerCommit": 3
+    "minPerCommit": 3,
+    "_openingNote": "openingGrave is the marker you land beside. Reading it fills that one row of the worksheet and leaves the other five empty. Nothing says anything about it \u2014 one filled row against five blank ones is the whole of the communication. Set it to null and the game starts with an empty sheet instead.",
+    "openingGrave": "g1"
   },
   "textures": {
     "_note": "Every texture is drawn in code at load \u2014 there are no image files. Sizes are pixels per side: a 512 map costs about 1.4 MB on the graphics card, a 256 map about 350 KB. If the game runs slowly it halves all of these automatically (render.downgrade.textureScale) and redraws them. Setting 'enabled' false turns every generated map off and falls back to plain colours.",

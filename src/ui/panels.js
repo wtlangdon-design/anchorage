@@ -38,12 +38,28 @@ export function initPanels(cfg, storyArg, deps){
 }
 
 /* ---------- generic overlays ---------- */
-export function showPanel(kicker, title, sub, body, extra){
+export function showPanel(kicker, title, sub, body, extra, onClose){
   document.getElementById("msheet").innerHTML = `
     <div class="lab">${kicker}</div><h1 style="font-size:21px">${title}</h1><h2>${sub}</h2>
     <p class="body">${body}</p>${extra || ""}
-    <button onclick="document.getElementById('msg').classList.remove('on')">${story.ui.closeButton}</button>`;
+    <button id="panel-close">${story.ui.closeButton}</button>`;
+  const btn = document.getElementById("panel-close");
+  btn.onclick = () => {
+    document.getElementById("msg").classList.remove("on");
+    if(onClose) onClose();
+  };
   document.getElementById("msg").classList.add("on");
+}
+
+// Open the logbook straight onto the crew sheet. Used once, by the marker you
+// land beside: you close the plate and the sheet is simply there, one row filled
+// and five empty. Nothing explains it, because one filled row against five blank
+// ones already says everything there is to say.
+export function openCrewSheet(){
+  openLog();
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.t === "crew"));
+  document.getElementById("log-list").style.display = "none";
+  document.getElementById("crew-list").style.display = "block";
 }
 export function showMsg(html){
   document.getElementById("msheet").innerHTML = html;

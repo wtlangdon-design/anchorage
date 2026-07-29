@@ -114,7 +114,7 @@ function init() {
   story.initStory(config, story_data, {
     S, manifest,
     showPanel: panels.showPanel, renderManifest: hud.renderManifest, esc: hud.esc, toast: hud.toast,
-    shadeAt: terrain.shadeAt
+    shadeAt: terrain.shadeAt, openWorksheet: panels.openCrewSheet
   });
 
   endings.initEndings(config, story_data, {

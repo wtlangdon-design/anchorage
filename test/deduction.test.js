@@ -17,14 +17,18 @@ applyWorldScale(config);
 const storyData = JSON.parse(readFileSync(join(here, "../content/story.json"), "utf8"));
 initClimate(config.climate);
 
-let failures = 0;
+let failures = 0, opened = 0, lastOnClose = null;
 const ok = (n, c, d = "") => { if (!c) { failures++; console.error("  FAIL:", n, d); } else console.log("  ok:", n); };
 
 function fresh() {
   const S = { t: 0, px: 0, pz: 0, knowTruth: false, log: [] };
   manifest.initManifest(config, storyData, { S, dawnX, tempAt, lostAtT });
+  opened = 0; lastOnClose = null;
   story.initStory(config, storyData, {
-    S, manifest, showPanel: () => {}, renderManifest: () => {}, esc: s => String(s), toast: () => {}
+    S, manifest,
+    showPanel: (k, t, sub, b, extra, onClose) => { lastOnClose = onClose || null; },
+    renderManifest: () => {}, esc: s => String(s), toast: () => {},
+    openWorksheet: () => { opened++; }
   });
   return S;
 }
@@ -39,14 +43,18 @@ console.log("READING TELLS YOU NOTHING");
 {
   const S = fresh();
   ok("no crew member starts with a fate", story.crew().every(c => !story.conclusionFor(c.id)));
+  ok("nothing is locked before anything is read", story.lockedCount() === 0);
   ok("names and roles are known from the manifest",
      story.crew().every(c => c.n && c.r) && story.crew().length === 6);
   readAllGraves();
   story.CAMPS.forEach(c => story.readCamp(c));
-  ok("reading every grave and camp still concludes nothing",
-     story.crew().every(c => !story.conclusionFor(c.id)) && story.lockedCount() === 0);
+  // the marker you land beside is the one exception, and it is deliberate (phase 3)
+  const OPENING = config.deduction.openingGrave;
+  ok("reading every grave and camp concludes nothing beyond the one you are given",
+     story.lockedCount() === 1 && story.isLocked(storyData.graves[OPENING].crew),
+     `${story.lockedCount()} locked`);
   ok("reading the shelter still concludes nothing",
-     (story.readLast(), story.crew().every(c => !story.conclusionFor(c.id)) && story.lockedCount() === 0));
+     (story.readLast(), story.lockedCount() === 1));
   ok("reading files evidence instead: 11 entries with place and time",
      S.log.length === 11 && S.log.every(e => typeof e.x === "number" && typeof e.h === "number"),
      `${S.log.length} entries`);
@@ -70,18 +78,20 @@ console.log("\nTHE DATES ARE EARNED, NOT GIVEN");
 console.log("\nCOMMITTING: ALL OR NOTHING, AND MUTE ABOUT WHICH");
 {
   fresh(); readAllGraves();
-  story.setConclusion("okonkwo", "died:9");
+  // okonkwo is already entered by the opening marker, so the sets below are the
+  // player's own work
+  story.setConclusion("lind", "survived");
   let r = story.commitConclusions();
   ok("one conclusion is refused", !r.ok && r.reason === "few");
   story.setConclusion("demir", "died:17");
   r = story.commitConclusions();
   ok("two are refused — no walking the answer out one at a time", !r.ok && r.reason === "few");
-  ok("nothing locked while refused", story.lockedCount() === 0);
+  ok("nothing new locked while refused", story.lockedCount() === 1);
 
   story.setConclusion("raman", "died:31");         // wrong: raman is 24
   r = story.commitConclusions();
   ok("a set containing one error is rejected", !r.ok && r.reason === "wrong");
-  ok("a rejected set locks NOTHING, including the two that were right", story.lockedCount() === 0);
+  ok("a rejected set locks NOTHING, including the ones that were right", story.lockedCount() === 1);
   ok("the rejection names no crew member and no field",
      !("who" in r) && !("wrong" in r) && !("id" in r) && Object.keys(r).join(",") === "ok,reason,have",
      Object.keys(r).join(","));
@@ -89,7 +99,7 @@ console.log("\nCOMMITTING: ALL OR NOTHING, AND MUTE ABOUT WHICH");
   story.setConclusion("raman", "died:24");
   r = story.commitConclusions();
   ok("the corrected set is accepted", r.ok && r.locked === 3);
-  ok("accepted conclusions lock", ["okonkwo", "demir", "raman"].every(id => story.isLocked(id)));
+  ok("accepted conclusions lock", ["lind", "demir", "raman"].every(id => story.isLocked(id)));
   ok("locked conclusions cannot be edited afterwards",
      (story.setConclusion("okonkwo", "survived"), story.conclusionFor("okonkwo").year === 9));
 }
@@ -102,7 +112,7 @@ console.log("\nTHE POINT: LINDQVIST IS SOLVABLE BEFORE THE SHELTER");
   story.setConclusion(SURVIVOR, "survived");
   for (const id of ["vantaa", "ruiz"]) story.setConclusion(id, "died:" + DEAD[id]);
   const r = story.commitConclusions();
-  ok("a player who reasoned it from the graves alone is accepted", r.ok && r.locked === 3);
+  ok("a player who reasoned it from the graves alone is accepted", r.ok && r.locked >= 2);
   ok("Lindqvist's survival locks without ever entering the shelter",
      story.isLocked(SURVIVOR) && !S.knowTruth);
 }
@@ -113,13 +123,13 @@ console.log("\nTHE FULL SIX, AND WHAT THE ENDING REPORTS");
   for (const [id, y] of Object.entries(DEAD)) story.setConclusion(id, "died:" + y);
   story.setConclusion(SURVIVOR, "survived");
   const r = story.commitConclusions();
-  ok("all six correct at once is accepted", r.ok && r.locked === 6);
+  ok("the remaining five, correct at once, are accepted", r.ok && r.locked === 5);
   ok("the ending will report 6 of 6", story.lockedCount() === 6);
-  ok("a wrong survivor is rejected even with five right",
+  ok("a wrong survivor is rejected even with the rest right",
      (fresh(), readAllGraves(),
       Object.entries(DEAD).forEach(([id, y]) => story.setConclusion(id, "died:" + y)),
       story.setConclusion(SURVIVOR, "died:41"),
-      !story.commitConclusions().ok && story.lockedCount() === 0));
+      !story.commitConclusions().ok && story.lockedCount() === 1));
 }
 
 console.log("\nTHE SHELTER STILL READS AS WRITTEN");
@@ -129,6 +139,28 @@ console.log("\nTHE SHELTER STILL READS AS WRITTEN");
   ok("the confession is unchanged and still sets knowTruth",
      S.knowTruth === true && story.CONFESSION.b === storyData.shelter.confession.body);
   ok("but it hands over no conclusions", story.lockedCount() === 0);
+
+  // ---- the opening hook -------------------------------------------------
+  console.log("\n  the marker you land beside:");
+  const S2 = fresh();
+  const OPENING = config.deduction.openingGrave;
+  const og = story.GRAVES.find(g => g.id === OPENING);
+  const spawn = config.player.spawn;
+  ok("the player lands inside its read radius",
+     Math.hypot(og.x - spawn.x, og.z - spawn.z) <= og.r,
+     `${Math.hypot(og.x - spawn.x, og.z - spawn.z).toFixed(1)} m vs radius ${og.r}`);
+  ok("nothing is filled in before it is read", story.lockedCount() === 0);
+  story.readGrave(og);
+  ok("reading it fills exactly one row", story.lockedCount() === 1);
+  ok("and it is the crew member on that plate",
+     story.isLocked(og.who) && story.conclusionFor(og.who).year === DEAD[og.who]);
+  ok("the other five are left blank",
+     story.crew().filter(c => !story.conclusionFor(c.id)).length === 5);
+  ok("closing the plate opens the sheet", typeof lastOnClose === "function" && (lastOnClose(), opened === 1));
+  const other = story.GRAVES.find(g => g.id !== OPENING);
+  story.readGrave(other);
+  ok("no other marker fills anything in", story.lockedCount() === 1);
+  ok("and no other marker opens the sheet", opened === 1);
 }
 
 if (failures) { console.error(`\ndeduction.test.js: ${failures} failure(s)`); process.exit(1); }
