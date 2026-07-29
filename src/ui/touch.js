@@ -19,7 +19,7 @@
 let config, S, actions, controller;
 let ST = null;                       // config.mobile.stick
 let mobile = false;
-let root = null, stickEl = null, knobEl = null;
+let root = null, stickEl = null, knobEl = null, homeEl;
 
 // which pointer is doing what — a thumb each, at most
 let moveId = null, lookId = null;
@@ -45,6 +45,7 @@ export function initTouch(cfg, story, deps){
 
   root = document.getElementById("touch");
   stickEl = document.getElementById("stick");
+  homeEl = document.getElementById("stick-home");
   knobEl = document.getElementById("stick-knob");
   if(!root) return mobile;
 
@@ -100,6 +101,7 @@ function onDown(e){
     stickEl.style.left = originX + "px";
     stickEl.style.top = originY + "px";
     stickEl.style.display = "block";
+    if(homeEl) homeEl.style.opacity = "0";
     knob(0, 0);
   } else if(lookId === null){
     lookId = e.pointerId;
@@ -128,6 +130,7 @@ function onMove(e){
 function onUp(e){
   if(e.pointerId === moveId){
     moveId = null;
+    if(homeEl) homeEl.style.opacity = "1";
     controller.setStick(0, 0, false);
     stickEl.style.display = "none";
   } else if(e.pointerId === lookId){

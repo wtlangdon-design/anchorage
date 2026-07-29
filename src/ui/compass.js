@@ -47,6 +47,12 @@ export function drawCompass(){
     marks.push({ x: cp.x, z: cp.z, label: cp.n.replace("Camp ", "C").toUpperCase(), col: "143,198,212", pri: 0 }); });
   if(CAMPS[4].read && !LAST.read)
     marks.push({ x: LAST.x, z: LAST.z, label: "?", col: "143,198,212", pri: 0 });
+  // Labels collide badly when several sites sit on a similar bearing — on a
+  // phone strip they overlap into mush. Draw the arrow for every mark, but
+  // give the text to the nearest one in each cluster and let the rest go.
+  const drawn = [];
+  const labelGap = (config.compass && config.compass.labelGapPx) || 46;
+  marks.sort((a, b) => Math.hypot(a.x - S.px, a.z - S.pz) - Math.hypot(b.x - S.px, b.z - S.pz));
   marks.forEach(m => {
     const a = Math.atan2(-(m.z - S.pz), m.x - S.px);
     let dd = ((a - S.camYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
@@ -56,7 +62,9 @@ export function drawCompass(){
     cx.globalAlpha = edge ? .35 : 1;
     cx.fillStyle = `rgba(${m.col},.95)`;
     cx.beginPath(); cx.moveTo(x, 3); cx.lineTo(x + 4, 9); cx.lineTo(x - 4, 9); cx.closePath(); cx.fill();
-    if(!edge){ cx.font = "8px monospace"; cx.fillStyle = `rgba(${m.col},.85)`;
+    const crowded = drawn.some(d => Math.abs(d.x - x) < labelGap && d.dist <= dist);
+    if(!edge && !crowded){ drawn.push({ x, dist });
+      cx.font = "8px monospace"; cx.fillStyle = `rgba(${m.col},.85)`;
       cx.fillText(m.label, x, 18);
       cx.fillStyle = `rgba(${m.col},.5)`;
       cx.fillText((dist / 1000).toFixed(1) + "k", x, 26); }

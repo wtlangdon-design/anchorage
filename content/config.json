@@ -1,7 +1,7 @@
 {
   "_note": "Every tunable number in the game. If a number appears in a .js file, it belongs here instead. Changing anything under 'climate', 'player.speed', or any site x/z means re-running the balance check.",
   "world": {
-    "_scaleNote": "One number for the size of the whole world. 1 is the nominal canyon: 600 m from end to end, 250 m across. Everything measured in metres multiplies by this at load. Deliberately NOT scaled: how fast you walk, how close you must stand to survey something, and anything vertical \u2014 you are the same size whatever the world does.",
+    "_scaleNote": "One number for the size of the whole world. 1 is the nominal canyon: 600 m from end to end, 250 m across. Everything measured in metres multiplies by this at load. Deliberately NOT scaled: how fast you walk, how close you must stand to survey something, and anything vertical — you are the same size whatever the world does.",
     "scale": 1.0,
     "size": 900,
     "segments": 210,
@@ -41,7 +41,7 @@
       "spreadFraction": 0.92
     },
     "palette": {
-      "_note": "Ground colour, baked into the terrain mesh once at load. Costs nothing at runtime \u2014 change these freely. Each triple is r,g,b in 0..1. 'ash' is the flat ground, 'rock' is what steep slopes show, 'broadWarm' drifts the tone slowly across the map so large areas are not one flat colour.",
+      "_note": "Ground colour, baked into the terrain mesh once at load. Costs nothing at runtime — change these freely. Each triple is r,g,b in 0..1. 'ash' is the flat ground, 'rock' is what steep slopes show, 'broadWarm' drifts the tone slowly across the map so large areas are not one flat colour.",
       "ash": [
         0.163,
         0.138,
@@ -83,7 +83,7 @@
       ]
     },
     "canyon": {
-      "_note": "The canyon. It runs north-south (along z) so the dawn line, which sweeps west along x, crosses its width rather than its length. length/width are the floor; wallRun is how far the wall takes to reach wallHeight, so a short run is a cliff. Vertical numbers are not touched by world.scale. TWO NUMBERS KEEP YOU IN: 1.5*wallHeight*(1-crestVary)/wallRun must stay above player.maxClimbGrade, or the wall becomes climbable. And meanderAmp must stay 0 \u2014 a wall line that wanders in x is a diagonal ramp out of the canyon, because the wall slides under you as you walk along z.",
+      "_note": "The canyon. It runs north-south (along z) so the dawn line, which sweeps west along x, crosses its width rather than its length. length/width are the floor; wallRun is how far the wall takes to reach wallHeight, so a short run is a cliff. Vertical numbers are not touched by world.scale. TWO NUMBERS KEEP YOU IN: 1.5*wallHeight*(1-crestVary)/wallRun must stay above player.maxClimbGrade, or the wall becomes climbable. And meanderAmp must stay 0 — a wall line that wanders in x is a diagonal ramp out of the canyon, because the wall slides under you as you walk along z.",
       "length": 600,
       "width": 250,
       "wallRun": 62,
@@ -100,7 +100,7 @@
     }
   },
   "sky": {
-    "_note": "The sky gradient, baked into the sky shader at load. Triples are r,g,b in 0..1. 'haze' should stay close to render.fogColour \u2014 that match is what makes the ground fade into the sky instead of ending at a visible line. 'dither' hides banding in the gradient on 8-bit screens; set it to 0 to switch that off.",
+    "_note": "The sky gradient, baked into the sky shader at load. Triples are r,g,b in 0..1. 'haze' should stay close to render.fogColour — that match is what makes the ground fade into the sky instead of ending at a visible line. 'dither' hides banding in the gradient on 8-bit screens; set it to 0 to switch that off.",
     "horizon": [
       0.44,
       0.385,
@@ -148,7 +148,7 @@
     "minTemp": -62,
     "maxTemp": 78,
     "lethalMargin": 12,
-    "_shadeNote": "Shade is survival. Ground the west wall hides from the sun heats at (1 - shadeRelief) of the open rate, so it stays under the lethal line far longer \u2014 that shaded stripe is the only ground worth standing on once the dawn line has gone past. samples/stepMetres are the ray march toward the sun: samples*stepMetres must reach past the far wall or distant shadow is missed. softnessMetres is how many metres of penumbra the shadow edge gets instead of a hard line.",
+    "_shadeNote": "Shade is survival. Ground the west wall hides from the sun heats at (1 - shadeRelief) of the open rate, so it stays under the lethal line far longer — that shaded stripe is the only ground worth standing on once the dawn line has gone past. samples/stepMetres are the ray march toward the sun: samples*stepMetres must reach past the far wall or distant shadow is missed. softnessMetres is how many metres of penumbra the shadow edge gets instead of a hard line.",
     "shadeRelief": 0.62,
     "shadeSamples": 12,
     "shadeStepMetres": 24,
@@ -178,7 +178,7 @@
       "autoTurnRate": 1.3,
       "firstPersonEyeHeight": 1.74
     },
-    "_climbNote": "maxClimbGrade is the steepest ground the suit will take, as a rise over run: 0.8 is about 39 degrees. The canyon walls are far steeper than this, which is what keeps you in the canyon \u2014 there is no invisible wall anywhere in this game.",
+    "_climbNote": "maxClimbGrade is the steepest ground the suit will take, as a rise over run: 0.8 is about 39 degrees. The canyon walls are far steeper than this, which is what keeps you in the canyon — there is no invisible wall anywhere in this game.",
     "maxClimbGrade": 0.8
   },
   "gait": {
@@ -388,7 +388,7 @@
     "radius": 34
   },
   "chart": {
-    "_note": "The chart is drawn as ink, not as filled squares: contour lines and hachures (the short downhill strokes ruled across a slope) carry the elevation, and everything unwalked is left blank. 'wobble' numbers are how unsteady the hand is, in pixels \u2014 0 everywhere gives a clean drafted chart, higher gives a rougher field sketch. Nothing here is random: the same chart always draws the same way, so the PNG you export is the chart you were looking at.",
+    "_note": "The chart is drawn as ink, not as filled squares: contour lines and hachures (the short downhill strokes ruled across a slope) carry the elevation, and everything unwalked is left blank. 'wobble' numbers are how unsteady the hand is, in pixels — 0 everywhere gives a clean drafted chart, higher gives a rougher field sketch. Nothing here is random: the same chart always draws the same way, so the PNG you export is the chart you were looking at.",
     "revealBaseRadius": 46,
     "revealPerMetreElevation": 2.0,
     "revealElevationThreshold": 42,
@@ -437,16 +437,18 @@
   },
   "compass": {
     "visibleArc": 1.25,
-    "tickSpacingDegrees": 10
+    "tickSpacingDegrees": 10,
+    "labelGapPx": 46,
+    "_note_labels": "labelGapPx: minimum pixels between two compass labels. When sites cluster on one bearing, the nearer one keeps its text and the others show only an arrow."
   },
   "deduction": {
-    "_note": "The Meridian worksheet. minPerCommit is how many fates must be entered before the record will accept them \u2014 the point of it being more than one is that a player cannot test a single guess at a time and walk the answer out of the game. Three is the Obra Dinn number.",
+    "_note": "The Meridian worksheet. minPerCommit is how many fates must be entered before the record will accept them — the point of it being more than one is that a player cannot test a single guess at a time and walk the answer out of the game. Three is the Obra Dinn number.",
     "minPerCommit": 3,
-    "_openingNote": "openingGrave is the marker you land beside. Reading it fills that one row of the worksheet and leaves the other five empty. Nothing says anything about it \u2014 one filled row against five blank ones is the whole of the communication. Set it to null and the game starts with an empty sheet instead.",
+    "_openingNote": "openingGrave is the marker you land beside. Reading it fills that one row of the worksheet and leaves the other five empty. Nothing says anything about it — one filled row against five blank ones is the whole of the communication. Set it to null and the game starts with an empty sheet instead.",
     "openingGrave": "g1"
   },
   "textures": {
-    "_note": "Every texture is drawn in code at load \u2014 there are no image files. Sizes are pixels per side: a 512 map costs about 1.4 MB on the graphics card, a 256 map about 350 KB. If the game runs slowly it halves all of these automatically (render.downgrade.textureScale) and redraws them. Setting 'enabled' false turns every generated map off and falls back to plain colours.",
+    "_note": "Every texture is drawn in code at load — there are no image files. Sizes are pixels per side: a 512 map costs about 1.4 MB on the graphics card, a 256 map about 350 KB. If the game runs slowly it halves all of these automatically (render.downgrade.textureScale) and redraws them. Setting 'enabled' false turns every generated map off and falls back to plain colours.",
     "enabled": true,
     "anisotropy": 4,
     "sizes": {
@@ -466,11 +468,11 @@
     }
   },
   "audio": {
-    "_note": "Everything you hear is made from filtered noise at run time \u2014 there are no sound files. Gains are 0..1 and they add up, so raising several at once is how you get distortion. The wind is meant to sit under everything and only be noticed when it stops. Mute is V.",
+    "_note": "Everything you hear is made from filtered noise at run time — there are no sound files. Gains are 0..1 and they add up, so raising several at once is how you get distortion. The wind is meant to sit under everything and only be noticed when it stops. Mute is V.",
     "masterGain": 0.9,
     "noiseSeconds": 3,
     "smoothing": {
-      "_note": "Seconds for a level to travel most of the way to its target. Small is twitchy, large is syrupy. 'null' is deliberately quicker than the rest \u2014 the silence should arrive faster than it leaves.",
+      "_note": "Seconds for a level to travel most of the way to its target. Small is twitchy, large is syrupy. 'null' is deliberately quicker than the rest — the silence should arrive faster than it leaves.",
       "wind": 0.45,
       "herd": 0.6,
       "null": 0.14,
@@ -521,7 +523,7 @@
       }
     },
     "null": {
-      "_note": "The ashwaiter silence. At full null everything is multiplied by zero \u2014 actual silence, not a quiet mix. 'curve' above 1 makes the drop bite earlier as you approach the den.",
+      "_note": "The ashwaiter silence. At full null everything is multiplied by zero — actual silence, not a quiet mix. 'curve' above 1 makes the drop bite earlier as you approach the den.",
       "curve": 1.6
     }
   },
@@ -559,7 +561,7 @@
     }
   },
   "mobile": {
-    "_note": "What a phone starts at, applied immediately instead of waiting to measure a stutter the player has already seen. These are RENDER-ONLY reductions: the world is still generated in full, so a phone and a desktop see the same rocks in the same places \u2014 only fewer of them are drawn. Set 'force' to true or false to override the automatic detection while testing on a desktop.",
+    "_note": "What a phone starts at, applied immediately instead of waiting to measure a stutter the player has already seen. These are RENDER-ONLY reductions: the world is still generated in full, so a phone and a desktop see the same rocks in the same places — only fewer of them are drawn. Set 'force' to true or false to override the automatic detection while testing on a desktop.",
     "force": null,
     "maxPixelRatio": 1.5,
     "grassMultiplier": 0.3,
@@ -573,7 +575,7 @@
       "_note": "The left thumb stick. radius is how far from where you first touched counts as full deflection; sprintAt is the fraction of that travel where walking becomes sprinting, because there is no shift key on a phone. deadZone stops a resting thumb from drifting.",
       "radius": 68,
       "deadZone": 0.14,
-      "sprintAt": 0.8,
+      "sprintAt": 0.92,
       "sideFraction": 0.45
     },
     "lookSensitivity": 0.006,
