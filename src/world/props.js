@@ -157,12 +157,12 @@ function linearToSRGB(c) {
   return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
 }
 
-let THREE, scene, rand, heightAt, fbm, config;
+let THREE, scene, rand, heightAt, fbm, config, record;
 
 export function initProps(cfg, story, deps){
   THREE = deps.THREE; scene = deps.scene; rand = deps.rand;
   heightAt = deps.heightAt; fbm = deps.fbm;
-  config = cfg;
+  config = cfg; record = story;
 }
 
 /* ---------------------------------------------------------------- rock ----- */
@@ -369,10 +369,28 @@ function plateHeight(u, v, gi) {
 
 /* -------------------------------------------------------------- build ------ */
 
+// Real keys of an object, in id order, ignoring the "_note" documentation keys.
+const realKeys=o=>Object.keys(o||{}).filter(k=>!k.startsWith("_")).sort();
+
+// The entries config actually places, each tagged with `i`: its index in the
+// full story.json record for that group. Falls back to the placed order only if
+// the record is missing the id entirely.
+function placedFromRecord(group,rec){
+  const ord={}; realKeys(rec).forEach((id,i)=>{ord[id]=i});
+  return realKeys(group).map((id,n)=>({...group[id],id,i:id in ord?ord[id]:n}));
+}
+
 export function buildPlaces(){
   const SIZE=config.world.size;
-  const CAMPS=[config.camps.c1,config.camps.c2,config.camps.c3,config.camps.c4,config.camps.c5];
-  const GRAVES=[config.graves.g1,config.graves.g2,config.graves.g3,config.graves.g4,config.graves.g5];
+  // Only some of the Meridian's camps and graves are on this ground; the rest
+  // exist only in story.json's record. config places what is here, story.json
+  // holds the full five and five — and each placed thing keeps its ORDINAL in
+  // that full record, never its position in the placed list, because the
+  // per-object art is indexed by it. Camp five's mast is the tall relay; grave
+  // five's plate is the clean, level one the reveal turns on. Renumber them and
+  // Vantaa inherits Okonkwo's hand.
+  const CAMPS=placedFromRecord(config.camps,record&&record.camps);
+  const GRAVES=placedFromRecord(config.graves,record&&record.graves);
   const LAST=config.shelter;
   const R=TUNING.rock, M=TUNING.metal, PL=TUNING.plate;
 
@@ -436,7 +454,11 @@ export function buildPlaces(){
   // --- one engraving map and one wear map per grave. The only per-object texture
   // spend in the file, and the reason is in TUNING.plate.grave.
   const plateClean=new THREE.Color(PL.clean), plateOxide=new THREE.Color(PL.oxide), plateMix=new THREE.Color();
+  // Indexed by record ordinal, so plateMats[4] is always Vantaa's. A grave that
+  // is only in the record costs no texture.
+  const wanted=new Set(GRAVES.map(g=>g.i));
   const plateMats=PL.grave.map((G,gi)=>{
+    if(!wanted.has(gi)) return null;
     const nrm=tex.normalTexture("plateNormal"+gi,tex.sizeFor("plateNormal",256),
       (u,v)=>plateHeight(u,v,gi),PL.normalStrength,{});
     const wear=tex.texture("plateWear"+gi,tex.sizeFor("plateWear",128),size=>
@@ -469,7 +491,8 @@ export function buildPlaces(){
      const b=new THREE.Mesh(roughRock(s),soilRockM);
      const x=c.x+Math.cos(a)*d,z=c.z+Math.sin(a)*d;
      b.position.set(x,heightAt(x,z)+s*.3,z);b.rotation.set(rand()*3,rand()*3,rand()*3);put(b)}}
-  CAMPS.forEach((cp,i)=>{
+  CAMPS.forEach(cp=>{
+    const i=cp.i;
     const y=heightAt(cp.x,cp.z),n=Math.max(1,4-Math.floor(i*.7));   // TODO(lead): hut-count formula max(1,4-floor(i*.7)) not in config
     for(let k=0;k<n;k++){const h=new THREE.Mesh(new THREE.BoxGeometry(6.5,3.2,4.8),metal);
       h.position.set(cp.x+k*8-8,y+1.35,cp.z+(k%2)*4.2);h.rotation.y=(rand()-.5)*.5;put(h)}
@@ -477,7 +500,7 @@ export function buildPlaces(){
     mast.position.set(cp.x+5,y+10+i*1.25,cp.z-7);put(mast);
     const dish=new THREE.Mesh(new THREE.SphereGeometry(1.9,M.dishSegments[0],M.dishSegments[1],0,6.28,0,1.1),dishM);
     dish.position.set(cp.x+5,y+20+i*2.5,cp.z-7);dish.rotation.x=-.85;put(dish)});
-  GRAVES.forEach((g,gi)=>{const y=heightAt(g.x,g.z);
+  GRAVES.forEach(g=>{const gi=g.i,y=heightAt(g.x,g.z);
     const lean=(1-PL.grave[gi].steady);
     for(let i=0;i<5;i++){const s=.9-i*.13;   // TODO(lead): 5 cairn rocks per grave and .9-i*.13 not in config
       const b=new THREE.Mesh(roughRock(s*.4),rockM);

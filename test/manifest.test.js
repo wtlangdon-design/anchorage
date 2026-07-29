@@ -46,12 +46,12 @@ function fresh() {
 }
 
 // 2. A Meridian gift never overwrites a player's own finding — and the player-given
-//    name survives. (Camp c1 gives "soil".)
+//    name survives. The archive moved to the shelter when camps one to four left
+//    this world, so the shelter is what hands the findings over now.
 {
   const S = fresh();
   manifest.complete("soil", "you", "Long Ash");           // player surveys and names it
-  const camp = story.CAMPS.find(c => c.id === "c1");
-  story.readCamp(camp);                                    // then reads the camp that offers soil
+  story.readLast();                                        // then finds the relay archive
   const soil = manifest.crit("soil");
   ok("player's authorship survives the gift", soil.by === "you");
   ok("player-given name survives the gift", soil.name === "Long Ash", `got ${soil.name}`);
@@ -61,17 +61,16 @@ function fresh() {
 {
   const S = fresh();
   ok("soil starts unanswered", manifest.crit("soil").done === false);
-  const camp = story.CAMPS.find(c => c.id === "c1");
-  story.readCamp(camp);
+  story.readLast();
   const soil = manifest.crit("soil");
-  ok("gift completes an unreached criterion", soil.done === true && soil.by === "meridian");
+  ok("the archive completes an unreached criterion", soil.done === true && soil.by === "meridian");
 }
 
 // 4. Player-given names persist into the end-state payload (state() snapshot).
 {
   const S = fresh();
   manifest.complete("water", "you", "Kettle");
-  story.readCamp(story.CAMPS.find(c => c.id === "c2")); // c2 gives "season", unrelated to water
+  story.readLast();                                    // the archive also carries water
   const row = manifest.state().find(r => r.id === "water");
   ok("named finding is intact in the end-state payload", row.name === "Kettle" && row.by === "you");
 }

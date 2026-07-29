@@ -46,11 +46,11 @@ const SCALED = [
   "sites.rad.x", "sites.rad.z", "sites.bio.x", "sites.bio.z",
   "sites.site.x", "sites.site.z", "sites.season.x", "sites.season.z",
 
-  "camps.c1.x", "camps.c1.z", "camps.c2.x", "camps.c2.z", "camps.c3.x", "camps.c3.z",
-  "camps.c4.x", "camps.c4.z", "camps.c5.x", "camps.c5.z",
+  // only what is actually in this world. Camps one to four and graves one and two
+  // are elsewhere on the planet and exist only in story.json's record.
+  "camps.c5.x", "camps.c5.z",
 
-  "graves.g1.x", "graves.g1.z", "graves.g2.x", "graves.g2.z", "graves.g3.x", "graves.g3.z",
-  "graves.g4.x", "graves.g4.z", "graves.g5.x", "graves.g5.z",
+  "graves.g3.x", "graves.g3.z", "graves.g4.x", "graves.g4.z", "graves.g5.x", "graves.g5.z",
 
   "shelter.x", "shelter.z",
 

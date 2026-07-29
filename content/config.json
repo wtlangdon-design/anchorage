@@ -172,8 +172,8 @@
   },
   "player": {
     "spawn": {
-      "x": -70,
-      "z": 211
+      "x": -56,
+      "z": 240
     },
     "walkSpeed": 4.2,
     "sprintSpeed": 9.0,
@@ -185,7 +185,7 @@
       "fov": 64,
       "near": 0.15,
       "far": 9000,
-      "startYaw": 2.1588,
+      "startYaw": 2.35619,
       "startPitch": 0.16,
       "minPitch": -0.42,
       "maxPitch": 0.8,
@@ -299,109 +299,94 @@
   "sites": {
     "_note": "The six findings. Prose for each lives in story.json under the same id. duration is seconds of holding still to complete the survey.",
     "soil": {
-      "x": -60,
-      "z": 245,
+      "x": -72,
+      "z": 168,
       "radius": 26,
       "duration": 3.2
     },
     "water": {
-      "x": 35,
-      "z": 178,
+      "x": 58,
+      "z": 118,
       "radius": 24,
       "duration": 2.8
     },
     "rad": {
-      "x": -86,
-      "z": 58,
+      "x": -88,
+      "z": 30,
       "radius": 48,
       "duration": 3.0
     },
     "bio": {
       "x": 0,
-      "z": -248,
+      "z": -205,
       "radius": 130,
       "duration": 3.6,
       "followsBand": true
     },
     "site": {
-      "x": 12,
-      "z": -38,
+      "x": 18,
+      "z": -48,
       "radius": 70,
       "duration": 4.0
     },
     "season": {
       "x": 94,
-      "z": -158,
+      "z": -168,
       "radius": 30,
       "duration": 3.2
     }
   },
   "camps": {
-    "_note": "The Meridian chain. Each camp is further north than the last. 'gives' names the site it answers from their archive, or null.",
-    "c1": {
-      "x": -42,
-      "z": 256,
-      "radius": 30,
-      "gives": "soil"
-    },
-    "c2": {
-      "x": 26,
-      "z": 132,
-      "radius": 30,
-      "gives": "season"
-    },
-    "c3": {
-      "x": -16,
-      "z": 2,
-      "radius": 30,
-      "gives": "rad"
-    },
-    "c4": {
-      "x": 46,
-      "z": -134,
-      "radius": 30,
-      "gives": "water"
-    },
+    "_note": "Only camp five is here. The Meridian moved across the planet for forty years; four camps 130 m apart could never have represented that, so camps one to four are somewhere else on this world and exist only in the record. Their findings are recovered from the relay archive at the shelter \u2014 see shelter.archive.",
     "c5": {
-      "x": -30,
-      "z": -250,
+      "x": -40,
+      "z": -238,
       "radius": 34,
       "gives": null
     }
   },
   "graves": {
-    "_note": "Never marked on the compass or the chart. Finding them is the discovery.",
-    "g1": {
-      "x": -76,
-      "z": 202,
-      "radius": 16
-    },
-    "g2": {
-      "x": 58,
-      "z": 74,
-      "radius": 16
-    },
+    "_note": "Only the deaths from the years they had stopped moving are buried here: raman (24), ruiz (31), vantaa (41). Okonkwo (9) and Demir (17) died while the survey was still travelling and are buried somewhere the player will never go. Their records still exist in story.json \u2014 that is where the answer key comes from \u2014 but their plates are not in this world, so nothing here states the year they died.",
     "g3": {
-      "x": -58,
-      "z": -62,
+      "x": -64,
+      "z": 232,
       "radius": 16
     },
     "g4": {
-      "x": 70,
-      "z": -188,
+      "x": -62,
+      "z": -112,
       "radius": 16
     },
     "g5": {
-      "x": -54,
-      "z": -276,
+      "x": 52,
+      "z": -268,
       "radius": 18
     }
   },
   "shelter": {
     "_note": "The sixth camp. Only appears on the compass after camp five is read, and then only as '?'.",
-    "x": 22,
-    "z": -292,
-    "radius": 34
+    "x": -14,
+    "z": -294,
+    "radius": 34,
+    "_archiveNote": "The relay terminal held everything the survey ever filed, because Lindqvist ran the relay. Each pair is [finding, which camp's record describes it] \u2014 the gift text is that camp's own line from story.json, so nothing new is written. Camp five carries the final entry and nothing else; loading four findings onto that beat would bury it.",
+    "archive": [
+      [
+        "soil",
+        "c1"
+      ],
+      [
+        "season",
+        "c2"
+      ],
+      [
+        "rad",
+        "c3"
+      ],
+      [
+        "water",
+        "c4"
+      ]
+    ]
   },
   "chart": {
     "_note": "The chart is drawn as ink, not as filled squares: contour lines and hachures (the short downhill strokes ruled across a slope) carry the elevation, and everything unwalked is left blank. 'wobble' numbers are how unsteady the hand is, in pixels \u2014 0 everywhere gives a clean drafted chart, higher gives a rougher field sketch. Nothing here is random: the same chart always draws the same way, so the PNG you export is the chart you were looking at.",
@@ -461,7 +446,9 @@
     "_note": "The Meridian worksheet. minPerCommit is how many fates must be entered before the record will accept them \u2014 the point of it being more than one is that a player cannot test a single guess at a time and walk the answer out of the game. Three is the Obra Dinn number.",
     "minPerCommit": 3,
     "_openingNote": "openingGrave is the marker you land beside. Reading it fills that one row of the worksheet and leaves the other five empty. Nothing says anything about it \u2014 one filled row against five blank ones is the whole of the communication. Set it to null and the game starts with an empty sheet instead.",
-    "openingGrave": "g1"
+    "openingGrave": "g3",
+    "_datesNote": "datesFromRecord is the switch for the two crew whose graves are not in this world. Okonkwo (year 9) and Demir (year 17) died while the survey was still travelling, and NOTHING readable in this crevice states either year \u2014 the only place those dates appear is on their plates, which are elsewhere. So the worksheet cannot currently be completed for them, and it should not offer dates the player has no evidence for. Put the grave record ids here (e.g. [\"g1\",\"g2\"]) ONLY once a log the player can actually reach states those years; the dates then become selectable when the shelter is read. Empty is the honest state until then.",
+    "datesFromRecord": []
   },
   "textures": {
     "_note": "Every texture is drawn in code at load \u2014 there are no image files. Sizes are pixels per side: a 512 map costs about 1.4 MB on the graphics card, a 256 map about 350 KB. If the game runs slowly it halves all of these automatically (render.downgrade.textureScale) and redraws them. Setting 'enabled' false turns every generated map off and falls back to plain colours.",

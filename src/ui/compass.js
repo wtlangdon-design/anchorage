@@ -45,7 +45,7 @@ export function drawCompass(){
   CAMPS.forEach(cp => { if(cp.read) return;
     if(lostAtT(cp.x) - S.t <= 0) return;
     marks.push({ x: cp.x, z: cp.z, label: cp.n.replace("Camp ", "C").toUpperCase(), col: "143,198,212", pri: 0 }); });
-  if(CAMPS[4].read && !LAST.read)
+  if(CAMPS.length && CAMPS[CAMPS.length-1].read && !LAST.read)
     marks.push({ x: LAST.x, z: LAST.z, label: "?", col: "143,198,212", pri: 0 });
   // Labels collide badly when several sites sit on a similar bearing — on a
   // phone strip they overlap into mush. Draw the arrow for every mark, but

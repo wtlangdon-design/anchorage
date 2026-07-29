@@ -13,8 +13,10 @@ let giftTemplate = "", giftAlreadyTemplate = "";
 export let CREW = [], CAMPS = [], GRAVES = [], LAST = null, CONFESSION = null;
 let afterReadToast = "";
 
-const CAMP_ORDER  = ["c1", "c2", "c3", "c4", "c5"];
-const GRAVE_ORDER = ["g1", "g2", "g3", "g4", "g5"];
+// What is actually in this world is whatever config places. The Meridian moved
+// across the planet for forty years, so most of their camps and two of their
+// graves are somewhere else on it — they exist in the record and not underfoot.
+const placed = o => Object.keys(o || {}).filter(k => !k.startsWith("_")).sort();
 
 export function initStory(config, story, deps){
   S = deps.S; manifest = deps.manifest;
@@ -32,7 +34,7 @@ export function initStory(config, story, deps){
   // fills it in for the player.
   CREW = story.crew.map(c => ({ id: c.id, n: c.name, r: c.role }));
 
-  CAMPS = CAMP_ORDER.map(id => {
+  CAMPS = placed(config.camps).map(id => {
     const cc = config.camps[id], sc = story.camps[id];
     return {
       id, n: sc.name,
@@ -44,7 +46,7 @@ export function initStory(config, story, deps){
     };
   });
 
-  GRAVES = GRAVE_ORDER.map(id => {
+  GRAVES = placed(config.graves).map(id => {
     const cg = config.graves[id], sg = story.graves[id];
     return {
       id, x: cg.x, z: cg.z, r: cg.radius, who: sg.crew,
@@ -69,16 +71,25 @@ export function initStory(config, story, deps){
     rev: ["lind", story.shelter.confession.reveal]  // TODO(lead): crew id not in story
   };
   afterReadToast = story.shelter.afterReadToast;
+  archive = (config.shelter && config.shelter.archive) || [];
+  archiveStory = story.camps;
+  graveRecords = story.graves || {};
+  datesFromRecord = (config.deduction && config.deduction.datesFromRecord) || [];
 
-  // The answer key is not written down anywhere. It is derived from the graves
-  // themselves: each marker names a crew member and a year, and the one member of
-  // six with no marker is the one who was still walking. Edit a grave label in
-  // story.json and the truth follows it — there is no second copy to fall out of
-  // step, and nothing in the code states the conclusion the player is chasing.
+  // The answer key comes from the RECORD, not from what happens to be buried here.
+  // story.json still holds all five grave entries; config only places three of
+  // them. So the truth is complete — okonkwo died in year 9 whether or not the
+  // player can ever stand at that plate — and the one crew member with no grave
+  // record at all is the one who was still walking.
+  //
+  // Deriving this from the placed graves instead would have quietly declared
+  // okonkwo and demir survivors, because they have no marker in this crevice.
   TRUTH = {};
-  for(const g of GRAVES){
-    const year = parseInt(String(g.l).replace(/[^0-9]/g, ""), 10);
-    if(g.who && isFinite(year)) TRUTH[g.who] = { fate: "died", year, label: g.l };
+  for(const id of Object.keys(story.graves || {})){
+    if(id.startsWith("_")) continue;
+    const sg = story.graves[id];
+    const year = parseInt(String(sg.label).replace(/[^0-9]/g, ""), 10);
+    if(sg.crew && isFinite(year)) TRUTH[sg.crew] = { fate: "died", year, label: sg.label };
   }
   for(const c of CREW) if(!TRUTH[c.id]) TRUTH[c.id] = { fate: "survived", year: null, label: "" };
 
@@ -95,16 +106,32 @@ export function initStory(config, story, deps){
    a player would binary-search the answer instead of reading the graves. */
 
 let TRUTH = {}, CONCLUSIONS = {}, LOCKED = {}, minPerCommit = 3, openingGrave = null;
+let archive = [], archiveStory = {};
+let datesFromRecord = [], graveRecords = {};
 
 // Fate options are earned, not given: a year only becomes selectable once the
 // player has stood at the marker that states it.
+//
+// Two of the six are buried somewhere this game never goes, and nothing readable
+// in this crevice states the year either of them died. Rather than offer dates the
+// player has no evidence for, those two stay unavailable — config.deduction
+// .datesFromRecord is the switch, and it is deliberately empty. Fill it in only
+// when a log the player can actually reach carries the year, and the date then
+// becomes selectable at the point that log is read (the shelter). The label comes
+// from the grave record in story.json, so turning it on invents no text either.
 export function fateOptions(){
-  const years = GRAVES.filter(g => g.read)
-    .map(g => ({ year: parseInt(String(g.l).replace(/[^0-9]/g, ""), 10), label: g.l }))
-    .filter(o => isFinite(o.year))
-    .sort((a, b) => a.year - b.year);
+  const out = GRAVES.filter(g => g.read)
+    .map(g => ({ year: parseInt(String(g.l).replace(/[^0-9]/g, ""), 10), label: g.l }));
+  if(LAST && LAST.read){
+    for(const id of datesFromRecord){
+      const rec = graveRecords[id];
+      if(!rec) continue;
+      out.push({ year: parseInt(String(rec.label).replace(/[^0-9]/g, ""), 10), label: rec.label });
+    }
+  }
   const seen = new Set();
-  return years.filter(o => !seen.has(o.year) && seen.add(o.year));
+  return out.filter(o => isFinite(o.year)).sort((a, b) => a.year - b.year)
+            .filter(o => !seen.has(o.year) && seen.add(o.year));
 }
 
 export function conclusionFor(id){ return CONCLUSIONS[id] || null; }
@@ -203,8 +230,24 @@ export function readCamp(cp){
 // ref 837-844
 export function readLast(){
   LAST.read = true; S.knowTruth = true;
+
+  // The relay archive. Lindqvist ran the relay, so everything the survey ever
+  // filed is on the terminal in here — including the findings from the four camps
+  // that are somewhere else on this planet. The gift line for each is that camp's
+  // own sentence out of story.json; nothing new is written to say it.
+  let gifts = "";
+  for(const [siteId, campId] of archive){
+    const c = manifest.crit(siteId);
+    if(!c || c.done) continue;
+    manifest.complete(siteId, "meridian", c.name || "(Meridian archive)");
+    const line = archiveStory[campId] && archiveStory[campId].gift;
+    gifts += `<p class="body"><em>${line || ""}</em><br>
+      <span style="font-size:13px;opacity:.8">${giftTemplate.replace("{name}", esc(c.n))}</span></p>`;
+  }
+  if(gifts) gifts = `<div class="rule"></div>${gifts}`;
+
   showPanel(ui.kickerShelter, LAST.t, ui.subtitleNotOnManifest, LAST.b,
-    `<div class="rule"></div><h1 style="font-size:19px">${CONFESSION.t}</h1>
+    `${gifts}<div class="rule"></div><h1 style="font-size:19px">${CONFESSION.t}</h1>
      <p class="body">${CONFESSION.b}</p>`);
   file(CONFESSION.t, ui.logKindConfession, CONFESSION.b, LAST.x, LAST.z);
   renderManifest();

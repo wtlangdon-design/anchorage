@@ -49,7 +49,7 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
   ok("site positions scale", near(c.sites.soil.x, base.sites.soil.x * s) && near(c.sites.soil.z, base.sites.soil.z * s));
   ok("site radius does NOT scale (the surveyor is unchanged)", c.sites.soil.radius === base.sites.soil.radius);
   ok("camp/grave/shelter positions scale",
-     near(c.camps.c1.x, base.camps.c1.x * s) && near(c.graves.g5.z, base.graves.g5.z * s) && near(c.shelter.x, base.shelter.x * s));
+     near(c.camps.c5.x, base.camps.c5.x * s) && near(c.graves.g5.z, base.graves.g5.z * s) && near(c.shelter.x, base.shelter.x * s));
   ok("spawn scales", near(c.player.spawn.x, base.player.spawn.x * s));
   ok("the canyon scales in every horizontal dimension",
      near(c.terrain.canyon.length, base.terrain.canyon.length * s)

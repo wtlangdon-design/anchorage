@@ -82,7 +82,7 @@ export function renderManifest(){
   const CAMPS = storyMod.CAMPS, LAST = storyMod.LAST;
   const camps = document.getElementById("camplist");
   const items = CAMPS.map(cp => ({ n: cp.n, x: cp.x, z: cp.z, read: cp.read, shade: cp.shade || 0 }));
-  if(LAST.read || CAMPS[4].read) items.push({ n: LAST.n, x: LAST.x, z: LAST.z, read: LAST.read, shade: 0 });
+  if(LAST.read || (CAMPS.length && CAMPS[CAMPS.length-1].read)) items.push({ n: LAST.n, x: LAST.x, z: LAST.z, read: LAST.read, shade: 0 });
   camps.innerHTML = items.map(cp => {
     const dist = Math.hypot(cp.x - S.px, cp.z - S.pz);
     const rem = lostAtT(cp.x, cp.shade) - S.t;

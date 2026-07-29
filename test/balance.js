@@ -108,7 +108,7 @@ ok("all six findings are answerable in one run (survey is solvable)",
 const all = [...sites, ...camps];
 const allWalk = maxCompletable(all, walk);
 const allSprint = maxCompletable(all, sprint);
-console.log(`\n  full manifest (6 sites + 5 camps): sprint ${allSprint.best}/${all.length}, walk ${allWalk.best}/${all.length}` +
+console.log(`\n  full manifest (${sites.length} sites + ${camps.length} camp${camps.length===1?"":"s"}): sprint ${allSprint.best}/${all.length}, walk ${allWalk.best}/${all.length}` +
             (allWalk.missed.length ? `  (walk sacrifices: ${allWalk.missed.join(", ")})` : ""));
 // NOT an assertion any more, and deliberately so. "You cannot answer all six" is a
 // design goal, not a property the code can guarantee — it depends on world.scale,
@@ -117,7 +117,7 @@ console.log(`\n  full manifest (6 sites + 5 camps): sprint ${allSprint.best}/${a
 // loudly instead, so the day it stops being true is the day you read it here.
 if (allWalk.best >= all.length) {
   console.log("\n  ** SLACK WARNING **");
-  console.log("  Every objective on the manifest — all six findings AND all five camps — can");
+  console.log(`  Every objective on the manifest — all ${sites.length} findings AND all ${camps.length} placed camp${camps.length===1?"":"s"} — can`);
   console.log("  be reached at a walk. Nothing has to be abandoned, so the central choice the");
   console.log("  design is built on is not currently being forced by the clock.");
 } else {
@@ -126,8 +126,8 @@ if (allWalk.best >= all.length) {
 
 // ---- reported, not asserted: is the tension there at full sprint too? ----
 if (allSprint.best === all.length) {
-  console.log("\n  NOTE for the author: at continuous sprint every tracked objective (all six");
-  console.log("  findings AND all five camps) is reachable. The 'you cannot answer all six'");
+  console.log(`\n  NOTE for the author: at continuous sprint every tracked objective (all ${sites.length}`);
+  console.log(`  findings AND all ${camps.length} placed camp${camps.length===1?"":"s"}) is reachable. The 'you cannot answer all six'`);
   console.log("  pressure is currently carried by pace and by the unmarked graves/shelter, not");
   console.log("  enforced by the site deadlines. Tightening dawnVelocity or the sunward site x");
   console.log("  positions would make the choice kinematic if that is the intent.");

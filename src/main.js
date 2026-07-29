@@ -157,7 +157,8 @@ function init() {
   });
 
   // oxygen refills at any camp or the shelter (ref 1140: CAMPS.concat([LAST]))
-  const oxyPositions = [config.camps.c1, config.camps.c2, config.camps.c3, config.camps.c4, config.camps.c5, config.shelter]
+  const oxyPositions = Object.keys(config.camps).filter(k => !k.startsWith("_"))
+    .map(k => config.camps[k]).concat([config.shelter])
     .map(o => ({ x: o.x, z: o.z }));
   suit.initSuit(config, story_data, {
     S, tempAt, toast: hud.toast, fail: endings.fail, getDens: fauna.getDens,
