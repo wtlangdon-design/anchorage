@@ -304,6 +304,8 @@
     "chartTitle": "Chart",
     "chartSubtitleTemplate": "Surveyed by {surveyor} · {ship}",
     "chartCoverageTemplate": "{percent}% charted · {count} recorded",
+    "chartExportButton": "Export chart",
+    "chartUnnamedWorld": "CS 4-9 b",
     "chartHint": "Dashed line is the dawn. Everything left of the red edge is already too hot to reach.",
     "closeButton": "Close",
     "kickerRecoveredRecord": "Recovered record · survey ship Meridian · 214 years",
