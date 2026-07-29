@@ -135,7 +135,9 @@
     ],
     "dither": 0.0045,
     "upScale": 1.55,
-    "upBias": 0.05
+    "upBias": 0.05,
+    "glareDepthTest": true,
+    "_note_glare": "glareDepthTest: true means terrain hides the sun's glare, which is what you want in a canyon. Set false for the old open-plain behaviour where the glare always showed."
   },
   "climate": {
     "_note": "The whole clock. dawn0 is where the dawn line starts in metres; dawnVelocity is metres per second. lethal is the temperature that kills a site. A site at x becomes lost at (x + (lethal + 12) / k - dawn0) / dawnVelocity seconds.",

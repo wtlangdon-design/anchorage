@@ -70,6 +70,12 @@ export function initTouch(cfg, story, deps){
   surface.addEventListener("pointerleave", onUp);
 
   // the buttons. Kept few and large; everything rarely used lives behind "···".
+  // the manifest is a tap-to-expand panel on a phone
+  const task = document.getElementById("task");
+  if(task) task.addEventListener("pointerdown", e => {
+    e.stopPropagation(); task.classList.toggle("open");
+  });
+
   bind("btn-act", () => actions.interact());
   bind("btn-chart", () => actions.openChart());
   bind("btn-log", () => actions.openLog());

@@ -169,7 +169,20 @@ body.touch #gauges .g{margin-bottom:0;width:74px}
 body.touch #read{bottom:auto;top:12px}
 body.touch #tbtns{flex-direction:row;right:12px;bottom:12px;gap:8px}
 body.touch #more-panel{flex-direction:row;right:12px;bottom:74px}
-body.touch #task{width:min(238px,38vw);font-size:9px}
+body.touch #task{width:min(238px,38vw);font-size:9px;pointer-events:auto;cursor:pointer}
+/* On a phone the manifest is a glance, not a wall. Collapsed it shows the
+   clock and the count; tap it for the whole thing. */
+body.touch #task .hdr:after{content:"\25BE";margin-left:6px;opacity:.6;font-size:8px}
+body.touch #task.open .hdr:after{content:"\25B4"}
+body.touch #task .cols,
+body.touch #task #critlist,
+body.touch #task .sub,
+body.touch #task #camplist{display:none}
+body.touch #task.open .cols,
+body.touch #task.open #critlist,
+body.touch #task.open .sub{display:block}
+body.touch #task.open #camplist{display:block}
+body.touch #task.open{max-height:78vh;overflow-y:auto}
 
 /* ---------- landscape only ---------- */
 #rotate{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
@@ -183,7 +196,7 @@ body.touch #task{width:min(238px,38vw);font-size:9px}
 <div id="hud">
   <div class="panel" id="task">
     <div class="hdr"><span>Survey manifest</span><span id="clockv"></span></div>
-    <div class="row" style="opacity:.45;font-size:8.5px;letter-spacing:.1em">
+    <div class="row cols" style="opacity:.45;font-size:8.5px;letter-spacing:.1em">
       <div>FINDING</div><div class="dd">DIST</div><div class="tt">LOST IN</div></div>
     <div id="critlist"></div>
     <div class="sub">Meridian chain</div>

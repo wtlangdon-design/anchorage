@@ -200,7 +200,11 @@ export function buildGlare(){
   const map=tex.texture("glare",tex.sizeFor("glare",256),glarePixels,{srgb:true});
   TUNING.glareSprites.forEach(([s,o])=>{
     const sp=new THREE.Sprite(new THREE.SpriteMaterial({map,transparent:true,opacity:o,
-      blending:THREE.AdditiveBlending,depthWrite:false,depthTest:false,fog:false}));
+      blending:THREE.AdditiveBlending,depthWrite:false,fog:false,
+      // depth-tested: on the old open plain nothing ever stood between the
+      // camera and the horizon, so this was free. In a canyon it painted the
+      // sun through solid rock.
+      depthTest:(TUNING.glareDepthTest!==false)}));
     sp.scale.set(s,s,1);sp.position.set(4200,200,0);
     // an unmapped sprite is a solid white square 1500 units across. if the map
     // could not be made, the sprite stays in the scene but stays out of the frame.
