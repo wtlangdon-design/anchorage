@@ -16,6 +16,7 @@
     "detailAmplitude": 7,
     "detailOffset": { "x": 30, "z": -11 },
     "octaves": 5,
+    "detailOctaves": 3,
     "ridge": { "x": -620, "z": -780, "length": 950, "angle": 0.62, "height": 130, "width": 200, "falloffPower": 2.2 },
     "basin": { "x": 150, "z": 900, "radius": 300, "depth": 28 },
     "farHills": { "count": 18, "minDistance": 2100, "distanceRange": 1600, "minHeight": 90, "heightRange": 240, "minRadius": 280, "radiusRange": 440 },

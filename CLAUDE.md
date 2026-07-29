@@ -78,3 +78,39 @@ breadth is explicitly not the goal.
   in your summary.
 - Do not refactor a module you were not asked to touch.
 - When you finish a task, state plainly what you did not do.
+
+## Structure and running
+
+The game is a folder of static ES modules — no build step. `index.html` at the
+repo root is the entry point; it loads Three.js r128 from the CDN and then
+`src/main.js` as a module, which `fetch()`es the two content files. Because of
+those imports and fetches it must be **served over http**, never opened from
+`file://`. GitHub Pages serves `main` from root, so the live build is
+https://wtlangdon-design.github.io/anchorage/ and every push redeploys it. To
+run it locally, serve the folder with any static server and open `index.html`.
+
+The single-file reference build is kept as `anchorage-reference.html` — it is the
+canonical behaviour. The modules were ported from it with zero behaviour change.
+
+```
+src/
+  main.js            bootstrap + game loop + wiring; owns the PRNG consumption order
+  world/  noise climate terrain grass fauna props sky
+  player/ rig gait controller suit
+  game/   manifest story endings
+  ui/     hud compass chart panels
+content/  config.json (all numbers)   story.json (all prose)
+test/     climate.test.js gait.test.js manifest.test.js balance.js
+```
+
+The whole world is generated from one seeded PRNG (`content/config.json` →
+`terrain.noiseSeed`). It is consumed in a fixed order at load time, orchestrated
+entirely by `main.js`; see the header comment there. Do not give a module its own
+generator — that silently changes the world.
+
+## Tests
+
+- `npm test` — runs `climate`, `gait`, and `manifest` (pure logic, no browser).
+- `npm run balance` — the solvability check; run it after any change to a number
+  in `config.json` that affects distance, speed, or the dawn line, and paste the
+  output in your summary.

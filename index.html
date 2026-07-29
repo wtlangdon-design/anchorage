@@ -1,8 +1,171 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
-<title>The Anchorage</title>
-<!-- TEMPORARY. The port replaces this file with the real entry point. -->
-<meta http-equiv="refresh" content="0; url=anchorage-reference.html">
-<p style="font-family:monospace;background:#05070B;color:#C8D4DC;padding:40px;margin:0;min-height:100vh">
-Loading the reference build&hellip; <a href="anchorage-reference.html" style="color:#8FC6D4">open it directly</a>
-</p>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Anchorage — v5</title>
+<style>
+:root{
+  --ink:#C8D4DC; --signal:#8FC6D4; --dawnlight:#FFE9C0;
+  --warn:#E0793F; --bad:#D9484A; --ok:#8FD4A8;
+  --glass:rgba(8,11,18,.86); --hair:rgba(143,198,212,.20);
+  --mono:"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#05070B;color:var(--ink);
+  font-family:var(--mono);-webkit-font-smoothing:antialiased}
+canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+.panel{position:absolute;background:var(--glass);border:1px solid var(--hair);
+  padding:9px 11px;backdrop-filter:blur(3px)}
+.lab{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--signal);opacity:.6}
+.val{font-size:13px;margin-top:2px}
+
+#task{left:14px;top:14px;width:268px}
+#task .hdr{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dawnlight);
+  margin-bottom:7px;opacity:.9;display:flex;justify-content:space-between}
+.row{display:grid;grid-template-columns:1fr 46px 52px;gap:5px;font-size:10.5px;
+  line-height:1.62;align-items:baseline}
+.row .nm2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .dd{text-align:right;opacity:.62}
+.row .tt{text-align:right}
+.row.done{color:var(--ok)} .row.mer{color:var(--dawnlight)}
+.row.lost{color:var(--bad);opacity:.55;text-decoration:line-through}
+.row .tt.urgent{color:var(--bad)} .row .tt.soon{color:var(--warn)}
+.sub{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.42;margin:8px 0 3px}
+#tasknote{font-size:9px;letter-spacing:.08em;opacity:.5;margin-top:8px;line-height:1.5}
+
+#gauges{left:14px;bottom:14px;width:168px}
+.g{margin-bottom:7px}.g:last-child{margin-bottom:0}
+.bar{height:3px;background:rgba(143,198,212,.15);margin-top:4px;position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--signal)}
+.bar.warn i{background:var(--warn)}.bar.bad i{background:var(--bad)}
+#read{right:14px;bottom:14px;width:184px;text-align:right}
+#top{left:50%;top:12px;transform:translateX(-50%);width:430px;padding:0;background:none;border:none}
+#cmpwrap,#sfwrap{background:var(--glass);border:1px solid var(--hair);position:relative}
+#cmpwrap{height:44px}#sfwrap{height:22px;margin-top:5px}
+#top canvas{position:absolute;inset:0;width:100%;height:100%}
+#sfnote{position:absolute;left:0;right:0;top:56px;text-align:center;font-size:9px;
+  letter-spacing:.16em;color:var(--signal);opacity:.7}
+#sfnote.null{color:var(--bad);opacity:1;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.3}}
+#prompt{left:50%;bottom:96px;transform:translateX(-50%);display:none;font-size:12px;letter-spacing:.1em;text-align:center}
+#prompt b{color:var(--dawnlight);font-weight:400}
+#pbar{height:3px;background:rgba(143,198,212,.18);margin-top:7px;width:190px;position:relative;display:none}
+#pbar i{position:absolute;inset:0 auto 0 0;background:var(--dawnlight);width:0}
+#keys{right:14px;top:14px;font-size:9px;letter-spacing:.12em;opacity:.34;line-height:1.8;text-align:right}
+#toast{position:fixed;left:50%;bottom:158px;transform:translateX(-50%);z-index:6;
+  font-family:var(--serif);font-size:18px;font-style:italic;color:var(--dawnlight);
+  opacity:0;transition:opacity .6s;text-align:center;max-width:660px;text-shadow:0 2px 16px #000;pointer-events:none}
+#visor{position:fixed;inset:0;z-index:4;pointer-events:none;display:none;
+  box-shadow:inset 0 0 130px 46px rgba(4,7,12,.92), inset 0 0 320px 90px rgba(8,14,22,.55)}
+#visor:after{content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 46%, transparent 42%, rgba(5,8,14,.85) 82%)}
+#heat{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .5s;
+  box-shadow:inset 0 0 180px 50px rgba(196,85,47,.7)}
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(5,7,12,.96);
+  display:none;align-items:center;justify-content:center;padding:28px}
+.overlay.on{display:flex}
+.sheet{max-width:620px;width:100%;max-height:100%;overflow-y:auto}
+h1{font-family:var(--serif);font-size:27px;font-weight:400;color:var(--dawnlight);margin-bottom:5px}
+h2{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--signal);
+  opacity:.7;margin-bottom:18px;font-weight:400}
+p.body{font-family:var(--serif);font-size:16px;line-height:1.68;margin-bottom:14px;color:#D8DEE3}
+p.body em{color:var(--dawnlight)}
+p.tiny{font-family:var(--mono);font-size:11px;line-height:1.7;opacity:.6;margin-bottom:12px;letter-spacing:.04em}
+.rule{height:1px;background:var(--hair);margin:20px 0}
+input[type=text]{width:100%;background:transparent;border:none;border-bottom:1px solid var(--signal);
+  color:var(--dawnlight);font-family:var(--serif);font-size:20px;padding:6px 2px;outline:none}
+input[type=text]::placeholder{color:rgba(200,212,220,.26)}
+button{background:transparent;border:1px solid var(--signal);color:var(--signal);
+  font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  padding:10px 20px;cursor:pointer;margin-top:16px;margin-right:8px}
+button:hover,button:focus-visible{background:var(--signal);color:#05070B;outline:none}
+button.danger{border-color:var(--bad);color:var(--bad)}
+button.danger:hover{background:var(--bad);color:#05070B}
+.hint{font-size:10px;letter-spacing:.11em;opacity:.42;margin-top:12px}
+.entry{border-left:1px solid var(--hair);padding-left:14px;margin-bottom:15px}
+.entry .nm{font-family:var(--serif);font-size:18px;color:var(--dawnlight);font-style:italic}
+.entry .meta{font-size:9px;letter-spacing:.15em;text-transform:uppercase;opacity:.5;margin:3px 0 5px}
+.entry .desc{font-family:var(--serif);font-size:14px;line-height:1.55;color:#C2CAD1}
+.crewrow{display:grid;grid-template-columns:170px 1fr;gap:12px;font-size:12px;
+  padding:7px 0;border-bottom:1px solid rgba(143,198,212,.10);align-items:baseline}
+.crewrow .cn{color:var(--dawnlight)}
+.crewrow.unknown{opacity:.35}
+.crewrow .cx{font-family:var(--serif);font-size:13.5px;line-height:1.5}
+#chart .sheet{max-width:none;width:100%;height:100%;display:flex;flex-direction:column}
+#chartcv{flex:1;width:100%;min-height:0;border:1px solid var(--hair)}
+#chead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.tabs{display:flex;gap:16px;margin-bottom:16px}
+.tab{font-size:9px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;
+  padding-bottom:5px;border-bottom:1px solid transparent;opacity:.5}
+.tab.on{opacity:1;color:var(--dawnlight);border-bottom-color:var(--dawnlight)}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="panel" id="task">
+    <div class="hdr"><span>Survey manifest</span><span id="clockv"></span></div>
+    <div class="row" style="opacity:.45;font-size:8.5px;letter-spacing:.1em">
+      <div>FINDING</div><div class="dd">DIST</div><div class="tt">LOST IN</div></div>
+    <div id="critlist"></div>
+    <div class="sub">Meridian chain</div>
+    <div id="camplist"></div>
+    <div id="tasknote"></div>
+  </div>
+  <div class="panel" id="gauges">
+    <div class="g"><div class="lab">Suit integrity</div><div class="bar" id="b-int"><i></i></div></div>
+    <div class="g"><div class="lab">Water</div><div class="bar" id="b-wat"><i></i></div></div>
+    <div class="g"><div class="lab">Oxygen</div><div class="bar" id="b-oxy"><i></i></div></div>
+  </div>
+  <div class="panel" id="read">
+    <div class="lab">External</div><div class="val" id="v-temp">—</div>
+    <div class="lab" style="margin-top:6px">Dawn line</div><div class="val" id="v-dawn">—</div>
+    <div class="lab" style="margin-top:6px">Elevation</div><div class="val" id="v-elev">—</div>
+  </div>
+  <div id="top" class="panel">
+    <div id="cmpwrap"><canvas id="cmp"></canvas></div>
+    <div id="sfwrap"><canvas id="sf"></canvas></div>
+    <div id="sfnote"></div>
+  </div>
+  <div class="panel" id="prompt"><span id="ptext"></span><div id="pbar"><i></i></div></div>
+  <div id="keys">
+    W A S D — WALK &nbsp; SHIFT — SPRINT<br>DRAG — LOOK &nbsp; C — VIEW<br>
+    E — SURVEY / READ<br>M — CHART &nbsp; L — LOGBOOK<br>T — TRANSMIT
+  </div>
+</div>
+<div id="visor"></div>
+<div id="heat"></div>
+<div id="toast"></div>
+
+<div class="overlay on" id="briefing"><div class="sheet" id="bsheet"></div></div>
+<div class="overlay" id="naming"><div class="sheet">
+  <h1 id="nm-title"></h1><h2 id="nm-sub"></h2>
+  <p class="body" id="nm-find"></p>
+  <input type="text" id="nm-input" autocomplete="off" spellcheck="false">
+  <div class="hint">Whatever you write is what it is called from now on.</div>
+  <button id="nm-ok">Enter into the record</button>
+</div></div>
+<div class="overlay" id="logbook"><div class="sheet">
+  <h1>Logbook</h1><h2 id="log-sub"></h2>
+  <div class="tabs"><div class="tab on" data-t="rec">Records</div><div class="tab" data-t="crew">Meridian crew</div></div>
+  <div id="log-list"></div><div id="crew-list" style="display:none"></div>
+  <button onclick="document.getElementById('logbook').classList.remove('on')">Close</button>
+</div></div>
+<div class="overlay" id="chart"><div class="sheet">
+  <div id="chead"><div><h1 style="font-size:22px;margin:0" id="c-title">Chart</h1>
+    <h2 style="margin:4px 0 0" id="c-sub"></h2></div><div class="lab" id="c-cov"></div></div>
+  <canvas id="chartcv"></canvas>
+  <div class="hint">Dashed line is the dawn. Everything left of the red edge is already too hot to reach.</div>
+</div></div>
+<div class="overlay" id="msg"><div class="sheet" id="msheet"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>if(!window.THREE){document.body.innerHTML=
+'<div style="padding:40px;font-family:monospace;color:#C8D4DC">Could not load the 3D library from the network. Try reloading.</div>'}</script>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
