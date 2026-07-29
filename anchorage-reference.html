@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Anchorage — v5</title>
+<style>
+:root{
+  --ink:#C8D4DC; --signal:#8FC6D4; --dawnlight:#FFE9C0;
+  --warn:#E0793F; --bad:#D9484A; --ok:#8FD4A8;
+  --glass:rgba(8,11,18,.86); --hair:rgba(143,198,212,.20);
+  --mono:"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#05070B;color:var(--ink);
+  font-family:var(--mono);-webkit-font-smoothing:antialiased}
+canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+.panel{position:absolute;background:var(--glass);border:1px solid var(--hair);
+  padding:9px 11px;backdrop-filter:blur(3px)}
+.lab{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--signal);opacity:.6}
+.val{font-size:13px;margin-top:2px}
+
+#task{left:14px;top:14px;width:268px}
+#task .hdr{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dawnlight);
+  margin-bottom:7px;opacity:.9;display:flex;justify-content:space-between}
+.row{display:grid;grid-template-columns:1fr 46px 52px;gap:5px;font-size:10.5px;
+  line-height:1.62;align-items:baseline}
+.row .nm2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .dd{text-align:right;opacity:.62}
+.row .tt{text-align:right}
+.row.done{color:var(--ok)} .row.mer{color:var(--dawnlight)}
+.row.lost{color:var(--bad);opacity:.55;text-decoration:line-through}
+.row .tt.urgent{color:var(--bad)} .row .tt.soon{color:var(--warn)}
+.sub{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.42;margin:8px 0 3px}
+#tasknote{font-size:9px;letter-spacing:.08em;opacity:.5;margin-top:8px;line-height:1.5}
+
+#gauges{left:14px;bottom:14px;width:168px}
+.g{margin-bottom:7px}.g:last-child{margin-bottom:0}
+.bar{height:3px;background:rgba(143,198,212,.15);margin-top:4px;position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--signal)}
+.bar.warn i{background:var(--warn)}.bar.bad i{background:var(--bad)}
+#read{right:14px;bottom:14px;width:184px;text-align:right}
+#top{left:50%;top:12px;transform:translateX(-50%);width:430px;padding:0;background:none;border:none}
+#cmpwrap,#sfwrap{background:var(--glass);border:1px solid var(--hair);position:relative}
+#cmpwrap{height:44px}#sfwrap{height:22px;margin-top:5px}
+#top canvas{position:absolute;inset:0;width:100%;height:100%}
+#sfnote{position:absolute;left:0;right:0;top:56px;text-align:center;font-size:9px;
+  letter-spacing:.16em;color:var(--signal);opacity:.7}
+#sfnote.null{color:var(--bad);opacity:1;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.3}}
+#prompt{left:50%;bottom:96px;transform:translateX(-50%);display:none;font-size:12px;letter-spacing:.1em;text-align:center}
+#prompt b{color:var(--dawnlight);font-weight:400}
+#pbar{height:3px;background:rgba(143,198,212,.18);margin-top:7px;width:190px;position:relative;display:none}
+#pbar i{position:absolute;inset:0 auto 0 0;background:var(--dawnlight);width:0}
+#keys{right:14px;top:14px;font-size:9px;letter-spacing:.12em;opacity:.34;line-height:1.8;text-align:right}
+#toast{position:fixed;left:50%;bottom:158px;transform:translateX(-50%);z-index:6;
+  font-family:var(--serif);font-size:18px;font-style:italic;color:var(--dawnlight);
+  opacity:0;transition:opacity .6s;text-align:center;max-width:660px;text-shadow:0 2px 16px #000;pointer-events:none}
+#visor{position:fixed;inset:0;z-index:4;pointer-events:none;display:none;
+  box-shadow:inset 0 0 130px 46px rgba(4,7,12,.92), inset 0 0 320px 90px rgba(8,14,22,.55)}
+#visor:after{content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 46%, transparent 42%, rgba(5,8,14,.85) 82%)}
+#heat{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .5s;
+  box-shadow:inset 0 0 180px 50px rgba(196,85,47,.7)}
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(5,7,12,.96);
+  display:none;align-items:center;justify-content:center;padding:28px}
+.overlay.on{display:flex}
+.sheet{max-width:620px;width:100%;max-height:100%;overflow-y:auto}
+h1{font-family:var(--serif);font-size:27px;font-weight:400;color:var(--dawnlight);margin-bottom:5px}
+h2{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--signal);
+  opacity:.7;margin-bottom:18px;font-weight:400}
+p.body{font-family:var(--serif);font-size:16px;line-height:1.68;margin-bottom:14px;color:#D8DEE3}
+p.body em{color:var(--dawnlight)}
+p.tiny{font-family:var(--mono);font-size:11px;line-height:1.7;opacity:.6;margin-bottom:12px;letter-spacing:.04em}
+.rule{height:1px;background:var(--hair);margin:20px 0}
+input[type=text]{width:100%;background:transparent;border:none;border-bottom:1px solid var(--signal);
+  color:var(--dawnlight);font-family:var(--serif);font-size:20px;padding:6px 2px;outline:none}
+input[type=text]::placeholder{color:rgba(200,212,220,.26)}
+button{background:transparent;border:1px solid var(--signal);color:var(--signal);
+  font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  padding:10px 20px;cursor:pointer;margin-top:16px;margin-right:8px}
+button:hover,button:focus-visible{background:var(--signal);color:#05070B;outline:none}
+button.danger{border-color:var(--bad);color:var(--bad)}
+button.danger:hover{background:var(--bad);color:#05070B}
+.hint{font-size:10px;letter-spacing:.11em;opacity:.42;margin-top:12px}
+.entry{border-left:1px solid var(--hair);padding-left:14px;margin-bottom:15px}
+.entry .nm{font-family:var(--serif);font-size:18px;color:var(--dawnlight);font-style:italic}
+.entry .meta{font-size:9px;letter-spacing:.15em;text-transform:uppercase;opacity:.5;margin:3px 0 5px}
+.entry .desc{font-family:var(--serif);font-size:14px;line-height:1.55;color:#C2CAD1}
+.crewrow{display:grid;grid-template-columns:170px 1fr;gap:12px;font-size:12px;
+  padding:7px 0;border-bottom:1px solid rgba(143,198,212,.10);align-items:baseline}
+.crewrow .cn{color:var(--dawnlight)}
+.crewrow.unknown{opacity:.35}
+.crewrow .cx{font-family:var(--serif);font-size:13.5px;line-height:1.5}
+#chart .sheet{max-width:none;width:100%;height:100%;display:flex;flex-direction:column}
+#chartcv{flex:1;width:100%;min-height:0;border:1px solid var(--hair)}
+#chead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.tabs{display:flex;gap:16px;margin-bottom:16px}
+.tab{font-size:9px;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;
+  padding-bottom:5px;border-bottom:1px solid transparent;opacity:.5}
+.tab.on{opacity:1;color:var(--dawnlight);border-bottom-color:var(--dawnlight)}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="panel" id="task">
+    <div class="hdr"><span>Survey manifest</span><span id="clockv"></span></div>
+    <div class="row" style="opacity:.45;font-size:8.5px;letter-spacing:.1em">
+      <div>FINDING</div><div class="dd">DIST</div><div class="tt">LOST IN</div></div>
+    <div id="critlist"></div>
+    <div class="sub">Meridian chain</div>
+    <div id="camplist"></div>
+    <div id="tasknote"></div>
+  </div>
+  <div class="panel" id="gauges">
+    <div class="g"><div class="lab">Suit integrity</div><div class="bar" id="b-int"><i></i></div></div>
+    <div class="g"><div class="lab">Water</div><div class="bar" id="b-wat"><i></i></div></div>
+    <div class="g"><div class="lab">Oxygen</div><div class="bar" id="b-oxy"><i></i></div></div>
+  </div>
+  <div class="panel" id="read">
+    <div class="lab">External</div><div class="val" id="v-temp">—</div>
+    <div class="lab" style="margin-top:6px">Dawn line</div><div class="val" id="v-dawn">—</div>
+    <div class="lab" style="margin-top:6px">Elevation</div><div class="val" id="v-elev">—</div>
+  </div>
+  <div id="top" class="panel">
+    <div id="cmpwrap"><canvas id="cmp"></canvas></div>
+    <div id="sfwrap"><canvas id="sf"></canvas></div>
+    <div id="sfnote"></div>
+  </div>
+  <div class="panel" id="prompt"><span id="ptext"></span><div id="pbar"><i></i></div></div>
+  <div id="keys">
+    W A S D — WALK &nbsp; SHIFT — SPRINT<br>DRAG — LOOK &nbsp; C — VIEW<br>
+    E — SURVEY / READ<br>M — CHART &nbsp; L — LOGBOOK<br>T — TRANSMIT
+  </div>
+</div>
+<div id="visor"></div>
+<div id="heat"></div>
+<div id="toast"></div>
+
+<div class="overlay on" id="briefing"><div class="sheet" id="bsheet"></div></div>
+<div class="overlay" id="naming"><div class="sheet">
+  <h1 id="nm-title"></h1><h2 id="nm-sub"></h2>
+  <p class="body" id="nm-find"></p>
+  <input type="text" id="nm-input" autocomplete="off" spellcheck="false">
+  <div class="hint">Whatever you write is what it is called from now on.</div>
+  <button id="nm-ok">Enter into the record</button>
+</div></div>
+<div class="overlay" id="logbook"><div class="sheet">
+  <h1>Logbook</h1><h2 id="log-sub"></h2>
+  <div class="tabs"><div class="tab on" data-t="rec">Records</div><div class="tab" data-t="crew">Meridian crew</div></div>
+  <div id="log-list"></div><div id="crew-list" style="display:none"></div>
+  <button onclick="document.getElementById('logbook').classList.remove('on')">Close</button>
+</div></div>
+<div class="overlay" id="chart"><div class="sheet">
+  <div id="chead"><div><h1 style="font-size:22px;margin:0" id="c-title">Chart</h1>
+    <h2 style="margin:4px 0 0" id="c-sub"></h2></div><div class="lab" id="c-cov"></div></div>
+  <canvas id="chartcv"></canvas>
+  <div class="hint">Dashed line is the dawn. Everything left of the red edge is already too hot to reach.</div>
+</div></div>
+<div class="overlay" id="msg"><div class="sheet" id="msheet"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>if(!window.THREE){document.body.innerHTML=
+'<div style="padding:40px;font-family:monospace;color:#C8D4DC">Could not load the 3D library from the network. Try reloading.</div>'}</script>
+<script>
+"use strict";
+
+/* ---------- noise ---------- */
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd=mulberry(7731);
+const perm=new Uint8Array(512);
+(function(){const p=[...Array(256).keys()];for(let i=255;i>0;i--){const j=(rnd()*(i+1))|0;[p[i],p[j]]=[p[j],p[i]]}
+ for(let i=0;i<512;i++)perm[i]=p[i&255]})();
+function fade(t){return t*t*t*(t*(t*6-15)+10)}
+function grd(h,x,y){const u=(h&1)?-x:x,v=(h&2)?-y:y;return u+v}
+function noise2(x,y){const X=Math.floor(x)&255,Y=Math.floor(y)&255;x-=Math.floor(x);y-=Math.floor(y);
+  const u=fade(x),v=fade(y),A=perm[X]+Y,B=perm[X+1]+Y,l=(a,b,t)=>a+t*(b-a);
+  return l(l(grd(perm[A],x,y),grd(perm[B],x-1,y),u),
+           l(grd(perm[A+1],x,y-1),grd(perm[B+1],x-1,y-1),u),v)}
+function fbm(x,y,o=5){let s=0,a=.5,f=1;for(let i=0;i<o;i++){s+=a*noise2(x*f,y*f);a*=.5;f*=2}return s}
+
+/* ---------- terrain ---------- */
+const SIZE=3400,SEG=210;
+const RIDGE={x:-620,z:-780,len:950,ang:.62,h:130,w:200};
+function ridgeH(x,z){const dx=x-RIDGE.x,dz=z-RIDGE.z,ca=Math.cos(RIDGE.ang),sa=Math.sin(RIDGE.ang);
+  const al=dx*ca+dz*sa,ac=-dx*sa+dz*ca;
+  return RIDGE.h*Math.max(0,1-Math.pow(Math.abs(al)/RIDGE.len,2.2))*Math.exp(-(ac*ac)/(2*RIDGE.w*RIDGE.w))}
+const BASIN={x:150,z:900,r:300,d:28};
+function heightAt(x,z){
+  let h=fbm(x*.00080,z*.00080,5)*44+fbm(x*.0038+30,z*.0038-11,3)*7+ridgeH(x,z);
+  const bd=Math.hypot(x-BASIN.x,z-BASIN.z);
+  h-=BASIN.d*Math.exp(-(bd*bd)/(2*BASIN.r*BASIN.r));
+  return h;
+}
+const SUNDIR={x:1,z:0};
+
+/* ---------- the clock ---------- */
+const DAWN0=-900, DAWN_V=2.0, LETHAL=52, K=0.050;
+function dawnX(){return DAWN0+S.t*DAWN_V}
+function tempAt(x){const b=dawnX()-x;return b<0?Math.max(-62,-12+b*0.030):Math.min(78,-12+b*K)}
+function lostAtT(x){return (x+(LETHAL+12)/K-DAWN0)/DAWN_V}   // seconds when x becomes lethal
+
+/* ---------- crew ---------- */
+const CREW=[
+  {id:"vantaa", n:"Cdr. Ilse Vantaa",   r:"Commander",            known:false,note:""},
+  {id:"ruiz",   n:"Tomas Ruiz",         r:"Geology, telemetry",   known:false,note:""},
+  {id:"okonkwo",n:"Adaeze Okonkwo",     r:"Biology",              known:false,note:""},
+  {id:"demir",  n:"Yusuf Demir",        r:"Engineering",          known:false,note:""},
+  {id:"raman",  n:"Priya Raman",        r:"Cartography",          known:false,note:""},
+  {id:"lind",   n:"Mara Lindqvist",     r:"Physician, relay",     known:false,note:""}
+];
+function crew(id){return CREW.find(c=>c.id===id)}
+function reveal(id,note){const c=crew(id);c.known=true;if(note)c.note=note}
+
+/* ---------- criteria ---------- */
+const CRIT=[
+  {id:"soil",  n:"Soil chemistry",    x:-1300,z:-250, r:26,dur:3.2,
+   find:"Ash-derived, mineral-rich, poor in fixed nitrogen. Crops would need help for a generation and then they would not.",
+   place:"Ash field",sugg:["The Grey","Long Ash","Tillage"]},
+  {id:"water", n:"Surface water",     x:-1000,z:430,  r:24,dur:2.8,
+   find:"Meltwater, low salinity, drinkable after filtration. It runs for a day in ninety and then it is ice again.",
+   place:"Hydrology",sugg:["Dawnwater","The Brief","Kettle"]},
+  {id:"rad",   n:"Radiation",         x:-620, z:-780, r:48,dur:3.0,
+   find:"Magnetosphere weak but sufficient. Surface dose survivable unshielded; a roof solves the rest.",
+   place:"Vantage",sugg:["The Spine","First Sight","Long Look"]},
+  {id:"bio",   n:"Biosphere",         x:0,    z:-1050,r:130,dur:3.6,band:true,
+   find:"Six tonnes each, walking. No stomach flora hostile to us, no airborne prion analogue. We could live alongside this.",
+   place:"Fauna — herd",sugg:["Striders","Walkers","Longshanks","Pilgrims"]},
+  {id:"site",  n:"Settlement site",   x:150,  z:900,  r:70,dur:4.0,
+   find:"A basin, sheltered, with a floor that holds water eleven days after each dawn. If it is anywhere, it is here.",
+   place:"Basin",sugg:["The Bowl","Harbour","Anchorage"]},
+  {id:"season",n:"Seasonal extremes", x:430,  z:-560, r:30,dur:3.2,
+   find:"The night side reaches sixty below and holds it for weeks. Anything we build has to be able to walk, or to sleep.",
+   place:"Frost margin",sugg:["The Cold Edge","Nightfall","The Hold"]}
+];
+CRIT.forEach(c=>{c.done=false;c.by=null;c.lost=false;c.name=null});
+function C(id){return CRIT.find(c=>c.id===id)}
+
+/* ---------- the Meridian chain ---------- */
+const CAMPS=[
+{id:"c1",n:"Camp one",x:-1200,z:-1150,r:30,gives:"soil",
+ t:"Camp one — Meridian, day 41",
+ b:`Marker one, logged 41:06:22 local, all six present and well.<br><br>
+ We are calling the planet nothing yet — Vantaa says naming it before the survey is finished is bad discipline, and she is right, and everyone has a name for it anyway.<br><br>
+ The band is generous. We can live here. I want that in the record plainly before I start qualifying it in the report.<br><br>
+ Soil series complete and filed. Ash-derived, mineral-rich, poor in fixed nitrogen. A generation of work and then none.<br><br>— T. Ruiz, for the commander`,
+ rev:[["ruiz","Wrote the early logs. Meticulous timekeeping, to the second."],["vantaa","Commanded the Meridian survey. Six crew, no relief, no return."]],
+ gift:"Ruiz's soil series, complete, two hundred years before you got here."},
+
+{id:"c2",n:"Camp two",x:-600,z:-450,r:30,gives:"season",
+ t:"Camp two — Meridian, day 1,205",
+ b:`Third move. We have the rhythm of it: strike at hour six, walk until the grass thins, make camp in the green again.<br><br>
+ Ruiz took the sledge past the dawn line to the frost and brought back numbers nobody wanted. Sixty below on the night side and it holds for weeks. Whatever gets built here has to be able to move, or to sleep through it.<br><br>
+ Okonkwo has not slept properly since planetfall. She says the light does not change enough to tell her body anything, and that she has started to find the fixed sun difficult to be under. Lindqvist has her on a schedule and a lamp. It is not working yet.<br><br>— T. Ruiz`,
+ rev:[["okonkwo","Biologist. Stopped being able to sleep almost immediately. The light never changes here."],["lind","Physician. Also ran the relay — six people, everyone doubled up."]],
+ gift:"Ruiz's cold-side telemetry, taken past the line at some cost."},
+
+{id:"c3",n:"Camp three",x:-150,z:200,r:30,gives:"rad",
+ t:"Camp three — Meridian, day 2,940",
+ b:`Earth acknowledged.<br><br>
+ That is the word. <em>Acknowledged. Recommendation received and filed. Colony programme deferred pending review. Review to be scheduled.</em><br><br>
+ Vantaa read it to all of us standing up, in full, twice, and then said we would continue the survey, because the survey is what we are for. Nobody argued. Nobody said anything at all.<br><br>
+ Radiation series finished and filed with the rest of it. Demir has kept the reactor inside tolerance four years past its rating and does not talk about how.<br><br>— T. Ruiz`,
+ rev:[["demir","Engineer. Kept a reactor alive years past its rating."]],
+ gift:"The radiation series — filed, complete, and read by no one."},
+
+{id:"c4",n:"Camp four",x:250,z:850,r:30,gives:"water",
+ t:"Camp four — Meridian, day 4,860 (?)",
+ b:`<span style="opacity:.55;font-size:13px">[ transcription note: hand unsteady from here on. dates internally inconsistent — this entry is logged as day 4,860 and also as day 4,680. ]</span><br><br>
+ We have moved this camp eleven times and not at all in nineteen years.<br><br>
+ Ruiz worked out that at fifty-five degrees the line moves slower than a person walks, and once you know a thing like that you cannot un-know it. We came north. Then further north. The grass is thin and the light never really changes and nobody has proposed going back.<br><br>
+ Raman is drawing again, which is good. She has drawn the valley below the camp eleven times this month. They are all slightly different and she says they are all correct.<br><br>
+ Hydrology closed out. It was closed out a long time ago.<br><br>— I. Vantaa`,
+ rev:[["raman","Cartographer. Drew the same valley eleven times in a month and said each was correct."]],
+ gift:"The hydrology record, closed out and left where someone might find it."},
+
+{id:"c5",n:"Camp five",x:650,z:1350,r:34,gives:null,
+ t:"Camp five — Meridian, final entry",
+ b:`I am the last one and I have stopped pretending the survey continues.<br><br>
+ Something I never put in a report: the ashwaiters do not migrate. They burrow in behind the herd and wait out the whole ninety days in the dark, and when the grass comes round again they are exactly where they were. I used to think that was a horror. I have come to think it is the only honest way to live here, and I am aware of what that says about me.<br><br>
+ We found a world. It was a good world. That part we did correctly.<br><br>
+ If you are reading this then someone came after all, and you are standing in my camp with a survey of your own to finish. Do not do what I did. Send it, and then keep walking.<br><br>— Ilse Vantaa`,
+ rev:[["vantaa","Wrote a final entry stating she was the last of the six alive."]],
+ gift:null}
+];
+CAMPS.forEach(c=>{c.read=false});
+
+/* ---------- graves ---------- */
+const GRAVES=[
+{id:"g1",x:-1050,z:-820,r:16,who:"okonkwo",
+ t:"A. OKONKWO",l:"year 9",
+ b:"A cairn with a plate cut from hull stock. The lettering is careful and even.<br><br><em>She stopped being able to sleep in the light.</em>",
+ rev:["okonkwo","Died in year nine. The first."]},
+{id:"g2",x:-320,z:-90,r:16,who:"demir",
+ t:"Y. DEMIR",l:"year 17",
+ b:"Hull plate again, same hand, less even now.<br><br><em>He kept the reactor running four years past its rating.</em>",
+ rev:["demir","Died in year seventeen."]},
+{id:"g3",x:190,z:560,r:16,who:"raman",
+ t:"P. RAMAN",l:"year 24",
+ b:"The lettering has gone irregular, the spacing wrong, as though cut by someone working from memory of how letters go.<br><br><em>She drew everything. At the end she drew the same valley eleven times.</em>",
+ rev:["raman","Died in year twenty-four."]},
+{id:"g4",x:520,z:1100,r:16,who:"ruiz",
+ t:"T. RUIZ",l:"year 31",
+ b:"Barely legible. Cut slowly, and by someone who had to stop and start.<br><br><em>He said the numbers were fine.</em>",
+ rev:["ruiz","Died in year thirty-one. His last telemetry is unusable, and he filed it as sound."]},
+{id:"g5",x:760,z:1420,r:18,who:"vantaa",
+ t:"I. VANTAA",l:"year 41",
+ b:`Hull plate, cut clean and square and level — the steadiest hand of any marker on this planet, and not the hand that cut the other four.<br><br><em>She was right about the world.</em><br><br>
+ <span style="color:var(--dawnlight)">Vantaa's last entry says she was the last of the six alive. Someone buried her.</span>`,
+ rev:["vantaa","Buried by a steady hand, after writing that she was the last one alive."]}
+];
+GRAVES.forEach(g=>{g.read=false});
+
+/* ---------- the sixth camp ---------- */
+const LAST={id:"last",n:"Unlogged camp",x:1150,z:1560,r:34,read:false,
+ t:"Unlogged camp — no designation",
+ b:`One shelter, out past the last of the grass, on ground that has not been warm in a hundred and eighty years. It is not on any Meridian manifest.<br><br>
+ There is a relay terminal inside, still under power, and a single record left open on it.`};
+
+const CONFESSION={
+ t:"M. Lindqvist — personal record, undated",
+ b:`I was the physician and I ran the relay, because there were six of us and everyone did two jobs.<br><br>
+ I had the medical series before anyone. Okonkwo first, then all of us: sleep architecture coming apart, circadian phase running free, and after the first decade something worse and slower underneath it. Ninety-day light. Our biology has no answer to it and neither did I. It does not kill you. It takes you apart over thirty years and you are the last to notice, and by the time you would notice you are not the one doing the noticing.<br><br>
+ I was holding the survey recommendation for transmission on day 2,900. Six lives on one side. Forty thousand on the other, asleep, with no fuel to go anywhere else once they were pointed here.<br><br>
+ I changed one word. The recommendation went out as <em>withdrawn</em>.<br><br>
+ Then I wrote the reply myself, because it would take nineteen years to arrive and I could not have Ilse reading the real one. <em>Deferred pending review.</em> She believed in that committee for the rest of her life. She died angry at an office that had never received anything to be angry about.<br><br>
+ I buried them all. I have been alone eleven years now and I am, as far as I can tell, still myself, which I no longer trust as evidence of anything.<br><br>
+ If you are reading this you are a surveyor and you have your own recommendation to send, and you have just found out that the world is good and that it will take your people apart slowly and they will not notice.<br><br>
+ I am not going to tell you what to do. I have already found out what it costs to decide that for other people.<br><br>— M. Lindqvist`,
+ rev:["lind","Altered the Meridian recommendation to <em>withdrawn</em>, and forged the reply. Buried the other five. Reason: the ninety-day light takes human beings apart over thirty years, and nobody notices it happening."]};
+
+/* ---------- state ---------- */
+const CELL=26,GW=Math.ceil(SIZE/CELL);
+const S={t:0,integrity:100,water:100,oxy:100,
+  px:-900,pz:430,heading:Math.PI,speed:0,
+  camYaw:Math.PI,camPitch:.16,camDist:6.2,fp:false,
+  name:"",ship:"",planet:"",
+  log:[],started:false,dead:false,mouse:false,ended:false,
+  seen:new Uint8Array(GW*GW),seenCount:0,
+  surveying:null,progress:0,null_:0,bob:0,grassAt:-9999,knowTruth:false};
+const DENS=[];
+for(let i=0;i<26;i++)DENS.push({x:-1600+rnd()*2700,z:-1500+rnd()*3100});
+
+/* ---------- three ---------- */
+let renderer,scene,cam,sun,player,legL,legR,armL,armR,grass,gShader=null,hands;
+const strider=[];
+
+function init(){
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.15;
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+  renderer.domElement.style.position="fixed";renderer.domElement.style.inset="0";
+  scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x6b5f52,0.00068);
+  cam=new THREE.PerspectiveCamera(64,innerWidth/innerHeight,.15,9000);
+  buildSky();buildTerrain();buildFarHills();buildGrass();
+  buildStriders();buildPlaces();buildPlayer();buildHands();buildDust();buildGlare();
+  sun=new THREE.DirectionalLight(0xffcf9a,2.9);
+  sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  const d=200;
+  sun.shadow.camera.left=-d;sun.shadow.camera.right=d;
+  sun.shadow.camera.top=d;sun.shadow.camera.bottom=-d;
+  sun.shadow.camera.near=1;sun.shadow.camera.far=1500;sun.shadow.bias=-0.0009;
+  scene.add(sun);scene.add(sun.target);
+  scene.add(new THREE.HemisphereLight(0x6e86ab,0x2b2018,.34));
+  const b=new THREE.DirectionalLight(0x5f7ba8,.22);b.position.set(-600,300,300);scene.add(b);
+  addEventListener("resize",()=>{renderer.setSize(innerWidth,innerHeight);
+    cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+  renderManifest();animate();
+}
+function buildSky(){
+  const mat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+    uniforms:{sd:{value:new THREE.Vector3(SUNDIR.x,.055,SUNDIR.z).normalize()}},
+    vertexShader:`varying vec3 vP;void main(){vP=normalize(position);
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader:`varying vec3 vP;uniform vec3 sd;
+      void main(){float up=clamp(vP.y*1.55+.05,0.,1.);
+      float s=clamp(dot(normalize(vP),sd),0.,1.);
+      vec3 c=mix(mix(vec3(.42,.375,.33),vec3(.13,.148,.19),smoothstep(0.,.30,up)),
+                 vec3(.028,.042,.072),smoothstep(.26,.92,up));
+      c+=vec3(1.,.78,.44)*pow(s,5.)*(1.-up*.70);
+      c+=vec3(.90,.52,.26)*pow(s,1.5)*.46*(1.-up*.86);
+      gl_FragColor=vec4(c,1.);}`});
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(4800,32,20),mat));
+  const disc=new THREE.Mesh(new THREE.CircleGeometry(78,36),
+    new THREE.MeshBasicMaterial({color:0xfff2d6,fog:false}));
+  disc.position.set(4200,200,0);disc.lookAt(0,200,0);scene.add(disc);
+}
+function buildTerrain(){
+  const geo=new THREE.PlaneGeometry(SIZE,SIZE,SEG,SEG);geo.rotateX(-Math.PI/2);
+  const pos=geo.attributes.position,col=[];
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i),z=pos.getZ(i),y=heightAt(x,z);pos.setY(i,y);
+    // slope: steep ground shows rock, flat ground holds ash
+    const gx=heightAt(x+6,z)-heightAt(x-6,z), gz=heightAt(x,z+6)-heightAt(x,z-6);
+    const slope=Math.min(1,Math.hypot(gx,gz)/9);
+    const dust=fbm(x*.018,z*.018,2)*.5+.5;
+    const fine=fbm(x*.09,z*.09,2)*.5+.5;
+    let r=.150+dust*.070+fine*.030, g=.130+dust*.058+fine*.026, b=.108+dust*.044+fine*.022;
+    // exposed rock, cooler and darker
+    r=r*(1-slope*.55)+.118*slope; g=g*(1-slope*.55)+.108*slope; b=b*(1-slope*.55)+.104*slope;
+    const hi=Math.min(1,Math.max(0,(y-46)/70));
+    r+=hi*.040;g+=hi*.038;b+=hi*.042;
+    col.push(r,g,b);
+  }
+  geo.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+  geo.computeVertexNormals();
+  const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial(
+    {vertexColors:true,roughness:.96,metalness:.0}));
+  m.receiveShadow=true;scene.add(m);
+}
+/* drifting dust — cheap, and it does more for atmosphere than anything else here */
+let dust;
+function buildDust(){
+  const N=2600,pos=new Float32Array(N*3);
+  for(let i=0;i<N;i++){pos[i*3]=(rnd()-.5)*180;pos[i*3+1]=rnd()*26;pos[i*3+2]=(rnd()-.5)*180}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  dust=new THREE.Points(g,new THREE.PointsMaterial({
+    color:0xffd9a8,size:.16,transparent:true,opacity:.42,
+    blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true}));
+  dust.frustumCulled=false;scene.add(dust);
+}
+/* glare around the low sun, sold with a couple of additive sprites */
+function glareTexture(){
+  const c=document.createElement("canvas");c.width=c.height=256;
+  const x=c.getContext("2d");
+  const g=x.createRadialGradient(128,128,0,128,128,128);
+  g.addColorStop(0,"rgba(255,240,214,1)");
+  g.addColorStop(.25,"rgba(255,206,150,.45)");
+  g.addColorStop(1,"rgba(255,180,120,0)");
+  x.fillStyle=g;x.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(c);
+}
+function buildGlare(){
+  const tex=glareTexture();
+  [[1500,.62],[900,.34],[420,.22]].forEach(([s,o])=>{
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,opacity:o,
+      blending:THREE.AdditiveBlending,depthWrite:false,depthTest:false,fog:false}));
+    sp.scale.set(s,s,1);sp.position.set(4200,200,0);scene.add(sp);
+  });
+}
+function buildFarHills(){
+  const mat=new THREE.MeshStandardMaterial({color:0x443c34,roughness:1});
+  for(let i=0;i<18;i++){const a=rnd()*6.28,d=2100+rnd()*1600,h=90+rnd()*240,r=280+rnd()*440;
+    const c=new THREE.Mesh(new THREE.ConeGeometry(r,h,7+((rnd()*4)|0)),mat);
+    c.position.set(Math.cos(a)*d,h*.34,Math.sin(a)*d);c.rotation.y=rnd()*3;scene.add(c)}
+}
+function bladeGeometry(){
+  const ys=[0,.30,.60,.85,1],ws=[.048,.040,.030,.017,0],p=[],idx=[];
+  for(let i=0;i<ys.length;i++)p.push(-ws[i],ys[i],0, ws[i],ys[i],0);
+  for(let i=0;i<ys.length-1;i++){const a=i*2;idx.push(a,a+2,a+1, a+1,a+2,a+3)}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(p,3));
+  g.setIndex(idx);g.computeVertexNormals();return g;
+}
+const GRASS_MAX=19000;
+function buildGrass(){
+  const mat=new THREE.MeshLambertMaterial({color:0x8fae5e,side:THREE.DoubleSide});
+  mat.onBeforeCompile=sh=>{sh.uniforms.uT={value:0};
+    sh.vertexShader="uniform float uT;\n"+sh.vertexShader.replace("#include <begin_vertex>",
+    `#include <begin_vertex>
+     float bk=pow(max(transformed.y,0.0),2.0);
+     #ifdef USE_INSTANCING
+       float ph=instanceMatrix[3][0]*0.11+instanceMatrix[3][2]*0.083;
+     #else
+       float ph=0.0;
+     #endif
+     transformed.x+=sin(uT*1.9+ph)*0.16*bk;
+     transformed.z+=cos(uT*1.3+ph*1.4)*0.10*bk;`);
+    gShader=sh};
+  grass=new THREE.InstancedMesh(bladeGeometry(),mat,GRASS_MAX);
+  grass.frustumCulled=false;scene.add(grass);refillGrass();
+}
+function refillGrass(){
+  const c=dawnX()-300;S.grassAt=dawnX();
+  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),
+        v=new THREE.Vector3(),sc=new THREE.Vector3(),col=new THREE.Color();
+  let n=0;
+  for(let i=0;i<GRASS_MAX*4&&n<GRASS_MAX;i++){
+    const x=c+(rnd()-.5)*1500,z=(rnd()-.5)*SIZE*.97;
+    if(x<-SIZE/2||x>SIZE/2)continue;
+    if(rnd()>Math.exp(-Math.pow((x-c)/470,2)))continue;
+    v.set(x,heightAt(x,z)-.03,z);
+    q.setFromAxisAngle(new THREE.Vector3(0,1,0),rnd()*6.28);
+    // knee height — a blade is a blade, not a tree
+    const s=.34+rnd()*.46;
+    sc.set(s*(.85+rnd()*.3),s*(.8+rnd()*.55),s);
+    m.compose(v,q,sc);grass.setMatrixAt(n,m);
+    if(grass.setColorAt){const k=.72+rnd()*.5;col.setRGB(.56*k,.70*k,.36*k);grass.setColorAt(n,col)}
+    n++;
+  }
+  grass.count=n;grass.instanceMatrix.needsUpdate=true;
+  if(grass.instanceColor)grass.instanceColor.needsUpdate=true;
+}
+function buildStriders(){
+  const N=150,mat=new THREE.MeshStandardMaterial({color:0x2a241c,roughness:.85});
+  const parts=[
+    {g:new THREE.SphereGeometry(3.0,10,7),sc:[1.7,.72,.78],off:[0,8.6,0]},
+    {g:new THREE.CylinderGeometry(.40,.26,8.6,6),sc:[1,1,1],off:[3.4,4.3,1.6]},
+    {g:new THREE.CylinderGeometry(.40,.26,8.6,6),sc:[1,1,1],off:[3.4,4.3,-1.6]},
+    {g:new THREE.CylinderGeometry(.40,.26,8.6,6),sc:[1,1,1],off:[-3.4,4.3,1.6]},
+    {g:new THREE.CylinderGeometry(.40,.26,8.6,6),sc:[1,1,1],off:[-3.4,4.3,-1.6]},
+    {g:new THREE.CylinderGeometry(.55,.95,6.4,6),sc:[1,1,1],off:[5.6,12.0,0]},
+    {g:new THREE.SphereGeometry(.85,8,6),sc:[1.5,.8,.8],off:[6.6,15.0,0]}];
+  const data=[];
+  for(let i=0;i<N;i++)data.push({dx:(rnd()-.5)*340,z:-1700+rnd()*1400,ph:rnd()*6.28,sp:.8+rnd()*.5});
+  parts.forEach(p=>{const im=new THREE.InstancedMesh(p.g,mat,N);
+    im.userData={off:p.off,sc:p.sc,data};im.frustumCulled=false;strider.push(im);scene.add(im)});
+  updateStriders(0);
+}
+function updateStriders(t){
+  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),
+        v=new THREE.Vector3(),sc=new THREE.Vector3();
+  const cx=dawnX()-230;
+  strider.forEach(im=>{const {off,sc:sk,data}=im.userData;
+    for(let i=0;i<data.length;i++){const d=data[i];
+      const x=cx+d.dx,bob=Math.sin(t*.85*d.sp+d.ph)*.42;
+      v.set(x+off[0],heightAt(x,d.z)+off[1]+bob,d.z+off[2]);
+      q.setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
+      sc.set(sk[0],sk[1],sk[2]);m.compose(v,q,sc);im.setMatrixAt(i,m)}
+    im.instanceMatrix.needsUpdate=true});
+}
+function roughRock(s){
+  const g=new THREE.DodecahedronGeometry(s,1);
+  const p=g.attributes.position;
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+    const n=1+fbm(x*1.7+11,z*1.7-4,3)*.55+fbm(y*2.3,x*2.3,2)*.30;
+    p.setXYZ(i,x*n,y*n*.82,z*n);
+  }
+  g.computeVertexNormals();return g;
+}
+function buildPlaces(){
+  const rockM=new THREE.MeshStandardMaterial({color:0x4d453b,roughness:.92,metalness:.02});
+  const metal=new THREE.MeshStandardMaterial({color:0x686c72,roughness:.55,metalness:.55});
+  const plate=new THREE.MeshStandardMaterial({color:0xa4aab0,roughness:.42,metalness:.7});
+  const put=o=>{o.castShadow=true;o.receiveShadow=true;scene.add(o);return o};
+  {const c=C("water"),y=heightAt(c.x,c.z);
+   const w=new THREE.Mesh(new THREE.CircleGeometry(14,30),
+     new THREE.MeshBasicMaterial({color:0xbcd8e0,transparent:true,opacity:.55}));
+   w.rotation.x=-Math.PI/2;w.position.set(c.x,y+.4,c.z);scene.add(w)}
+  {const c=C("season"),y=heightAt(c.x,c.z);
+   const f=new THREE.Mesh(new THREE.CircleGeometry(78,30),
+     new THREE.MeshLambertMaterial({color:0xdfe9ef,transparent:true,opacity:.72}));
+   f.rotation.x=-Math.PI/2;f.position.set(c.x,y+.25,c.z);scene.add(f)}
+  {const c=C("soil");
+   for(let i=0;i<44;i++){const a=rnd()*6.28,d=rnd()*76,s=.5+rnd()*1.2;
+     const b=new THREE.Mesh(roughRock(s),
+       new THREE.MeshStandardMaterial({color:0x726757,roughness:.95}));
+     const x=c.x+Math.cos(a)*d,z=c.z+Math.sin(a)*d;
+     b.position.set(x,heightAt(x,z)+s*.3,z);b.rotation.set(rnd()*3,rnd()*3,rnd()*3);put(b)}}
+  CAMPS.forEach((cp,i)=>{
+    const y=heightAt(cp.x,cp.z),n=Math.max(1,4-Math.floor(i*.7));
+    for(let k=0;k<n;k++){const h=new THREE.Mesh(new THREE.BoxGeometry(6.5,3.2,4.8),metal);
+      h.position.set(cp.x+k*8-8,y+1.35,cp.z+(k%2)*4.2);h.rotation.y=(rnd()-.5)*.5;put(h)}
+    const mast=new THREE.Mesh(new THREE.CylinderGeometry(.16,.30,20+i*2.5,7),metal);
+    mast.position.set(cp.x+5,y+10+i*1.25,cp.z-7);put(mast);
+    const dish=new THREE.Mesh(new THREE.SphereGeometry(1.9,14,10,0,6.28,0,1.1),
+      new THREE.MeshLambertMaterial({color:0x7e838a,side:THREE.DoubleSide}));
+    dish.position.set(cp.x+5,y+20+i*2.5,cp.z-7);dish.rotation.x=-.85;put(dish)});
+  GRAVES.forEach(g=>{const y=heightAt(g.x,g.z);
+    for(let i=0;i<5;i++){const s=.9-i*.13;
+      const b=new THREE.Mesh(roughRock(s*.4),rockM);
+      b.position.set(g.x+(rnd()-.5)*.5,y+.2+i*.3,g.z+(rnd()-.5)*.5);
+      b.rotation.set(rnd()*3,rnd()*3,rnd()*3);put(b)}
+    const p=new THREE.Mesh(new THREE.BoxGeometry(.62,.78,.05),plate);
+    p.position.set(g.x,y+1.75,g.z);p.rotation.y=.3;put(p);
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,2.1,6),metal);
+    post.position.set(g.x,y+1.05,g.z);put(post)});
+  {const y=heightAt(LAST.x,LAST.z);
+   const h=new THREE.Mesh(new THREE.BoxGeometry(6,3.4,5),metal);
+   h.position.set(LAST.x,y+1.5,LAST.z);put(h);
+   const mast=new THREE.Mesh(new THREE.CylinderGeometry(.14,.26,15,7),metal);
+   mast.position.set(LAST.x+4,y+7.5,LAST.z-5);put(mast);
+   const lamp=new THREE.PointLight(0x8FC6D4,1.5,60);
+   lamp.position.set(LAST.x,y+3.4,LAST.z);scene.add(lamp);
+   const bulb=new THREE.Mesh(new THREE.SphereGeometry(.28,10,8),
+     new THREE.MeshBasicMaterial({color:0x8FC6D4}));
+   bulb.position.set(LAST.x,y+3.4,LAST.z);scene.add(bulb)}
+  for(let i=0;i<250;i++){const x=(rnd()-.5)*SIZE*.92,z=(rnd()-.5)*SIZE*.92,s=.6+rnd()*3;
+    const b=new THREE.Mesh(roughRock(s),rockM);
+    b.position.set(x,heightAt(x,z)+s*.4,z);b.rotation.set(rnd()*3,rnd()*3,rnd()*3);put(b)}
+  DENS.forEach(d=>{const y=heightAt(d.x,d.z);
+    const m=new THREE.Mesh(new THREE.SphereGeometry(2.6,10,6),
+      new THREE.MeshStandardMaterial({color:0x3b352d,roughness:.98}));
+    m.scale.set(1.5,.36,1.2);m.position.set(d.x,y+.3,d.z);put(m)});
+}
+function buildPlayer(){
+  player=new THREE.Group();
+  const suit=new THREE.MeshStandardMaterial({color:0xd7dbde,roughness:.62,metalness:.06});
+  const dark=new THREE.MeshStandardMaterial({color:0x33383f,roughness:.55,metalness:.30});
+  const visor=new THREE.MeshStandardMaterial({color:0x0b1017,roughness:.08,metalness:.85});
+  const acc=new THREE.MeshStandardMaterial({color:0xE0793F,roughness:.6});
+  const cast=o=>{o.castShadow=true;return o};
+
+  const torsoPivot=new THREE.Group();player.add(torsoPivot);
+  const t=cast(new THREE.Mesh(new THREE.CylinderGeometry(.29,.245,.62,16),suit));t.position.y=1.24;torsoPivot.add(t);
+  const be=cast(new THREE.Mesh(new THREE.SphereGeometry(.265,16,12),suit));be.scale.set(1,.78,.86);be.position.y=.99;torsoPivot.add(be);
+  const cl=cast(new THREE.Mesh(new THREE.CylinderGeometry(.155,.185,.12,14),dark));cl.position.y=1.60;torsoPivot.add(cl);
+  const pk=cast(new THREE.Mesh(new THREE.CylinderGeometry(.21,.19,.56,12),dark));pk.scale.set(1,1,.62);pk.position.set(0,1.26,-.30);torsoPivot.add(pk);
+  const st=new THREE.Mesh(new THREE.BoxGeometry(.075,.20,.02),acc);st.position.set(.20,1.34,.24);torsoPivot.add(st);
+  const hm=cast(new THREE.Mesh(new THREE.SphereGeometry(.235,20,16),suit));hm.position.y=1.79;torsoPivot.add(hm);
+  const vs=new THREE.Mesh(new THREE.SphereGeometry(.238,20,16,-1.0,2.0,.62,1.05),visor);vs.position.y=1.79;torsoPivot.add(vs);
+  const hipBlock=cast(new THREE.Mesh(new THREE.SphereGeometry(.245,14,10),dark));
+  hipBlock.scale.set(1,.72,.9);hipBlock.position.y=.83;player.add(hipBlock);
+
+  // two-segment limb: upper rotates at the joint, lower rotates at knee/elbow
+  const makeLimb=(uW1,uW2,uLen,lW1,lW2,lLen,jr,foot)=>{
+    const hip=new THREE.Group();
+    hip.add(cast(new THREE.Mesh(new THREE.SphereGeometry(jr,12,10),suit)));
+    const up=cast(new THREE.Mesh(new THREE.CylinderGeometry(uW1,uW2,uLen,10),suit));
+    up.position.y=-uLen/2;hip.add(up);
+    const joint=cast(new THREE.Mesh(new THREE.SphereGeometry(uW2*1.12,12,10),suit));
+    joint.position.y=-uLen;hip.add(joint);
+    const lower=new THREE.Group();lower.position.y=-uLen;hip.add(lower);
+    const lo=cast(new THREE.Mesh(new THREE.CylinderGeometry(lW1,lW2,lLen,10),suit));
+    lo.position.y=-lLen/2;lower.add(lo);
+    const end=cast(new THREE.Mesh(new THREE.SphereGeometry(lW2*1.1,10,8),suit));
+    end.position.y=-lLen;lower.add(end);
+    if(foot){const b=cast(new THREE.Mesh(new THREE.BoxGeometry(.17,.11,.31),dark));
+      b.position.set(0,-lLen-.04,.06);lower.add(b)}
+    hip.userData.lower=lower;
+    return hip;
+  };
+  legL=makeLimb(.118,.100,.42,.098,.084,.40,.128,true);legL.position.set(.135,.86,0);player.add(legL);
+  legR=makeLimb(.118,.100,.42,.098,.084,.40,.128,true);legR.position.set(-.135,.86,0);player.add(legR);
+  armL=makeLimb(.086,.072,.32,.070,.060,.30,.098,false);armL.position.set(.335,1.46,0);torsoPivot.add(armL);
+  armR=makeLimb(.086,.072,.32,.070,.060,.30,.098,false);armR.position.set(-.335,1.46,0);torsoPivot.add(armR);
+  player.userData.torso=torsoPivot;
+
+  const lamp=new THREE.PointLight(0xffe4bc,.7,20);lamp.position.set(0,1.72,.42);player.add(lamp);
+  player.position.set(S.px,heightAt(S.px,S.pz),S.pz);scene.add(player);
+}
+function buildHands(){
+  hands=new THREE.Group();
+  const suit=new THREE.MeshStandardMaterial({color:0xd6dade,roughness:.6,metalness:.05});
+  const dark=new THREE.MeshStandardMaterial({color:0x2e333a,roughness:.5,metalness:.4});
+  const lit=new THREE.MeshBasicMaterial({color:0x8FC6D4});
+  const mkArm=sx=>{const g=new THREE.Group();
+    const f=new THREE.Mesh(new THREE.CylinderGeometry(.042,.052,.30,10),suit);
+    f.rotation.x=Math.PI/2.15;f.position.set(0,0,-.13);g.add(f);
+    const c2=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.035,12),dark);
+    c2.rotation.x=Math.PI/2;c2.position.set(0,.01,-.27);g.add(c2);
+    const gl=new THREE.Mesh(new THREE.SphereGeometry(.048,12,10),suit);
+    gl.scale.set(1,.85,1.15);gl.position.set(0,-.01,.01);g.add(gl);
+    g.position.set(sx,-.14,-.30);return g};
+  const R=mkArm(.16),L=mkArm(-.17);
+  const scan=new THREE.Mesh(new THREE.BoxGeometry(.10,.055,.15),dark);
+  scan.position.set(0,.01,.05);R.add(scan);
+  const face=new THREE.Mesh(new THREE.PlaneGeometry(.072,.032),lit);
+  face.position.set(0,.030,.05);face.rotation.x=-Math.PI/2.4;R.add(face);
+  hands.add(R);hands.add(L);hands.visible=false;cam.add(hands);scene.add(cam);
+}
+
+/* ---------- input ---------- */
+const keys={};
+addEventListener("keydown",e=>{
+  const tag=(e.target&&e.target.tagName||"").toLowerCase();
+  if(tag==="input"||tag==="textarea"||e.target.isContentEditable)return;
+  const k=e.key.toLowerCase();
+  if(["w","a","s","d"," ","arrowup","arrowdown","arrowleft","arrowright"].includes(k))e.preventDefault();
+  keys[k]=true;
+  if(document.querySelector(".overlay.on")){if(k==="escape")closeOv();return}
+  if(k==="e")interact();
+  if(k==="l")openLog();
+  if(k==="m")openChart();
+  if(k==="t")transmit();
+  if(k==="c"){S.fp=!S.fp;document.getElementById("visor").style.display=S.fp?"block":"none";
+    hands.visible=S.fp;toast(S.fp?"Visor view.":"Over the shoulder.",1600)}
+});
+addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false});
+let drag=false,lx=0,ly=0;
+addEventListener("mousedown",e=>{if(e.target.tagName==="CANVAS"&&!document.querySelector(".overlay.on")){drag=true;lx=e.clientX;ly=e.clientY}});
+addEventListener("mouseup",()=>drag=false);
+addEventListener("mousemove",e=>{if(!drag)return;S.mouse=true;
+  S.camYaw-=(e.clientX-lx)*.005;
+  S.camPitch=Math.max(-.42,Math.min(.80,S.camPitch+(e.clientY-ly)*.004));
+  lx=e.clientX;ly=e.clientY});
+addEventListener("wheel",e=>{if(!S.fp)S.camDist=Math.max(2.6,Math.min(15,S.camDist+e.deltaY*.01))},{passive:true});
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+  t.classList.add("on");
+  const crew=t.dataset.t==="crew";
+  document.getElementById("log-list").style.display=crew?"none":"block";
+  document.getElementById("crew-list").style.display=crew?"block":"none";
+}));
+function closeOv(){document.querySelectorAll(".overlay.on").forEach(o=>{
+  if(o.id!=="briefing"&&o.id!=="naming")o.classList.remove("on")})}
+let tt=null;
+function toast(h,ms=4600){const t=document.getElementById("toast");
+  t.innerHTML=h;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>t.style.opacity=0,ms)}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function mmss(s){if(s<0)s=0;const m=Math.floor(s/60);return m+":"+String(Math.floor(s%60)).padStart(2,"0")}
+const PTS=["W","NW","N","NE","E","SE","S","SW"];
+function bearingTo(x,z){
+  let a=Math.atan2(-(z-S.pz),x-S.px);a=(a+Math.PI*2)%(Math.PI*2);
+  return PTS[Math.round(a/(Math.PI/4))%8];
+}
+
+/* ---------- briefing ---------- */
+let bstep=0;const bs=document.getElementById("bsheet");
+function brief(){
+  if(bstep===0){
+    bs.innerHTML=`<h1>The Anchorage</h1><h2>Deep survey · single operator · sector CS 4</h2>
+    <p class="body">Nine ships. Forty thousand people, asleep. They launched before anyone had found them a destination — deliberately, so no committee could defer the programme the way the last one was deferred.</p>
+    <p class="body">You are the part of that gamble that has to work.</p>
+    <div class="rule"></div>
+    <label class="lab">Surveyor</label><input type="text" id="i-n" placeholder="your name">
+    <div style="height:16px"></div>
+    <label class="lab">Survey vessel</label><input type="text" id="i-s" placeholder="name your ship">
+    <button id="bnx">Sign the commission</button>`;
+    const go=()=>{S.name=document.getElementById("i-n").value.trim()||"Surveyor";
+      S.ship=document.getElementById("i-s").value.trim()||"Kittiwake";bstep=1;brief()};
+    document.getElementById("bnx").onclick=go;
+    bs.querySelectorAll("input").forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter")go()}));
+    document.getElementById("i-n").focus();
+  }else if(bstep===1){
+    bs.innerHTML=`<h1>Orbital manifest</h1><h2>Read this before you go down</h2>
+    <p class="body">Six findings make a recommendation. Orbital survey has located all six and timed them against the dawn line. <em>The heat takes them in this order:</em></p>
+    <p class="tiny">${CRIT.map(c=>{
+      const t=c.band?null:lostAtT(c.x);
+      return `${c.n.toUpperCase().padEnd(20,"·")} ${t===null?"follows the herd — never lost":"lost at "+mmss(t)}`;
+    }).join("<br>")}</p>
+    <p class="body">Bearings to all six stay on your compass and your chart for the whole descent. You cannot reach all of them. The two on the sunward side go first and they go early. Decide now which questions you are willing to leave unanswered — the manifest stays on your display, counting down, for the whole descent.</p>
+    <div class="rule"></div>
+    <p class="body">One more thing. There was a survey here two hundred years ago. The <em>Meridian</em>, six crew, commanded by Ilse Vantaa. They filed a recommendation and no fleet ever came.</p>
+    <p class="body">Their camps run north. So does everything else they left.</p>
+    <button id="bnx">Continue</button>`;
+    document.getElementById("bnx").onclick=()=>{bstep=2;brief()};
+  }else{
+    bs.innerHTML=`<h1>CS 4-9 b</h1><h2>Second planet · unnamed</h2>
+    <p class="body">Eighty-eight day rotation. Gravity 1.3 g. A habitable band three hundred kilometres wide, moving west at fifteen and a half kilometres an hour, forever.</p>
+    <input type="text" id="i-p" placeholder="name the world">
+    <div class="hint">This is the name the fleet will read.</div>
+    <button id="bnx">Step outside</button>`;
+    const go=()=>{S.planet=document.getElementById("i-p").value.trim()||"Meridian's World";
+      document.getElementById("briefing").classList.remove("on");S.started=true;
+      toast("Press <b>C</b> to switch between the visor and over the shoulder.",6000);
+      setTimeout(transmission,120000)};
+    document.getElementById("bnx").onclick=go;
+    document.getElementById("i-p").focus();
+    bs.querySelector("input").addEventListener("keydown",e=>{if(e.key==="Enter")go()});
+  }
+}
+brief();
+function transmission(){
+  if(S.dead||S.ended)return;
+  document.getElementById("msheet").innerHTML=`
+  <div class="lab">Received · Anchorage relay · delayed 6 y 4 m</div>
+  <h1 style="font-size:22px">Message for ${esc(S.name)}</h1><h2>Recorded before cold sleep</h2>
+  <p class="body" style="opacity:.5;font-style:italic;font-size:13px">[ Placeholder. Replace this whole block — it is the one part that cannot be generated. ]</p>
+  <p class="body">I'm told this reaches you years after I record it, and that by then I'll have been asleep for most of them. I don't understand the arithmetic and I've decided not to.</p>
+  <p class="body">Take your time out there. I know you can't. I'm saying it anyway.</p>
+  <p class="body"><em>Find us somewhere with weather.</em></p>
+  <button onclick="document.getElementById('msg').classList.remove('on')">Close the channel</button>`;
+  document.getElementById("msg").classList.add("on");
+}
+
+/* ---------- interaction ---------- */
+function target(){
+  for(const c of CRIT){if(c.done||c.lost)continue;
+    const tx=c.band?dawnX()-230:c.x;
+    if(Math.hypot(tx-S.px,c.z-S.pz)<=c.r)return{k:"crit",o:c,label:"survey · "+c.n}}
+  for(const g of GRAVES){if(g.read)continue;
+    if(Math.hypot(g.x-S.px,g.z-S.pz)<=g.r)return{k:"grave",o:g,label:"read the marker"}}
+  for(const cp of CAMPS){if(cp.read)continue;
+    if(Math.hypot(cp.x-S.px,cp.z-S.pz)<=cp.r)return{k:"camp",o:cp,label:"read the record"}}
+  if(!LAST.read&&Math.hypot(LAST.x-S.px,LAST.z-S.pz)<=LAST.r)return{k:"last",o:LAST,label:"enter the shelter"};
+  return null;
+}
+function interact(){
+  const t=target();
+  if(!t){toast("Nothing here.",1500);return}
+  if(t.k==="crit"){S.surveying=t.o;S.progress=0;return}
+  if(t.k==="grave")return readGrave(t.o);
+  if(t.k==="camp")return readCamp(t.o);
+  if(t.k==="last")return readLast();
+}
+let pending=null;
+function finishSurvey(c){
+  S.surveying=null;S.progress=0;pending=c;
+  document.getElementById("nm-title").textContent=c.place;
+  document.getElementById("nm-sub").textContent=c.n+" — finding recorded";
+  document.getElementById("nm-find").innerHTML=`<em>${c.find}</em>`;
+  const i=document.getElementById("nm-input");
+  i.value="";i.placeholder=c.sugg[(rnd()*c.sugg.length)|0];
+  document.getElementById("naming").classList.add("on");setTimeout(()=>i.focus(),40);
+}
+function commit(){
+  if(!pending)return;
+  const i=document.getElementById("nm-input");
+  const nm=i.value.trim()||i.placeholder;
+  pending.done=true;pending.by="you";pending.name=nm;
+  S.log.push({name:nm,kind:pending.place,desc:pending.find,h:S.t/60});
+  document.getElementById("naming").classList.remove("on");
+  toast(`<b style="color:var(--dawnlight)">${esc(nm)}</b> — ${esc(pending.n.toLowerCase())} answered.`);
+  pending=null;renderManifest();
+}
+document.getElementById("nm-ok").onclick=commit;
+document.getElementById("nm-input").addEventListener("keydown",e=>{if(e.key==="Enter")commit()});
+
+function panel(kicker,title,sub,body,extra){
+  document.getElementById("msheet").innerHTML=`
+    <div class="lab">${kicker}</div><h1 style="font-size:21px">${title}</h1><h2>${sub}</h2>
+    <p class="body">${body}</p>${extra||""}
+    <button onclick="document.getElementById('msg').classList.remove('on')">Close</button>`;
+  document.getElementById("msg").classList.add("on");
+}
+function readGrave(g){
+  g.read=true;reveal(g.rev[0],g.rev[1]);
+  panel("Grave marker · Meridian",`${g.t} — ${g.l}`,"Not your survey",g.b);
+  S.log.push({name:g.t,kind:"Grave marker",desc:g.b.replace(/<[^>]+>/g," "),h:S.t/60});
+  renderManifest();
+}
+function readCamp(cp){
+  cp.read=true;(cp.rev||[]).forEach(r=>reveal(r[0],r[1]));
+  let gift="";
+  if(cp.gives){const c=C(cp.gives);
+    if(!c.done){c.done=true;c.by="meridian";c.name=c.name||"(Meridian archive)";
+      gift=`<div class="rule"></div><p class="body"><em>${cp.gift}</em><br>
+        <span style="font-size:13px;opacity:.8">${esc(c.n)} — answered from their records. You did not have to reach it.</span></p>`}
+    else gift=`<div class="rule"></div><p class="body" style="opacity:.6;font-size:14px">Their ${esc(c.n.toLowerCase())} file is here too. You already have your own.</p>`}
+  panel("Recovered record · survey ship Meridian · 214 years",cp.t,"Not your survey",cp.b,gift);
+  S.log.push({name:cp.t,kind:"Meridian record",desc:cp.b.replace(/<[^>]+>/g," "),h:S.t/60});
+  renderManifest();
+}
+function readLast(){
+  LAST.read=true;S.knowTruth=true;reveal(CONFESSION.rev[0],CONFESSION.rev[1]);
+  panel("Unlogged shelter · still under power",LAST.t,"Not on any manifest",LAST.b,
+    `<div class="rule"></div><h1 style="font-size:19px">${CONFESSION.t}</h1>
+     <p class="body">${CONFESSION.b}</p>`);
+  S.log.push({name:CONFESSION.t,kind:"Recovered confession",desc:CONFESSION.b.replace(/<[^>]+>/g," "),h:S.t/60});
+  renderManifest();
+  setTimeout(()=>toast("Your six findings say yes. Their forty years say yes, and in thirty years you will not be yourselves. Press <b>T</b> when you know what to send.",13000),900);
+}
+function openLog(){
+  document.getElementById("log-sub").textContent=`${S.name} · ${S.ship} · ${S.planet}`;
+  const l=document.getElementById("log-list");
+  l.innerHTML=S.log.length?S.log.slice().reverse().map(d=>`<div class="entry"><div class="nm">${esc(d.name)}</div>
+    <div class="meta">${esc(d.kind)} · ${d.h.toFixed(0)} min</div><div class="desc">${esc(d.desc).slice(0,700)}</div></div>`).join("")
+    :`<p class="body" style="opacity:.5">Nothing recorded yet.</p>`;
+  document.getElementById("crew-list").innerHTML=CREW.map(c=>
+    `<div class="crewrow ${c.known?"":"unknown"}">
+      <div><div class="cn">${c.known?esc(c.n):"— — —"}</div>
+      <div style="font-size:9px;letter-spacing:.14em;opacity:.55;text-transform:uppercase">${esc(c.r)}</div></div>
+      <div class="cx">${c.note||"<span style='opacity:.4'>Nothing known.</span>"}</div></div>`).join("")
+    +`<p class="hint">Manifest lists six. Five are buried.</p>`;
+  document.getElementById("logbook").classList.add("on");
+}
+
+/* ---------- manifest ---------- */
+function renderManifest(){
+  const cl=document.getElementById("critlist");
+  cl.innerHTML=CRIT.map(c=>{
+    const tx=c.band?dawnX()-230:c.x;
+    const dist=Math.hypot(tx-S.px,c.z-S.pz);
+    const cls=c.done?(c.by==="meridian"?"mer":"done"):(c.lost?"lost":"");
+    let tcell,tcls="";
+    if(c.done)tcell="✓";
+    else if(c.lost)tcell="—";
+    else if(c.band)tcell="∞";
+    else{const rem=lostAtT(c.x)-S.t;tcell=mmss(rem);
+      tcls=rem<75?"urgent":rem<180?"soon":""}
+    const dcell=c.done||c.lost?"":`${bearingTo(tx,c.z)} ${(dist/1000).toFixed(1)}k`;
+    return `<div class="row ${cls}"><div class="nm2">${c.n}</div>
+      <div class="dd">${dcell}</div><div class="tt ${tcls}">${tcell}</div></div>`;
+  }).join("");
+  const camps=document.getElementById("camplist");
+  const items=CAMPS.map(cp=>({n:cp.n,x:cp.x,z:cp.z,read:cp.read}));
+  if(LAST.read||CAMPS[4].read)items.push({n:LAST.n,x:LAST.x,z:LAST.z,read:LAST.read});
+  camps.innerHTML=items.map(cp=>{
+    const dist=Math.hypot(cp.x-S.px,cp.z-S.pz);
+    const rem=lostAtT(cp.x)-S.t;
+    const lost=rem<=0&&!cp.read;
+    return `<div class="row ${cp.read?"mer":lost?"lost":""}">
+      <div class="nm2">${cp.n}</div>
+      <div class="dd">${cp.read?"":bearingTo(cp.x,cp.z)+" "+(dist/1000).toFixed(1)+"k"}</div>
+      <div class="tt ${!cp.read&&rem<75?"urgent":!cp.read&&rem<180?"soon":""}">${cp.read?"✓":lost?"—":mmss(rem)}</div></div>`;
+  }).join("");
+  const got=CRIT.filter(c=>c.done).length,lost=CRIT.filter(c=>c.lost&&!c.done).length;
+  document.getElementById("tasknote").innerHTML=
+    `${got} of 6 answered${lost?` · ${lost} lost`:""} · press T to transmit`;
+}
+
+/* ---------- chart ---------- */
+function markSeen(){
+  const gy=heightAt(S.px,S.pz),R=70+Math.max(0,gy-42)*2.0;
+  const ci=((S.px+SIZE/2)/CELL)|0,cj=((S.pz+SIZE/2)/CELL)|0,rad=Math.ceil(R/CELL);
+  for(let j=cj-rad;j<=cj+rad;j++){if(j<0||j>=GW)continue;
+    for(let i=ci-rad;i<=ci+rad;i++){if(i<0||i>=GW)continue;
+      const wx=(i+.5)*CELL-SIZE/2,wz=(j+.5)*CELL-SIZE/2;
+      if(Math.hypot(wx-S.px,wz-S.pz)<=R){const k=j*GW+i;if(!S.seen[k]){S.seen[k]=1;S.seenCount++}}}}
+}
+function openChart(){
+  document.getElementById("chart").classList.add("on");
+  document.getElementById("c-title").textContent=S.planet||"CS 4-9 b";
+  document.getElementById("c-sub").textContent=`Surveyed by ${S.name} · ${S.ship}`;
+  document.getElementById("c-cov").textContent=
+    `${(100*S.seenCount/S.seen.length).toFixed(1)}% charted · ${S.log.length} recorded`;
+  const c=document.getElementById("chartcv");
+  const w=c.clientWidth,h=c.clientHeight,dpr=Math.min(devicePixelRatio,2);
+  c.width=w*dpr;c.height=h*dpr;
+  const g=c.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);
+  g.fillStyle="#070A10";g.fillRect(0,0,w,h);
+  const s=Math.min(w,h)/SIZE,ox=(w-SIZE*s)/2,oy=(h-SIZE*s)/2;
+  g.strokeStyle="rgba(143,198,212,.08)";g.lineWidth=1;
+  for(let v=0;v<=SIZE;v+=500){
+    g.beginPath();g.moveTo(ox+v*s,oy);g.lineTo(ox+v*s,oy+SIZE*s);g.stroke();
+    g.beginPath();g.moveTo(ox,oy+v*s);g.lineTo(ox+SIZE*s,oy+v*s);g.stroke()}
+  for(let j=0;j<GW;j++)for(let i=0;i<GW;i++){
+    if(!S.seen[j*GW+i])continue;
+    const wx=(i+.5)*CELL-SIZE/2,wz=(j+.5)*CELL-SIZE/2,e=heightAt(wx,wz);
+    const px=ox+i*CELL*s,py=oy+j*CELL*s,sz=CELL*s+.7;
+    g.fillStyle=`rgba(200,212,220,${.045+Math.min(.30,Math.max(0,e)/210)})`;
+    g.fillRect(px,py,sz,sz);
+    if(e>62){g.strokeStyle=`rgba(200,212,220,${.10+(e-62)/220})`;g.lineWidth=.65;g.beginPath();
+      for(let k=0;k<3;k++){const yy=py+sz*(k+.5)/3;g.moveTo(px,yy);g.lineTo(px+sz,yy-sz*.3)}g.stroke()}}
+  const dl=ox+(dawnX()+SIZE/2)*s;
+  g.strokeStyle="rgba(255,233,192,.55)";g.lineWidth=1.4;g.setLineDash([5,5]);
+  g.beginPath();g.moveTo(dl,oy);g.lineTo(dl,oy+SIZE*s);g.stroke();g.setLineDash([]);
+  const le=ox+(dawnX()-(LETHAL+12)/K+SIZE/2)*s;
+  g.fillStyle="rgba(217,72,74,.13)";g.fillRect(ox,oy,Math.max(0,le-ox),SIZE*s);
+  g.strokeStyle="rgba(217,72,74,.6)";g.beginPath();g.moveTo(le,oy);g.lineTo(le,oy+SIZE*s);g.stroke();
+  // unfound manifest sites, hollow — you were given these from orbit
+  g.font="10px monospace";
+  CRIT.forEach(c=>{if(c.done||c.lost)return;
+    const tx=c.band?dawnX()-230:c.x;
+    const px=ox+(tx+SIZE/2)*s,py=oy+(c.z+SIZE/2)*s;
+    g.strokeStyle="rgba(255,233,192,.7)";g.lineWidth=1.1;
+    g.beginPath();g.arc(px,py,4.5,0,6.29);g.stroke();
+    g.fillStyle="rgba(255,233,192,.6)";g.fillText(c.n,px+8,py+3)});
+  CAMPS.forEach(cp=>{if(cp.read)return;
+    const px=ox+(cp.x+SIZE/2)*s,py=oy+(cp.z+SIZE/2)*s;
+    g.strokeStyle="rgba(143,198,212,.55)";g.lineWidth=1;
+    g.strokeRect(px-3,py-3,6,6);
+    g.fillStyle="rgba(143,198,212,.5)";g.fillText(cp.n,px+8,py+3)});
+  g.font="italic 14px Georgia, serif";
+  CRIT.forEach(c=>{if(!c.done&&!c.lost)return;
+    const tx=c.band?dawnX()-230:c.x;
+    const px=ox+(tx+SIZE/2)*s,py=oy+(c.z+SIZE/2)*s;
+    g.fillStyle=c.done?"#FFE9C0":"rgba(217,72,74,.8)";
+    g.beginPath();g.arc(px,py,2.6,0,6.29);g.fill();
+    if(c.name&&c.by==="you")g.fillText(c.name,px+7,py+4)});
+  const marks=CAMPS.filter(c=>c.read).concat(GRAVES.filter(g2=>g2.read)).concat(LAST.read?[LAST]:[]);
+  marks.forEach(m=>{const px=ox+(m.x+SIZE/2)*s,py=oy+(m.z+SIZE/2)*s;
+    g.fillStyle="rgba(143,198,212,.85)";g.fillRect(px-2,py-2,4,4)});
+  const sx=ox+(S.px+SIZE/2)*s,sy=oy+(S.pz+SIZE/2)*s;
+  g.strokeStyle="#8FC6D4";g.lineWidth=1.3;
+  g.beginPath();g.arc(sx,sy,6,0,6.29);g.stroke();
+  g.beginPath();g.moveTo(sx-9,sy);g.lineTo(sx+9,sy);g.moveTo(sx,sy-9);g.lineTo(sx,sy+9);g.stroke();
+}
+
+/* ---------- compass + soundfield ---------- */
+const cmp=document.getElementById("cmp"),cx=cmp.getContext("2d");
+const sfc=document.getElementById("sf"),s2=sfc.getContext("2d");
+function fit(c){const w=c.clientWidth,h=c.clientHeight,d=Math.min(devicePixelRatio,2);
+  if(c.width!==w*d){c.width=w*d;c.height=h*d}return[w,h,d]}
+function drawCompass(){
+  const [w,h,d]=fit(cmp);cx.setTransform(d,0,0,d,0,0);cx.clearRect(0,0,w,h);
+  cx.font="9px monospace";cx.textAlign="center";
+  for(let deg=0;deg<360;deg+=10){const a=deg*Math.PI/180;
+    let dd=((a-S.camYaw+Math.PI*3)%(Math.PI*2))-Math.PI;
+    if(Math.abs(dd)>1.25)continue;
+    const x=w/2+dd*(w/2.5),major=deg%90===0;
+    cx.fillStyle=major?"rgba(143,198,212,.55)":"rgba(143,198,212,.20)";
+    cx.fillRect(x-.5,h-(major?9:4),1,major?9:4);
+    if(major){cx.fillStyle=deg===0?"rgba(255,233,192,.7)":"rgba(143,198,212,.5)";
+      cx.fillText({0:"W ☀",90:"N",180:"E",270:"S"}[deg],x,h-12)}}
+  // orbital survey gave you the six sites and the camp positions. it did not give you
+  // the graves or the shelter — those stay unmarked, and finding them is the discovery.
+  const marks=[];
+  CRIT.forEach(c=>{if(c.done||c.lost)return;
+    const tx=c.band?dawnX()-230:c.x;
+    marks.push({x:tx,z:c.z,label:c.n.split(" ")[0].toUpperCase(),col:"255,233,192",pri:1})});
+  CAMPS.forEach(cp=>{if(cp.read)return;
+    if(lostAtT(cp.x)-S.t<=0)return;
+    marks.push({x:cp.x,z:cp.z,label:cp.n.replace("Camp ","C").toUpperCase(),col:"143,198,212",pri:0})});
+  if(CAMPS[4].read&&!LAST.read)
+    marks.push({x:LAST.x,z:LAST.z,label:"?",col:"143,198,212",pri:0});
+  marks.forEach(m=>{
+    const a=Math.atan2(-(m.z-S.pz),m.x-S.px);
+    let dd=((a-S.camYaw+Math.PI*3)%(Math.PI*2))-Math.PI;
+    const edge=Math.abs(dd)>1.25;
+    const x=edge?(dd>0?w-6:6):w/2+dd*(w/2.5);
+    const dist=Math.hypot(m.x-S.px,m.z-S.pz);
+    cx.globalAlpha=edge?.35:1;
+    cx.fillStyle=`rgba(${m.col},.95)`;
+    cx.beginPath();cx.moveTo(x,3);cx.lineTo(x+4,9);cx.lineTo(x-4,9);cx.closePath();cx.fill();
+    if(!edge){cx.font="8px monospace";cx.fillStyle=`rgba(${m.col},.85)`;
+      cx.fillText(m.label,x,18);
+      cx.fillStyle=`rgba(${m.col},.5)`;
+      cx.fillText((dist/1000).toFixed(1)+"k",x,26)}
+    cx.globalAlpha=1;
+  });
+  cx.strokeStyle="rgba(255,233,192,.55)";cx.beginPath();cx.moveTo(w/2,0);cx.lineTo(w/2,h);cx.stroke();
+}
+function drawSound(){
+  const [w,h,d]=fit(sfc);s2.setTransform(d,0,0,d,0,0);s2.clearRect(0,0,w,h);
+  const src=[];
+  const hx=dawnX()-230,hz=-1050,hd=Math.hypot(hx-S.px,hz-S.pz);
+  src.push({a:Math.atan2(-(hz-S.pz),hx-S.px),amp:Math.max(0,1-hd/2400)*.95});
+  let nul=0;
+  DENS.forEach(dn=>{if(tempAt(dn.x)<34)return;
+    const dd=Math.hypot(dn.x-S.px,dn.z-S.pz);if(dd<75)nul=Math.max(nul,1-dd/75)});
+  S.null_=nul;const amb=1-nul;
+  for(let i=0;i<70;i++){const x=i/70*w,a=(.13+.08*Math.sin(S.t*.9+i*.7))*amb;
+    s2.fillStyle=`rgba(143,198,212,${.16*amb+.02})`;s2.fillRect(x,h/2-a*h/2,w/70-1,a*h)}
+  src.forEach(sc=>{let dd=((sc.a-S.camYaw+Math.PI*3)%(Math.PI*2))-Math.PI;
+    if(Math.abs(dd)>1.25)return;
+    const x=w/2+dd*(w/2.5),a=sc.amp*amb;
+    s2.fillStyle=`rgba(143,198,212,${.28+a*.6})`;
+    const bw=7+a*24;s2.fillRect(x-bw/2,h/2-a*h*.46,bw,a*h*.92)});
+  s2.fillStyle="rgba(255,233,192,.35)";s2.fillRect(w/2-.5,0,1,h);
+  const note=document.getElementById("sfnote");
+  if(nul>.35){note.textContent="SOUNDFIELD NULL — SOMETHING IS NOT MOVING";note.className="null"}
+  else if(hd<650){note.textContent="HERD — HEAVY, CONTINUOUS";note.className=""}
+  else{note.textContent="";note.className=""}
+}
+
+/* ---------- endings ---------- */
+function transmit(){
+  if(S.ended||S.dead)return;
+  const got=CRIT.filter(c=>c.done);
+  if(!got.length){toast("Nothing to send yet.",2000);return}
+  if(!S.knowTruth){return sendIt("clean",got)}
+  document.getElementById("msheet").innerHTML=`
+    <h1>What do you send?</h1><h2>One transmission · six years in flight · no revision</h2>
+    <p class="body">Your findings say the world is good, and they are not wrong. Lindqvist's medical series says it will take your people apart over thirty years and they will not notice it happening.</p>
+    <p class="body" style="opacity:.75;font-size:14px">The fleet has no fuel to go anywhere else. Whatever you send, they are coming here or they are coming to nothing.</p>
+    <div class="rule"></div>
+    <button id="e1">Send the recommendation</button>
+    <button id="e2">Send it with the caveat</button>
+    <button id="e3" class="danger">Withdraw it</button>
+    <div class="hint">The last surveyor who stood here chose the third one.</div>`;
+  document.getElementById("msg").classList.add("on");
+  document.getElementById("e1").onclick=()=>sendIt("clean",got);
+  document.getElementById("e2").onclick=()=>sendIt("caveat",got);
+  document.getElementById("e3").onclick=()=>sendIt("withdraw",got);
+}
+function sendIt(mode,got){
+  S.ended=true;
+  const mine=got.filter(c=>c.by==="you").length,hers=got.filter(c=>c.by==="meridian").length;
+  const lost=CRIT.filter(c=>!c.done);
+  let end;
+  if(mode==="withdraw"){
+    end=`<p class="body">The withdrawal reaches the relay in six years. The <em>Anchorage</em> holds its heading because it has no other heading to hold, and passes ${esc(S.planet)} at four hundred million kilometres without slowing.</p>
+    <p class="body">Nobody aboard wakes up. That is the mercy in it, and it is the only one.</p>
+    <p class="body"><em>Mara Lindqvist made this decision alone, on worse information, and spent eleven years afterwards deciding whether she had been right. You had her notes and you made it in a minute.</em></p>`;
+  }else if(mode==="caveat"){
+    end=`<p class="body">The recommendation goes out with the medical series attached and a sentence you write yourself, which is that the world is good and it will cost them something slow.</p>
+    <p class="body">They come. They have six years in flight to plan for it, and they use them. They build below ground and they rotate crews into shielded sleep on a schedule that a physician two hundred years dead worked out and never got to send. The first generation is hard. The second one is born to it, and the drift is smaller in them, and smaller again after that.</p>
+    <p class="body"><em>They name the basin after you, and the settlement after her.</em></p>`;
+  }else{
+    end=`<p class="body">The recommendation goes out clean. They come, and the landing is good, and the first decade is the best decade any of them have had.</p>
+    <p class="body">In year thirty-one a physician in the settlement notices that the sleep records have been drifting for a long time, and pulls the old survey, and finds that the answer was on this planet the whole time, filed in an unlogged shelter north of everything, by someone who had worked it out two centuries early and had no way to make anyone believe her.</p>
+    <p class="body"><em>They live. It costs them something they never agreed to.</em></p>`;
+  }
+  document.getElementById("msheet").innerHTML=`
+    <h1>${mode==="withdraw"?"Withdrawal transmitted":"Recommendation transmitted"}</h1>
+    <h2>${esc(S.name)} · ${esc(S.ship)} · ${esc(S.planet)}</h2>
+    <p class="body">${got.length} of 6 findings. ${mine} taken by you${hers?`, ${hers} recovered from the Meridian archive`:""}.
+    ${lost.length?`Unanswered: ${lost.map(c=>esc(c.n)).join(", ")}.`:""}</p>
+    <p class="body" style="font-size:14px;opacity:.8">Meridian crew identified: ${CREW.filter(c=>c.known).length} of 6.
+    ${S.knowTruth?"":"<br>You never found out what happened to the sixth."}</p>
+    <div class="rule"></div>${end}<div class="rule"></div>
+    <p class="body" style="opacity:.5;font-size:14px">Slice ends here. In the full game this is world one of four, and she is aboard.</p>
+    <button onclick="location.reload()">Run it again</button>`;
+  document.getElementById("msg").classList.add("on");
+}
+function fail(msg){
+  if(S.dead||S.ended)return;S.dead=true;
+  document.getElementById("msheet").innerHTML=`<h1>Survey terminated</h1>
+    <h2>${esc(S.ship)} · ${esc(S.planet)}</h2><p class="body">${msg}</p>
+    <p class="body" style="opacity:.6;font-size:14px">The fleet is still coming. It does not know yet.</p>
+    <button onclick="location.reload()">Begin again</button>`;
+  document.getElementById("msg").classList.add("on");
+}
+
+/* ---------- loop ---------- */
+function bar(id,v){const e=document.getElementById(id);e.querySelector("i").style.width=v+"%";
+  e.className="bar"+(v<18?" bad":v<38?" warn":"")}
+let last=performance.now(),fA=0,fN=0,tuned=false,manT=0;
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now(),dt=Math.min(.05,(now-last)/1000);last=now;
+  const paused=!!document.querySelector(".overlay.on");
+  if(paused)for(const k in keys)keys[k]=false;
+  if(!tuned&&S.started){fA+=1/Math.max(dt,.001);fN++;
+    if(fN>140){tuned=true;if(fA/fN<32){renderer.shadowMap.enabled=false;
+      grass.count=Math.floor(grass.count*.5);grass.instanceMatrix.needsUpdate=true;
+      renderer.setPixelRatio(1)}}}
+
+  if(S.started&&!paused&&!S.dead&&!S.ended){
+    S.t+=dt;
+    let fx=0,fz=0;
+    if(keys.w||keys.arrowup)fz+=1;
+    if(keys.s||keys.arrowdown)fz-=1;
+    if(keys.a||keys.arrowleft)fx-=1;
+    if(keys.d||keys.arrowright)fx+=1;
+    const mag=Math.hypot(fx,fz),spd=keys.shift?9.0:4.2;
+    if(mag>0){
+      if(S.surveying){S.surveying=null;S.progress=0;toast("Survey interrupted.",1500)}
+      fx/=mag;fz/=mag;
+      const cy=Math.cos(S.camYaw),sy=Math.sin(S.camYaw);
+      const wx=cy*fz+sy*fx,wz=-sy*fz+cy*fx;
+      S.px=Math.max(-SIZE/2+40,Math.min(SIZE/2-40,S.px+wx*spd*dt));
+      S.pz=Math.max(-SIZE/2+40,Math.min(SIZE/2-40,S.pz+wz*spd*dt));
+      S.heading=Math.atan2(wx,wz);S.speed+=(spd-S.speed)*.16;
+      S.bob+=dt*(keys.shift?13:8.5);
+      if(!S.mouse){const want=Math.atan2(-wz,wx);
+        let dd=((want-S.camYaw+Math.PI*3)%(Math.PI*2))-Math.PI;
+        S.camYaw+=dd*Math.min(1,dt*1.3)}
+    }else S.speed+=(0-S.speed)*.22;
+
+    markSeen();
+    if(Math.abs(dawnX()-S.grassAt)>110)refillGrass();
+    if(S.surveying){S.progress+=dt;if(S.progress>=S.surveying.dur)finishSurvey(S.surveying)}
+
+    CRIT.forEach(c=>{if(c.done||c.lost||c.band)return;
+      if(tempAt(c.x)>LETHAL){c.lost=true;renderManifest();
+        toast(`<span style="color:var(--bad)">${esc(c.n)} is behind the heat now. That question stays unanswered.</span>`,6500)}});
+
+    const T=tempAt(S.px);
+    S.water=Math.max(0,S.water-dt*(.040+Math.max(0,T-28)*.011));
+    S.oxy=Math.max(0,S.oxy-dt*(.026+S.speed*.007));
+    if(T>44)S.integrity=Math.max(0,S.integrity-dt*(T-44)*.10);
+    if(T<-40)S.integrity=Math.max(0,S.integrity-dt*(-40-T)*.045);
+    const wc=C("water");
+    if(Math.hypot(wc.x-S.px,wc.z-S.pz)<18&&tempAt(wc.x)<LETHAL)S.water=Math.min(100,S.water+dt*12);
+    CAMPS.concat([LAST]).forEach(cp=>{if(Math.hypot(cp.x-S.px,cp.z-S.pz)<26)S.oxy=Math.min(100,S.oxy+dt*10)});
+    DENS.forEach(dn=>{if(tempAt(dn.x)<34)return;
+      const dd=Math.hypot(dn.x-S.px,dn.z-S.pz);
+      if(dd<9){S.integrity=Math.max(0,S.integrity-dt*13);
+        if(!dn.hit||now-dn.hit>4000){dn.hit=now;toast("<span style='color:var(--bad)'>Something came out of the ash.</span>",3000)}}});
+    if(S.water<=0)fail("Water gone. The band moved on without you, the way it moves on without everything.");
+    if(S.oxy<=0)fail("Oxygen gone.");
+    if(S.integrity<=0)fail("Suit breached.");
+
+    manT+=dt;if(manT>0.4){manT=0;renderManifest()}
+  }
+
+  const gy=heightAt(S.px,S.pz);
+  player.position.set(S.px,gy,S.pz);
+  let hd=((S.heading-player.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI;
+  player.rotation.y+=hd*Math.min(1,dt*9);
+
+  // gait: thigh swings, knee flexes only backward and only on the back half,
+  // elbows hold a permanent bend. that permanent bend is what stops it reading as a robot.
+  const run=S.speed>6, k=Math.min(1,S.speed/4.2), ph=S.bob;
+  const thigh=run?.80:.56, knee=run?1.45:.95;
+  const shldr=run?.62:.40, elbowSwing=run?.55:.30;
+  legL.rotation.x=Math.sin(ph)*thigh*k;
+  legR.rotation.x=Math.sin(ph+Math.PI)*thigh*k;
+  legL.userData.lower.rotation.x=Math.max(0,Math.sin(ph+.45))*knee*k;
+  legR.userData.lower.rotation.x=Math.max(0,Math.sin(ph+Math.PI+.45))*knee*k;
+  armL.rotation.x=-Math.sin(ph)*shldr*k;
+  armR.rotation.x=-Math.sin(ph+Math.PI)*shldr*k;
+  armL.userData.lower.rotation.x=-(.30+Math.max(0,Math.sin(ph+1.3))*elbowSwing*k);
+  armR.userData.lower.rotation.x=-(.30+Math.max(0,Math.sin(ph+Math.PI+1.3))*elbowSwing*k);
+  const torso=player.userData.torso;
+  torso.rotation.y=Math.sin(ph)*.10*k;
+  torso.rotation.x=k*(run?.14:.05);
+  torso.position.y=Math.abs(Math.sin(ph))*.035*k;
+
+  sun.target.position.set(S.px,gy,S.pz);sun.target.updateMatrixWorld();
+  sun.position.set(S.px+SUNDIR.x*520,gy+72,S.pz+SUNDIR.z*520);
+  if(gShader)gShader.uniforms.uT.value=S.t;
+
+  if(S.fp){
+    player.visible=false;
+    const k=Math.min(1,S.speed/4.2);
+    cam.position.set(S.px+Math.cos(S.bob*.5)*.02*k,gy+1.74+Math.sin(S.bob)*.035*k,S.pz);
+    const dir=new THREE.Vector3(Math.cos(S.camYaw),Math.sin(-S.camPitch)*1.25,-Math.sin(S.camYaw));
+    cam.lookAt(cam.position.clone().add(dir));
+    hands.rotation.x=Math.sin(S.bob*.5)*.05*k;
+    hands.position.y=-Math.abs(Math.sin(S.bob))*.012*k;
+  }else{
+    player.visible=true;
+    const d2=S.camDist,ph=S.camPitch;
+    const ox=Math.cos(S.camYaw)*Math.cos(ph)*d2,oz=-Math.sin(S.camYaw)*Math.cos(ph)*d2;
+    const tx=S.px-ox,tz=S.pz-oz,ty=gy+Math.sin(ph)*d2+1.85;
+    cam.position.set(tx,Math.max(ty,heightAt(tx,tz)+1.5),tz);
+    cam.lookAt(S.px,gy+1.45,S.pz);
+  }
+  if(dust){dust.position.set(Math.round(S.px/40)*40,gy,Math.round(S.pz/40)*40);
+    dust.rotation.y=S.t*.02}
+  updateStriders(S.t);
+
+  bar("b-int",S.integrity);bar("b-wat",S.water);bar("b-oxy",S.oxy);
+  const T=tempAt(S.px),tv=document.getElementById("v-temp");
+  tv.textContent=`${T>0?"+":""}${T.toFixed(0)} °C`;
+  tv.style.color=T>40?"var(--bad)":T>28?"var(--warn)":T<-30?"#79A6D8":"var(--ink)";
+  const behind=dawnX()-S.px;
+  document.getElementById("v-dawn").textContent=
+    behind>=0?`${(behind/1000).toFixed(2)} km behind`:`${(-behind/1000).toFixed(2)} km ahead`;
+  document.getElementById("v-elev").textContent=`${gy.toFixed(0)} m`;
+  document.getElementById("clockv").textContent=mmss(S.t);
+  document.getElementById("heat").style.opacity=T>42?Math.min(.9,(T-42)/20):0;
+
+  const tg=target(),p=document.getElementById("prompt"),pb=document.getElementById("pbar");
+  if(S.surveying){p.style.display="block";pb.style.display="block";
+    document.getElementById("ptext").innerHTML="Surveying — hold still";
+    pb.querySelector("i").style.width=(100*S.progress/S.surveying.dur)+"%"}
+  else if(tg){p.style.display="block";pb.style.display="none";
+    document.getElementById("ptext").innerHTML=`<b>E</b> — ${esc(tg.label)}`}
+  else p.style.display="none";
+
+  drawCompass();drawSound();
+  renderer.render(scene,cam);
+}
+if(window.THREE) init();
+</script>
+</body>
+</html>

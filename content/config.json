@@ -1,0 +1,224 @@
+{
+  "_note": "Every tunable number in the game. If a number appears in a .js file, it belongs here instead. Changing anything under 'climate', 'player.speed', or any site x/z means re-running the balance check.",
+
+  "world": {
+    "size": 3400,
+    "segments": 210,
+    "chartCell": 26,
+    "sunDirection": { "x": 1, "z": 0 }
+  },
+
+  "terrain": {
+    "noiseSeed": 7731,
+    "baseFrequency": 0.0008,
+    "baseAmplitude": 44,
+    "detailFrequency": 0.0038,
+    "detailAmplitude": 7,
+    "detailOffset": { "x": 30, "z": -11 },
+    "octaves": 5,
+    "ridge": { "x": -620, "z": -780, "length": 950, "angle": 0.62, "height": 130, "width": 200, "falloffPower": 2.2 },
+    "basin": { "x": 150, "z": 900, "radius": 300, "depth": 28 },
+    "farHills": { "count": 18, "minDistance": 2100, "distanceRange": 1600, "minHeight": 90, "heightRange": 240, "minRadius": 280, "radiusRange": 440 },
+    "scatterRocks": { "count": 250, "minScale": 0.6, "scaleRange": 3, "spreadFraction": 0.92 }
+  },
+
+  "climate": {
+    "_note": "The whole clock. dawn0 is where the dawn line starts in metres; dawnVelocity is metres per second. lethal is the temperature that kills a site. A site at x becomes lost at (x + (lethal + 12) / k - dawn0) / dawnVelocity seconds.",
+    "dawn0": -900,
+    "dawnVelocity": 2.0,
+    "lethal": 52,
+    "k": 0.05,
+    "baseTemp": -12,
+    "nightSlope": 0.03,
+    "minTemp": -62,
+    "maxTemp": 78,
+    "lethalMargin": 12
+  },
+
+  "player": {
+    "spawn": { "x": -900, "z": 430 },
+    "walkSpeed": 4.2,
+    "sprintSpeed": 9.0,
+    "acceleration": 0.16,
+    "deceleration": 0.22,
+    "boundaryMargin": 40,
+    "bobRateWalk": 8.5,
+    "bobRateRun": 13,
+    "camera": {
+      "fov": 64,
+      "near": 0.15,
+      "far": 9000,
+      "startYaw": 3.14159265,
+      "startPitch": 0.16,
+      "startDistance": 6.2,
+      "minDistance": 2.6,
+      "maxDistance": 15,
+      "minPitch": -0.42,
+      "maxPitch": 0.8,
+      "lookSensitivity": 0.005,
+      "pitchSensitivity": 0.004,
+      "zoomSensitivity": 0.01,
+      "autoTurnRate": 1.3,
+      "firstPersonEyeHeight": 1.74,
+      "thirdPersonLookHeight": 1.45,
+      "thirdPersonMinClearance": 1.5,
+      "thirdPersonHeightOffset": 1.85
+    }
+  },
+
+  "gait": {
+    "_note": "The elbow base bend of 0.30 rad is load-bearing. A straight arm reads as a robot. gait.test.js asserts it never goes below this.",
+    "runThreshold": 6,
+    "speedNormaliser": 4.2,
+    "thighWalk": 0.56,
+    "thighRun": 0.8,
+    "kneeWalk": 0.95,
+    "kneeRun": 1.45,
+    "kneePhaseOffset": 0.45,
+    "shoulderWalk": 0.4,
+    "shoulderRun": 0.62,
+    "elbowSwingWalk": 0.3,
+    "elbowSwingRun": 0.55,
+    "elbowBaseBend": 0.3,
+    "elbowPhaseOffset": 1.3,
+    "torsoYawAmount": 0.1,
+    "torsoPitchWalk": 0.05,
+    "torsoPitchRun": 0.14,
+    "torsoLiftAmount": 0.035,
+    "bodyTurnRate": 9
+  },
+
+  "suit": {
+    "waterDrainBase": 0.04,
+    "waterDrainPerDegreeAbove": 0.011,
+    "waterDrainThreshold": 28,
+    "oxygenDrainBase": 0.026,
+    "oxygenDrainPerSpeed": 0.007,
+    "heatDamageThreshold": 44,
+    "heatDamageRate": 0.1,
+    "coldDamageThreshold": -40,
+    "coldDamageRate": 0.045,
+    "waterRefillRadius": 18,
+    "waterRefillRate": 12,
+    "oxygenRefillRadius": 26,
+    "oxygenRefillRate": 10,
+    "gaugeWarnBelow": 38,
+    "gaugeBadBelow": 18
+  },
+
+  "grass": {
+    "maxBlades": 19000,
+    "bandOffset": -300,
+    "spawnWidth": 1500,
+    "falloffSigma": 470,
+    "refillThreshold": 110,
+    "minScale": 0.34,
+    "scaleRange": 0.46,
+    "windSpeedX": 1.9,
+    "windSpeedZ": 1.3,
+    "windAmplitudeX": 0.16,
+    "windAmplitudeZ": 0.1
+  },
+
+  "striders": {
+    "count": 150,
+    "bandOffset": -230,
+    "herdZ": -1050,
+    "spreadX": 340,
+    "zStart": -1700,
+    "zRange": 1400,
+    "bobRate": 0.85,
+    "bobAmplitude": 0.42,
+    "audibleRange": 2400,
+    "closeRange": 650
+  },
+
+  "ashwaiters": {
+    "_note": "Currently a damage radius, not a creature. Known issue 2 in HANDOFF.",
+    "denCount": 26,
+    "denSpreadX": { "min": -1600, "range": 2700 },
+    "denSpreadZ": { "min": -1500, "range": 3100 },
+    "activeAboveTemp": 34,
+    "damageRadius": 9,
+    "damageRate": 13,
+    "damageMessageCooldownMs": 4000,
+    "soundNullRadius": 75,
+    "soundNullThreshold": 0.35
+  },
+
+  "sites": {
+    "_note": "The six findings. Prose for each lives in story.json under the same id. duration is seconds of holding still to complete the survey.",
+    "soil":   { "x": -1300, "z": -250,  "radius": 26,  "duration": 3.2 },
+    "water":  { "x": -1000, "z": 430,   "radius": 24,  "duration": 2.8 },
+    "rad":    { "x": -620,  "z": -780,  "radius": 48,  "duration": 3.0 },
+    "bio":    { "x": 0,     "z": -1050, "radius": 130, "duration": 3.6, "followsBand": true },
+    "site":   { "x": 150,   "z": 900,   "radius": 70,  "duration": 4.0 },
+    "season": { "x": 430,   "z": -560,  "radius": 30,  "duration": 3.2 }
+  },
+
+  "camps": {
+    "_note": "The Meridian chain. Each camp is further north than the last. 'gives' names the site it answers from their archive, or null.",
+    "c1": { "x": -1200, "z": -1150, "radius": 30, "gives": "soil" },
+    "c2": { "x": -600,  "z": -450,  "radius": 30, "gives": "season" },
+    "c3": { "x": -150,  "z": 200,   "radius": 30, "gives": "rad" },
+    "c4": { "x": 250,   "z": 850,   "radius": 30, "gives": "water" },
+    "c5": { "x": 650,   "z": 1350,  "radius": 34, "gives": null }
+  },
+
+  "graves": {
+    "_note": "Never marked on the compass or the chart. Finding them is the discovery.",
+    "g1": { "x": -1050, "z": -820,  "radius": 16 },
+    "g2": { "x": -320,  "z": -90,   "radius": 16 },
+    "g3": { "x": 190,   "z": 560,   "radius": 16 },
+    "g4": { "x": 520,   "z": 1100,  "radius": 16 },
+    "g5": { "x": 760,   "z": 1420,  "radius": 18 }
+  },
+
+  "shelter": {
+    "_note": "The sixth camp. Only appears on the compass after camp five is read, and then only as '?'.",
+    "x": 1150,
+    "z": 1560,
+    "radius": 34
+  },
+
+  "chart": {
+    "revealBaseRadius": 70,
+    "revealPerMetreElevation": 2.0,
+    "revealElevationThreshold": 42,
+    "contourThreshold": 62,
+    "gridSpacing": 500
+  },
+
+  "compass": {
+    "visibleArc": 1.25,
+    "tickSpacingDegrees": 10
+  },
+
+  "timing": {
+    "fleetTransmissionDelayMs": 120000,
+    "manifestRefreshInterval": 0.4,
+    "toastDefaultMs": 4600
+  },
+
+  "render": {
+    "maxPixelRatio": 1.7,
+    "toneMappingExposure": 1.15,
+    "fogDensity": 0.00068,
+    "fogColour": "0x6b5f52",
+    "shadowMapSize": 2048,
+    "shadowCameraExtent": 200,
+    "shadowBias": -0.0009,
+    "sunIntensity": 2.9,
+    "hemisphereIntensity": 0.34,
+    "bounceIntensity": 0.22,
+    "dustCount": 2600,
+    "downgrade": {
+      "_note": "Keep this path working. Target is 60fps on integrated graphics.",
+      "sampleFrames": 140,
+      "fpsThreshold": 32,
+      "disableShadows": true,
+      "grassMultiplier": 0.5,
+      "pixelRatio": 1
+    }
+  }
+}
