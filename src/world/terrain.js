@@ -38,8 +38,14 @@ const TUNING = {
   bedPeriod: 16, bedOctaves: 2, bedGain: 0.26,          // gravel beds
   gritPeriod: 56, gritOctaves: 2, gritGain: 0.20,       // grit, ~4 texels wide
   scourPeriod: 24, scourGain: 0.10, scourSmear: 0.5,    // grooves, smeared along +x
-  normalStrength: 5.5,   // height gradient -> normal tilt, baked into the pixels
-  normalScale: 0.9,      // runtime dial on top of it; costs no repaint to change
+  // The sun sits 7.9 deg above the horizon (main.js puts it at +520 x, +72 y), so
+  // this ground is unusually sensitive to these two: any texel tilted more than
+  // ~8 deg away from +x falls out of the key light entirely and is carried by the
+  // cool fills alone. At these values about a fifth of them do, which is what a
+  // raking light does to grit. normalScale is the dial to reach for — it is a
+  // uniform, so it costs no repaint; normalStrength is baked into the pixels.
+  normalStrength: 5.0,   // height gradient -> normal tilt, baked into the pixels
+  normalScale: 0.85,     // runtime dial on top of it
 
   // --- roughness map: wind-packed ground vs loose dust.
   patchPeriod: 3, patchOctaves: 2, patchBreakPeriod: 14,
