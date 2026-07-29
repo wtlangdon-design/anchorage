@@ -40,6 +40,8 @@ const THREE = window.THREE;
 
 let renderer, scene, cam, sun;
 let config, story_data, S, SUNDIR;
+let SUN_COS = 1, SUN_SIN = 0;
+const SUN_D = 520;
 
 boot();
 
@@ -71,6 +73,8 @@ function init() {
   const camCfg = config.player.camera;
   cam = new THREE.PerspectiveCamera(camCfg.fov, innerWidth / innerHeight, camCfg.near, camCfg.far);
   SUNDIR = config.world.sunDirection;
+  const elev = (config.world.sunElevationDeg || 0) * Math.PI / 180;
+  SUN_COS = Math.cos(elev); SUN_SIN = Math.sin(elev);
 
   // ---- game state S (ref 337-346), seeded from config ----
   const CELL = config.world.chartCell, GW = Math.ceil(config.world.size / CELL);
@@ -82,7 +86,7 @@ function init() {
     name: "", ship: "", planet: "",
     log: [], started: false, dead: false, mouse: false, ended: false,
     seen: new Uint8Array(GW * GW), seenCount: 0,
-    surveying: null, progress: 0, null_: 0, bob: 0, grassAt: -9999, knowTruth: false
+    surveying: null, progress: 0, null_: 0, bob: 0, grassAt: -9999, knowTruth: false, shade: 0
   };
 
   // ---- pure cores ----
@@ -103,13 +107,14 @@ function init() {
 
   rig.initRig(config, story_data, { THREE, scene, cam, heightAt: terrain.heightAt, S });
 
-  manifest.initManifest(config, story_data, { S, dawnX, tempAt, lostAtT });
+  manifest.initManifest(config, story_data, { S, dawnX, tempAt, lostAtT, shadeAt: terrain.shadeAt });
 
   hud.initHud(config, story_data, { S, manifest, storyMod: story, dawnX, tempAt, lostAtT });
 
   story.initStory(config, story_data, {
     S, manifest,
-    showPanel: panels.showPanel, renderManifest: hud.renderManifest, esc: hud.esc, toast: hud.toast
+    showPanel: panels.showPanel, renderManifest: hud.renderManifest, esc: hud.esc, toast: hud.toast,
+    shadeAt: terrain.shadeAt
   });
 
   endings.initEndings(config, story_data, {
@@ -249,6 +254,9 @@ function animate() {
   if (S.started && !paused && !S.dead && !S.ended) {
     S.t += dt;
     controller.updateMovement(dt);          // ref 1105-1123
+    // how much of the sun the rock is taking off this patch of ground. Everything
+    // that asks for a temperature this frame is handed it.
+    S.shade = terrain.shadeAt(S.px, S.pz);
     chart.markSeen();                        // ref 1125
     grass.maybeRefill(S.t);                  // ref 1126
     panels.tickSurvey(dt);                   // ref 1127
@@ -269,7 +277,9 @@ function animate() {
 
   // sun follows the player (ref 1175-1176)
   sun.target.position.set(S.px, gy, S.pz); sun.target.updateMatrixWorld();
-  sun.position.set(S.px + SUNDIR.x * 520, gy + 72, S.pz + SUNDIR.z * 520);
+  // one elevation drives the light, the sky and the shade march, so the shadow you
+  // can see on the rock is the shadow that is keeping you alive
+  sun.position.set(S.px + SUNDIR.x * SUN_D * SUN_COS, gy + SUN_D * SUN_SIN, S.pz + SUNDIR.z * SUN_D * SUN_COS);
 
   grass.setWind(S.t);                        // ref 1177
   controller.updateCamera(dt);               // ref 1179-1194

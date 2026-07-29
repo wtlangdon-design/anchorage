@@ -9,7 +9,9 @@
     "sunDirection": {
       "x": 1,
       "z": 0
-    }
+    },
+    "_sunNote": "sunElevationDeg drives three things at once and they must not drift apart: where the DirectionalLight sits, where the sun is drawn in the sky, and how far the west wall throws its shadow across the floor. Below about 13 degrees a 58 m wall shadows the whole 250 m canyon and shade stops meaning anything; raise it and the shaded stripe narrows. 22 leaves roughly half the floor in sun.",
+    "sunElevationDeg": 22
   },
   "terrain": {
     "noiseSeed": 7731,
@@ -145,7 +147,12 @@
     "nightSlope": 0.03,
     "minTemp": -62,
     "maxTemp": 78,
-    "lethalMargin": 12
+    "lethalMargin": 12,
+    "_shadeNote": "Shade is survival. Ground the west wall hides from the sun heats at (1 - shadeRelief) of the open rate, so it stays under the lethal line far longer \u2014 that shaded stripe is the only ground worth standing on once the dawn line has gone past. samples/stepMetres are the ray march toward the sun: samples*stepMetres must reach past the far wall or distant shadow is missed. softnessMetres is how many metres of penumbra the shadow edge gets instead of a hard line.",
+    "shadeRelief": 0.62,
+    "shadeSamples": 12,
+    "shadeStepMetres": 24,
+    "shadeSoftnessMetres": 7
   },
   "player": {
     "spawn": {

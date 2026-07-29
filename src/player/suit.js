@@ -21,7 +21,7 @@ export function initSuit(cfg, st, deps){
 // ref 1133-1147
 export function update(dt, now){
   const su=config.suit;
-  const T=tempAt(S.px,S.t);
+  const T=tempAt(S.px,S.t,S.shade);   // the rock is what is keeping you alive
   S.water=Math.max(0,S.water-dt*(su.waterDrainBase+Math.max(0,T-su.waterDrainThreshold)*su.waterDrainPerDegreeAbove));
   S.oxy=Math.max(0,S.oxy-dt*(su.oxygenDrainBase+S.speed*su.oxygenDrainPerSpeed));
   if(T>su.heatDamageThreshold)S.integrity=Math.max(0,S.integrity-dt*(T-su.heatDamageThreshold)*su.heatDamageRate);

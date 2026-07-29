@@ -14,13 +14,20 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { initClimate, dawnX, lostAtT } from "../src/world/climate.js";
+import { initClimate, dawnX, lostAtT, tempAt, LETHAL } from "../src/world/climate.js";
 import { applyWorldScale } from "../src/world/scale.js";
+import { initNoise, fbm } from "../src/world/noise.js";
+import * as terrain from "../src/world/terrain.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(join(here, "../content/config.json"), "utf8"));
 applyWorldScale(config);   // measure the world as it ships
 initClimate(config.climate);
+// the canyon decides which ground is shaded, and shaded ground survives the dawn
+// line far longer, so balance has to measure the world with its shadow in place
+terrain.initTerrain(config, {}, { THREE: {}, scene: { add(){} }, rand: () => 0.5, fbm });
+initNoise(config.terrain.noiseSeed);
+const shadeAt = terrain.shadeAt;
 
 const spawn = config.player.spawn;
 const sprint = config.player.sprintSpeed;
@@ -31,10 +38,12 @@ const notMeta = ([id]) => !id.startsWith("_");
 
 const sites = Object.entries(config.sites).filter(notMeta).map(([id, s]) => ({
   id, x: s.x, z: s.z, dur: s.duration, band: !!s.followsBand,
-  deadline: s.followsBand ? Infinity : lostAtT(s.x)
+  shade: s.followsBand ? 0 : shadeAt(s.x, s.z),
+  deadline: s.followsBand ? Infinity : lostAtT(s.x, shadeAt(s.x, s.z))
 }));
 const camps = Object.entries(config.camps).filter(notMeta).map(([id, c]) => ({
-  id, x: c.x, z: c.z, dur: 0, band: false, deadline: lostAtT(c.x)
+  id, x: c.x, z: c.z, dur: 0, band: false, shade: shadeAt(c.x, c.z),
+  deadline: lostAtT(c.x, shadeAt(c.x, c.z))
 }));
 const targetX = (o, t) => (o.band ? dawnX(t) + bandOffset : o.x);
 
@@ -42,8 +51,9 @@ const targetX = (o, t) => (o.band ? dawnX(t) + bandOffset : o.x);
 function printRow(o) {
   const d = dist(spawn.x, spawn.z, targetX(o, 0), o.z);
   const lost = o.deadline === Infinity ? "  never" : o.deadline.toFixed(0).padStart(7);
+  const sh = o.shade > 0.5 ? "shaded" : o.shade > 0.05 ? " part " : " sun  ";
   console.log(`  ${o.id.padEnd(8)} dist ${d.toFixed(0).padStart(5)}m   sprint ${(d / sprint).toFixed(0).padStart(4)}s` +
-              `   walk ${(d / walk).toFixed(0).padStart(4)}s   lost@ ${lost}s`);
+              `   walk ${(d / walk).toFixed(0).padStart(4)}s   ${sh}   lost@ ${lost}s`);
 }
 console.log("SITES");  sites.forEach(printRow);
 console.log("CAMPS");  camps.forEach(printRow);
@@ -148,6 +158,41 @@ if (allSprint.best === all.length) {
     console.log(`  (walk is currently ${walk} m/s, sprint ${sprint} m/s — so a walk of roughly`);
     console.log(`   ${(hi * 0.9).toFixed(1)} m/s would put the choice back in the player's hands)`);
   }
+}
+
+// ---- THE CLOCK, as the player actually meets it ---------------------------
+// Site reachability stopped being the interesting number the moment the world
+// became a 600 m room: everything is a short walk away. What bites now is the
+// ground itself. The dawn line crosses the canyon from the east, the west wall
+// throws shade back across the floor, and the survivable floor becomes a stripe
+// that narrows against that wall. This measures the stripe.
+{
+  const CY = config.terrain.canyon, suit = config.suit;
+  const halfW = CY.width / 2, halfL = CY.length / 2;
+  const sample = [];
+  for (let z = -halfL + 20; z <= halfL - 20; z += 20)
+    for (let x = -halfW + 5; x <= halfW - 5; x += 5) sample.push([x, z, shadeAt(x, z)]);
+  const shadedFrac = sample.filter(p => p[2] > 0.5).length / sample.length;
+  console.log(`\n  THE FLOOR: ${sample.length} sample points, ${(100 * shadedFrac).toFixed(0)}% of it in the west wall's shade`);
+  console.log(`  survivable floor over time (below ${suit.heatDamageThreshold} C = no suit damage; below ${LETHAL} C = ground not lost):`);
+  let firstBite = null, firstForced = null, allGone = null;
+  for (let t = 600; t <= 2600; t += 100) {
+    const safe = sample.filter(p => tempAt(p[0], t, p[2]) < suit.heatDamageThreshold).length / sample.length;
+    const alive = sample.filter(p => tempAt(p[0], t, p[2]) < LETHAL).length / sample.length;
+    if (firstBite === null && safe < 0.999) firstBite = t;
+    if (firstForced === null && safe < 0.5) firstForced = t;
+    if (allGone === null && alive <= 0.001) allGone = t;
+    if (t % 200 === 0)
+      console.log(`     t=${String(t).padStart(4)}s   ${(100 * safe).toFixed(0).padStart(3)}% comfortable   ${(100 * alive).toFixed(0).padStart(3)}% survivable`);
+  }
+  console.log(`\n  the floor first starts burning at t=${firstBite}s`);
+  console.log(`  over half of it is gone by t=${firstForced}s — from here the shade is not optional`);
+  console.log(`  the last of it goes at t=${allGone === null ? ">2600" : allGone}s`);
+  ok("there is a window where the floor is comfortable everywhere", firstBite !== null && firstBite > 600);
+  ok("the heat eventually forces the player into the shade", firstForced !== null, "never forced");
+  ok("shaded ground outlasts open ground by a wide margin",
+     lostAtT(0, 1) > lostAtT(0, 0) * 1.5,
+     `open ${lostAtT(0, 0).toFixed(0)}s vs shaded ${lostAtT(0, 1).toFixed(0)}s`);
 }
 
 if (failures) { console.error(`\nbalance.js: ${failures} failure(s)`); process.exit(1); }

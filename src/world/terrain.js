@@ -90,7 +90,7 @@ function groundRoughness(u, v) {
 }
 
 let THREE, scene, rand, fbm, config;
-let SIZE, SEG, CY;
+let SIZE, SEG, CY, SH;
 
 export function initTerrain(cfg, story, deps){
   THREE = deps.THREE; scene = deps.scene; rand = deps.rand; fbm = deps.fbm;
@@ -106,6 +106,35 @@ export function initTerrain(cfg, story, deps){
     endRun: c.endRun, invEndRun: 1 / Math.max(1e-6, c.endRun), endH: c.endHeight,
     floorF: c.floorFrequency, floorRelief: c.floorRelief, floorOct: c.floorOctaves
   };
+  const cl = config.climate;
+  SH = {
+    samples: cl.shadeSamples, step: cl.shadeStepMetres,
+    soft: Math.max(0.001, cl.shadeSoftnessMetres),
+    // the sun sits at +x (west) at this elevation, so a ray toward it climbs by
+    // tan(elevation) for every metre travelled in +x
+    tan: Math.tan((config.world.sunElevationDeg || 0) * Math.PI / 180)
+  };
+}
+
+// How much of the sun this patch of ground has lost to the rock, 0..1.
+//
+// The sun is at +x, low. So the ray toward it marches WEST and climbs; anything
+// standing higher than the ray blocks it. In this canyon that is always the west
+// wall — the east wall is the lit face and the floor is what falls into shadow.
+// The lethal edge arrives from the east, so the last survivable ground and the
+// deepest shade are the same place, at the foot of the west wall.
+//
+// Twelve heightAt calls at worst, and it exits early once fully blocked. Called
+// once a frame for the player and once at load for each site.
+export function shadeAt(x, z){
+  const y = heightAt(x, z);
+  let s = 0;
+  for(let i = 1; i <= SH.samples; i++){
+    const d = i * SH.step;
+    const over = (heightAt(x + d, z) - (y + d * SH.tan)) / SH.soft;
+    if(over > s){ s = over; if(s >= 1) return 1; }   // fully blocked, stop marching
+  }
+  return s < 0 ? 0 : s;
 }
 
 const smooth = t => t * t * (3 - 2 * t);

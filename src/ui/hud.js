@@ -72,7 +72,7 @@ export function renderManifest(){
     if(c.done) tcell = "✓";
     else if(c.lost) tcell = "—";
     else if(c.band) tcell = "∞";
-    else { const rem = lostAtT(c.x) - S.t; tcell = mmss(rem);
+    else { const rem = lostAtT(c.x, c.shade) - S.t; tcell = mmss(rem);
       tcls = rem < 75 ? "urgent" : rem < 180 ? "soon" : ""; }   // TODO(lead): urgency thresholds 75/180 not in config
     const dcell = c.done || c.lost ? "" : `${bearingTo(tx, c.z)} ${(dist / 1000).toFixed(1)}k`;
     return `<div class="row ${cls}"><div class="nm2">${c.n}</div>
@@ -81,11 +81,11 @@ export function renderManifest(){
 
   const CAMPS = storyMod.CAMPS, LAST = storyMod.LAST;
   const camps = document.getElementById("camplist");
-  const items = CAMPS.map(cp => ({ n: cp.n, x: cp.x, z: cp.z, read: cp.read }));
-  if(LAST.read || CAMPS[4].read) items.push({ n: LAST.n, x: LAST.x, z: LAST.z, read: LAST.read });
+  const items = CAMPS.map(cp => ({ n: cp.n, x: cp.x, z: cp.z, read: cp.read, shade: cp.shade || 0 }));
+  if(LAST.read || CAMPS[4].read) items.push({ n: LAST.n, x: LAST.x, z: LAST.z, read: LAST.read, shade: 0 });
   camps.innerHTML = items.map(cp => {
     const dist = Math.hypot(cp.x - S.px, cp.z - S.pz);
-    const rem = lostAtT(cp.x) - S.t;
+    const rem = lostAtT(cp.x, cp.shade) - S.t;
     const lost = rem <= 0 && !cp.read;
     return `<div class="row ${cp.read ? "mer" : lost ? "lost" : ""}">
       <div class="nm2">${cp.n}</div>
@@ -108,7 +108,7 @@ export function updateGauges(){
 
 /* ---------- readouts ---------- */
 export function updateReadouts(gy){
-  const T = tempAt(S.px, S.t), tv = document.getElementById("v-temp");
+  const T = tempAt(S.px, S.t, S.shade), tv = document.getElementById("v-temp");
   tv.textContent = `${T > 0 ? "+" : ""}${T.toFixed(0)} °C`;
   tv.style.color = T > 40 ? "var(--bad)" : T > 28 ? "var(--warn)" : T < -30 ? "#79A6D8" : "var(--ink)";   // TODO(lead): temp colour thresholds 40/28/-30 (and colours) not in config
   const behind = dawnX(S.t) - S.px;
@@ -121,7 +121,7 @@ export function updateReadouts(gy){
 
 /* ---------- heat overlay ---------- */
 export function updateHeat(){
-  const T = tempAt(S.px, S.t);
+  const T = tempAt(S.px, S.t, S.shade);
   document.getElementById("heat").style.opacity = T > 42 ? Math.min(.9, (T - 42) / 20) : 0;   // TODO(lead): heat overlay 42/.9/20 not in config
 }
 

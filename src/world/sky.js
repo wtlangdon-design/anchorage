@@ -17,7 +17,7 @@
 import * as tex from "./textures.js";
 
 let THREE, scene, rand, config;
-let SUNDIR;
+let SUNDIR, SUNC = 1, SUNS = 0.055;
 let dust;
 
 // TODO(lead): lift into config.json. Everything here is art, not gameplay —
@@ -66,6 +66,10 @@ export function initSky(cfg, story, deps){
   THREE = deps.THREE; scene = deps.scene; rand = deps.rand;
   config = cfg;
   SUNDIR = { x:config.world.sunDirection.x, z:config.world.sunDirection.z };
+  // the drawn sun has to sit where the light comes from, or the shadow that
+  // decides whether you live will not line up with the sun you can see
+  const el = (config.world.sunElevationDeg || 0) * Math.PI / 180;
+  SUNC = Math.cos(el); SUNS = Math.sin(el);
 }
 
 // GLSL wants "1.0", never "1" — every number that goes into a shader string is
@@ -142,7 +146,7 @@ function dustMotePixels(size){
 export function buildSky(){
   const K = config.sky, T = TUNING;
   const mat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
-    uniforms:{sd:{value:new THREE.Vector3(SUNDIR.x,.055,SUNDIR.z).normalize()}},
+    uniforms:{sd:{value:new THREE.Vector3(SUNDIR.x*SUNC,SUNS,SUNDIR.z*SUNC).normalize()}},
     vertexShader:`varying vec3 vP;void main(){vP=normalize(position);
       gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
     fragmentShader:`varying vec3 vP;uniform vec3 sd;
@@ -172,7 +176,8 @@ export function buildSky(){
     new THREE.MeshBasicMaterial({color:0xfff2d6,fog:false,
       map:tex.texture("sunDisc",tex.sizeFor("sunDisc",128),sunDiscPixels,{srgb:true}),
       transparent:true,depthWrite:false}));
-  disc.position.set(4200,200,0);disc.lookAt(0,200,0);scene.add(disc);
+  const sdx=4200*SUNC, sdy=4200*SUNS;
+  disc.position.set(sdx,sdy,0);disc.lookAt(0,sdy,0);scene.add(disc);
 }
 
 /* drifting dust — cheap, and it does more for atmosphere than anything else here */

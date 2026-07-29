@@ -48,5 +48,53 @@ ok("earliest in-bounds loss is after t=0", minLost >= 0, `minLost=${minLost.toFi
 ok("tempAt never exceeds maxTemp", tempAt(-1e6, 0) <= config.climate.maxTemp + EPS);
 ok("tempAt never drops below minTemp", tempAt(1e6, 0) >= config.climate.minTemp - EPS);
 
+// ---- shade ----------------------------------------------------------------
+// Shade is the survival mechanic, so these are the properties it must never lose.
+console.log("\n  shade:");
+{
+  const xs = [-1200, -600, -125, 0, 125, 400, 1000];
+  const ts = [0, 200, 600, 1200, 2000];
+
+  // 1. shade can never make ground hotter than the same ground in the open
+  let worst = 0, hotter = 0;
+  for (const x of xs) for (const t of ts) for (const s of [0, .25, .5, .75, 1]) {
+    const open = tempAt(x, t, 0), sh = tempAt(x, t, s);
+    if (sh > open + EPS) hotter++;
+    worst = Math.max(worst, sh - open);
+  }
+  ok("shade never makes ground hotter", hotter === 0, `${hotter} cases, worst +${worst.toFixed(3)}`);
+
+  // 2. full shade must be strictly cooler than full sun wherever the sun reaches
+  let notCooler = [];
+  for (const x of xs) for (const t of ts) {
+    const b = dawnX(t) - x;
+    if (b <= 0) continue;                       // night side: no sun to take away
+    if (!(tempAt(x, t, 1) < tempAt(x, t, 0) - EPS)) notCooler.push(`x=${x},t=${t}`);
+  }
+  ok("full shade is strictly cooler than full sun on the lit side", notCooler.length === 0, notCooler.join(" "));
+
+  // 3. shade must not resurrect the night side or break the clamps
+  for (const x of [2000, 5000]) {
+    ok(`shade changes nothing on the night side (x=${x})`,
+       near(tempAt(x, 0, 1), tempAt(x, 0, 0)));
+  }
+  ok("shaded ground still obeys the max temperature clamp",
+     tempAt(-1e6, 0, 0.5) <= config.climate.maxTemp + EPS);
+
+  // 4. shaded ground survives longer, and nothing is lethal before t=0 either way
+  let earliest = Infinity;
+  for (let x = -SIZE / 2; x <= SIZE / 2; x += 5) {
+    for (const s of [0, .5, 1]) {
+      earliest = Math.min(earliest, lostAtT(x, s));
+      if (tempAt(x, 0, s) > LETHAL + EPS) { ok("nothing is lethal at t=0 in any shade", false, `x=${x} shade=${s}`); }
+    }
+  }
+  ok("nothing is lethal at t=0 in any shade", true);
+  ok("the earliest possible loss is still after t=0", earliest >= 0, `${earliest.toFixed(1)}s`);
+  ok("shaded ground is lost strictly later than open ground",
+     lostAtT(0, 1) > lostAtT(0, 0) + 1, `open ${lostAtT(0,0).toFixed(0)}s vs shaded ${lostAtT(0,1).toFixed(0)}s`);
+  console.log(`     open ground at x=0 is lost at ${lostAtT(0,0).toFixed(0)}s; fully shaded, ${lostAtT(0,1).toFixed(0)}s`);
+}
+
 if (failures) { console.error(`\nclimate.test.js: ${failures} failure(s)`); process.exit(1); }
 console.log("\nclimate.test.js: all passed");

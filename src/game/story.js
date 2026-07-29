@@ -7,7 +7,7 @@
 // change: the reference's DOM writes (panel(), renderManifest()) become calls to
 // the ui functions handed in via deps.
 
-let S, manifest, showPanel, renderManifest, esc, toast, ui;
+let S, manifest, showPanel, renderManifest, esc, toast, ui, shadeAt;
 let giftTemplate = "", giftAlreadyTemplate = "";
 
 export let CREW = [], CAMPS = [], GRAVES = [], LAST = null, CONFESSION = null;
@@ -21,6 +21,7 @@ export function initStory(config, story, deps){
   showPanel = deps.showPanel; renderManifest = deps.renderManifest; esc = deps.esc;
   // readLast schedules a toast; the reference used the global toast().
   toast = deps.toast;
+  shadeAt = deps.shadeAt || (() => 0);
   ui = story.ui;
   giftTemplate = story.toasts.giftTemplate;
   giftAlreadyTemplate = story.toasts.giftAlreadyHaveTemplate;
@@ -37,6 +38,7 @@ export function initStory(config, story, deps){
       x: cc.x, z: cc.z, r: cc.radius, gives: cc.gives,
       t: sc.title, b: sc.body, gift: sc.gift,
       rev: sc.reveals.map(rv => [rv.crew, rv.note]),
+      shade: shadeAt(cc.x, cc.z),   // how long this ground stays under the lethal line
       read: false
     };
   });

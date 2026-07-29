@@ -10,7 +10,7 @@
 
 import { LETHAL } from "../world/climate.js";
 
-let S, dawnX, tempAt, lostAtT, config;
+let S, dawnX, tempAt, lostAtT, shadeAt, config;
 let CRIT = [];
 let lostCb = null, completeCb = null;
 
@@ -19,6 +19,7 @@ const SITE_ORDER = ["soil", "water", "rad", "bio", "site", "season"];
 
 export function initManifest(config_, story, deps){
   S = deps.S; dawnX = deps.dawnX; tempAt = deps.tempAt; lostAtT = deps.lostAtT;
+  shadeAt = deps.shadeAt || (() => 0);
   config = config_;
   CRIT = SITE_ORDER.map(id => {
     const cs = config.sites[id], ss = story.sites[id];
@@ -30,7 +31,9 @@ export function initManifest(config_, story, deps){
       find: ss.finding,
       place: ss.place,
       sugg: ss.suggestions,
-      done: false, by: null, lost: false, name: null
+      done: false, by: null, lost: false, name: null,
+      // static ground, so its shade is worked out once and never again
+      shade: cs.followsBand ? 0 : shadeAt(cs.x, cs.z)
     };
   });
 }
@@ -65,7 +68,7 @@ export function targetCrit(){
 export function updateLost(){
   CRIT.forEach(c => {
     if(c.done || c.lost || c.band) return;
-    if(tempAt(c.x, S.t) > LETHAL){
+    if(tempAt(c.x, S.t, c.shade) > LETHAL){
       c.lost = true;
       if(lostCb) lostCb(c);
     }
@@ -79,6 +82,6 @@ export function state(){
   return CRIT.map(c => ({
     id: c.id, name: c.name, done: c.done, by: c.by, lost: c.lost,
     x: c.x, z: c.z,
-    timeLeft: c.band ? Infinity : lostAtT(c.x) - S.t
+    timeLeft: c.band ? Infinity : lostAtT(c.x, c.shade) - S.t
   }));
 }
