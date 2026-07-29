@@ -274,7 +274,7 @@
     "readoutElevation": "Elevation",
     "dawnBehindTemplate": "{km} km behind",
     "dawnAheadTemplate": "{km} km ahead",
-    "keyHints": "W A S D — WALK &nbsp; SHIFT — SPRINT<br>DRAG — LOOK &nbsp; C — VIEW<br>E — SURVEY / READ<br>M — CHART &nbsp; L — LOGBOOK<br>T — TRANSMIT",
+    "keyHints": "W A S D — WALK &nbsp; SHIFT — SPRINT<br>DRAG — LOOK &nbsp; C — VIEW<br>E — SURVEY / READ<br>M — CHART &nbsp; L — LOGBOOK<br>T — TRANSMIT &nbsp; F — FPS",
     "promptSurveying": "Surveying — hold still",
     "promptSurveyTemplate": "survey · {name}",
     "promptReadMarker": "read the marker",
