@@ -72,8 +72,9 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
        return near(1.5 * sg.drop / sg.dropRun, 1.5 * b.drop / b.dropRun, 1e-9);
      }));
   ok("den spread scales", near(c.ashwaiters.denSpreadX.range, base.ashwaiters.denSpreadX.range * s));
-  ok("strider spread and herd z scale",
-     near(c.striders.spreadX, base.striders.spreadX * s) && near(c.striders.herdZ, base.striders.herdZ * s));
+  ok("strider spread scales, and its lateral fraction does NOT (it is a fraction)",
+     near(c.striders.spreadX, base.striders.spreadX * s)
+     && c.striders.lateralFraction === base.striders.lateralFraction);
   ok("far hills scale", near(c.terrain.farHills.minDistance, base.terrain.farHills.minDistance * s));
   ok("terrain frequencies scale INVERSELY", near(c.terrain.baseFrequency, base.terrain.baseFrequency / s));
   ok("palette frequencies scale INVERSELY", near(c.terrain.palette.dustFrequency, base.terrain.palette.dustFrequency / s));

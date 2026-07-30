@@ -85,15 +85,21 @@ export function renderManifest(){
   const cl = document.getElementById("critlist");
   cl.innerHTML = list.map(c => {
     const tx = c.band ? manifest.bandTargetX(S.t) : c.x;
-    const dist = Math.hypot(tx - S.px, c.z - S.pz);
+    const tz = c.band ? manifest.bandTargetZ(S.t) : c.z;
+    const dist = Math.hypot(tx - S.px, tz - S.pz);
     const cls = c.done ? (c.by === "meridian" ? "mer" : "done") : (c.lost ? "lost" : "");
     let tcell, tcls = "";
     if(c.done) tcell = "✓";
     else if(c.lost) tcell = "—";
-    else if(c.band) tcell = "∞";
-    else { const rem = lostAtT(c.x, c.shade) - S.t; tcell = mmss(rem);
+    else {
+      // The band objective used to print an infinity here and it was a lie: the herd
+      // walks out of the world at a known second, so it gets a countdown like
+      // everything else. The manifest does not tell the player anything it does not
+      // mean — that is the whole reason the countdowns are trusted at all.
+      const rem = (c.band ? manifest.bandDeadline() : lostAtT(c.x, c.shade)) - S.t;
+      tcell = isFinite(rem) ? mmss(rem) : "∞";
       tcls = rem < 75 ? "urgent" : rem < 180 ? "soon" : ""; }   // TODO(lead): urgency thresholds 75/180 not in config
-    const dcell = c.done || c.lost ? "" : `${bearingTo(tx, c.z)} ${(dist / 1000).toFixed(1)}k`;
+    const dcell = c.done || c.lost ? "" : `${bearingTo(tx, tz)} ${(dist / 1000).toFixed(1)}k`;
     return `<div class="row ${cls}"><div class="nm2">${c.n}</div>
       <div class="dd">${dcell}</div><div class="tt ${tcls}">${tcell}</div></div>`;
   }).join("");

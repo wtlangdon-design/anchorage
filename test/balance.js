@@ -74,6 +74,17 @@ console.log(`THE PROLOGUE, untimed: spawn (${spawn.x}, ${spawn.z}) to ${grantNam
 /* ---- the detours --------------------------------------------------------- */
 // Each static finding sits at the head of a pocket. Its detour is the real walk:
 // off the corridor's centreline out to the site and back.
+// THE BIOSPHERE IS NOT A DETOUR, IT IS A RENDEZVOUS. The herd's x is pinned to the
+// dawn line, so wherever the player chooses to stand the herd arrives at a time that
+// is already fixed: (x - bandOffset - dawn0)/dawnVelocity. It starts behind them and
+// closes only while they are not moving forward, so its cost is WAITING, and the
+// dawn charges for waiting directly. Standing further along the path means waiting
+// longer, which is why it competes with every other finding rather than being free.
+const bandOffset = config.striders.bandOffset;
+const herdAt = x => (x - bandOffset - config.climate.dawn0) / config.climate.dawnVelocity;
+const bandDeadline = (X1 - (config.striders.reachAtEnd || 0) - bandOffset - config.climate.dawn0)
+                     / config.climate.dawnVelocity;
+
 const sites = Object.keys(config.sites).filter(notMeta).map(id => {
   const s = config.sites[id];
   const p = plan(s.x);
@@ -83,7 +94,9 @@ const sites = Object.keys(config.sites).filter(notMeta).map(id => {
     id, x: s.x, z: s.z, dur: s.duration, band: !!s.followsBand,
     offset: off, detour, cost: detour / walk + s.duration,
     shade: s.followsBand ? 0 : shadeAt(s.x, s.z),
-    deadline: s.followsBand ? Infinity : lostAtT(s.x, shadeAt(s.x, s.z)),
+    // the band objective is not lost to heat — the herd stays inside the survivable
+    // window, that is why they migrate. It is lost when they walk out of the world.
+    deadline: s.followsBand ? bandDeadline : lostAtT(s.x, shadeAt(s.x, s.z)),
     seg: (segs.find(g => s.x >= g.x0 && s.x <= g.x1) || {}).id || "?"
   };
 }).sort((a, b) => a.x - b.x);
@@ -94,7 +107,7 @@ for (const s of sites) {
   console.log(`  ${s.id.padEnd(8)} ${String(Math.round(s.x)).padStart(6)}  ${s.seg.padEnd(12)}` +
     `  ${s.offset.toFixed(0).padStart(5)} m     ${s.detour.toFixed(0).padStart(4)} m  ` +
     `${s.cost.toFixed(0).padStart(4)}s  ${s.deadline === Infinity ? "  never" : s.deadline.toFixed(0).padStart(6) + "s"}` +
-    (s.band ? "   (follows the band — see phase 3)" : ""));
+    (s.band ? "   (the herd: a rendezvous, not a detour)" : ""));
 }
 {
   const past = sites.filter(s => s.x < grant.x);
@@ -137,10 +150,16 @@ function maxTakeable(speed) {
       if (!isFinite(best[k])) continue;
       const arrive = best[k] + leg;
       if (arrive < next[k]) { next[k] = arrive; nextTaken[k] = taken[k]; }
-      // take it: half the detour to reach the head, survey, half back
-      const reach = arrive + s.detour / (2 * speed);
-      const alive = s.deadline === Infinity || reach + s.dur <= s.deadline;
-      const done = arrive + s.detour / speed + s.dur;
+      let reach, done;
+      if (s.band) {
+        // the herd comes to you: you cannot arrive before it does, only wait
+        reach = Math.max(arrive, herdAt(s.x));
+        done = reach + s.dur;
+      } else {
+        reach = arrive + s.detour / (2 * speed);
+        done = arrive + s.detour / speed + s.dur;
+      }
+      const alive = reach + s.dur <= s.deadline;
       if (alive && done < next[k + 1]) { next[k + 1] = done; nextTaken[k + 1] = taken[k].concat(s.id); }
     }
     best = next; taken = nextTaken;
@@ -164,6 +183,7 @@ const allDetours = sites.reduce((a, s) => a + s.detour, 0);
 const allSurvey = sites.reduce((a, s) => a + s.dur, 0);
 console.log(`  the lethal edge reaches the far end at t=${atWalk.runOut.toFixed(0)}s — that is the whole run`);
 console.log(`  main line from ${grantName} to the far end: ${mainLine.toFixed(0)} m, ${(mainLine / walk).toFixed(0)}s at a walk`);
+console.log(`  the herd's rendezvous window closes at t=${bandDeadline.toFixed(0)}s`);
 console.log(`  every detour as well: +${allDetours.toFixed(0)} m and +${allSurvey.toFixed(0)}s of survey` +
             ` = ${((mainLine + allDetours) / walk + allSurvey).toFixed(0)}s at a walk,` +
             ` ${((mainLine + allDetours) / sprint + allSurvey).toFixed(0)}s at a sprint`);
@@ -176,12 +196,17 @@ ok("the six findings CANNOT all be taken in one pass, even at a continuous sprin
    `${atSprint.n}/${atSprint.total} taken — the clock is not charging enough for the detours`);
 ok("but enough can be taken that the choice is a choice, not a formality",
    atWalk.n >= 2 && atSprint.n >= 3, `walk ${atWalk.n}, sprint ${atSprint.n}`);
-ok("each finding is individually reachable if you go straight to it",
-   sites.every(s => s.deadline === Infinity ||
-     Math.abs(s.x - grant.x) / sprint + s.detour / (2 * sprint) + s.dur <= s.deadline),
-   sites.filter(s => s.deadline !== Infinity &&
-     Math.abs(s.x - grant.x) / sprint + s.detour / (2 * sprint) + s.dur > s.deadline)
-     .map(s => s.id).join(", "));
+{
+  const straightTo = s => s.band
+    ? Math.max(Math.abs(s.x - grant.x) / sprint, herdAt(s.x)) + s.dur
+    : Math.abs(s.x - grant.x) / sprint + s.detour / (2 * sprint) + s.dur;
+  ok("each finding is individually reachable if you go straight to it",
+     sites.every(s => straightTo(s) <= s.deadline),
+     sites.filter(s => straightTo(s) > s.deadline).map(s => s.id).join(", "));
+}
+ok("the biosphere reports a real deadline instead of an infinity",
+   isFinite(bandDeadline) && bandDeadline < lostAtT(X1, 0),
+   `deadline ${bandDeadline.toFixed(0)}s vs run ${lostAtT(X1, 0).toFixed(0)}s`);
 
 /* ---- what the dawn takes while you are elsewhere ------------------------ */
 console.log("\nWHAT THE DAWN TAKES, AND WHEN");
@@ -190,14 +215,13 @@ console.log("\nWHAT THE DAWN TAKES, AND WHEN");
   const rows = [];
   for (const s of sites) {
     t += Math.abs(s.x - atX) / walk; atX = s.x;
-    const head = t + s.detour / (2 * walk);
-    rows.push([s.id, head, s.deadline, s.deadline === Infinity ? Infinity : s.deadline - head - s.dur]);
+    const head = s.band ? Math.max(t, herdAt(s.x)) : t + s.detour / (2 * walk);
+    rows.push([s.id, head, s.deadline, s.deadline - head - s.dur]);
   }
   for (const [id, head, dead, margin] of rows)
     console.log(`  ${id.padEnd(8)} a walker who stops for nothing else reaches its head at t=${head.toFixed(0)}s` +
-      (dead === Infinity ? ", and it never expires"
-        : `, ground gone at t=${dead.toFixed(0)}s — ${margin.toFixed(0)}s of margin`));
-  const doomed = rows.filter(r => r[3] !== Infinity && r[3] < 0);
+      `, gone at t=${dead.toFixed(0)}s — ${margin.toFixed(0)}s of margin`);
+  const doomed = rows.filter(r => r[3] < 0);
   console.log(doomed.length
     ? `  the dawn takes ${doomed.length} of them before even a straight-line walker arrives: ${doomed.map(r => r[0]).join(", ")}`
     : `  none of the six is out of reach for a walker who takes no other detour`);

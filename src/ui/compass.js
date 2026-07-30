@@ -40,7 +40,8 @@ export function drawCompass(){
   const marks = [];
   manifest.list().forEach(c => { if(c.done || c.lost) return;
     const tx = c.band ? manifest.bandTargetX(S.t) : c.x;
-    marks.push({ x: tx, z: c.z, label: c.n.split(" ")[0].toUpperCase(), col: "255,233,192", pri: 1 }); });
+    const tz = c.band ? manifest.bandTargetZ(S.t) : c.z;
+    marks.push({ x: tx, z: tz, label: c.n.split(" ")[0].toUpperCase(), col: "255,233,192", pri: 1 }); });
   const CAMPS = storyMod.CAMPS, LAST = storyMod.LAST;
   CAMPS.forEach(cp => { if(cp.read) return;
     if(lostAtT(cp.x) - S.t <= 0) return;
@@ -81,7 +82,12 @@ export function soundfield(){ return field; }
 export function drawSound(){
   const [w, h, d] = fit(sfc); s2.setTransform(d, 0, 0, d, 0, 0); s2.clearRect(0, 0, w, h);
   const src = [];
-  const hx = dawnX(S.t) + config.striders.bandOffset, hz = config.striders.herdZ, hd = Math.hypot(hx - S.px, hz - S.pz);
+  // The herd is ON the route now, so its bearing is along the corridor: almost
+  // always dead ahead or dead behind, which is exactly what the strip is for. In a
+  // corridor you cannot see past the next pass, so this is how you know which.
+  const hx = dawnX(S.t) + config.striders.bandOffset;
+  const hz = manifest.bandTargetZ ? manifest.bandTargetZ(S.t) : 0;
+  const hd = Math.hypot(hx - S.px, hz - S.pz);
   src.push({ a: Math.atan2(-(hz - S.pz), hx - S.px), amp: Math.max(0, 1 - hd / config.striders.audibleRange) * .95 });
   field.herdAngle = src[0].a; field.herdAmp = src[0].amp; field.herdDistance = hd;
   let nul = 0;
@@ -95,10 +101,15 @@ export function drawSound(){
   for(let i = 0; i < 70; i++){ const x = i / 70 * w, a = (.13 + .08 * Math.sin(at * .9 + i * .7)) * amb;
     s2.fillStyle = `rgba(143,198,212,${.16 * amb + .02})`; s2.fillRect(x, h / 2 - a * h / 2, w / 70 - 1, a * h); }
   src.forEach(sc => { let dd = ((sc.a - S.camYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-    if(Math.abs(dd) > config.compass.visibleArc) return;
-    const x = w / 2 + dd * (w / 2.5), a = sc.amp * amb;
+    // A source BEHIND you used to be dropped, which threw away the only thing the
+    // strip is now for. It is pinned to whichever edge it is past instead, dimmer,
+    // so "they are back that way" is readable without a word of text.
+    const behind = Math.abs(dd) > config.compass.visibleArc;
+    const x = behind ? (dd > 0 ? w - 5 : 5) : w / 2 + dd * (w / 2.5);
+    const a = sc.amp * amb * (behind ? .55 : 1);
     s2.fillStyle = `rgba(143,198,212,${.28 + a * .6})`;
-    const bw = 7 + a * 24; s2.fillRect(x - bw / 2, h / 2 - a * h * .46, bw, a * h * .92); });
+    const bw = (behind ? 5 : 7) + a * 24;
+    s2.fillRect(x - bw / 2, h / 2 - a * h * .46, bw, a * h * .92); });
   s2.fillStyle = "rgba(255,233,192,.35)"; s2.fillRect(w / 2 - .5, 0, 1, h);
   const note = document.getElementById("sfnote");
   if(nul > config.ashwaiters.soundNullThreshold){ note.textContent = story.soundfield.null; note.className = "null"; }

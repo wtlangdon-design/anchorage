@@ -82,8 +82,11 @@ const SCALED = [
   "ashwaiters.denSpreadX.min", "ashwaiters.denSpreadX.range",
   "ashwaiters.denSpreadZ.min", "ashwaiters.denSpreadZ.range",
 
-  "striders.bandOffset", "striders.herdZ", "striders.spreadX",
-  "striders.zStart", "striders.zRange", "striders.audibleRange", "striders.closeRange",
+  // The herd is on the route now, so its lateral position is a FRACTION of the
+  // corridor's half-width and is deliberately not here — lateralFraction is
+  // dimensionless and scaling it would push the animals into the rock.
+  "striders.bandOffset", "striders.spreadX", "striders.reachAtEnd",
+  "striders.audibleRange", "striders.closeRange",
 
   // see the note above: these four keep refillGrass's draw count invariant
   "grass.bandOffset", "grass.spawnWidth", "grass.falloffSigma", "grass.refillThreshold",

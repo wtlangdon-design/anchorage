@@ -232,7 +232,8 @@ export function drawChart(g, w, h){
   for(const c of list){
     if(c.done || c.lost) continue;
     const tx = c.band ? manifest.bandTargetX(S.t) : c.x;
-    const X = px(tx), Y = py(c.z);
+    const tz = c.band ? manifest.bandTargetZ(S.t) : c.z;
+    const X = px(tx), Y = py(tz);
     g.strokeStyle = P.pending; g.lineWidth = CH.contourWidth * 1.3;
     g.beginPath(); g.arc(X, Y, F * .5, 0, 6.29); g.stroke();
     g.fillStyle = P.pendingText; g.fillText(c.n, X + F * .8, Y + F * .3);
@@ -254,7 +255,8 @@ export function drawChart(g, w, h){
   for(const c of list){
     if(!c.done && !c.lost) continue;
     const tx = c.band ? manifest.bandTargetX(S.t) : c.x;
-    const X = px(tx), Y = py(c.z);
+    const tz = c.band ? manifest.bandTargetZ(S.t) : c.z;
+    const X = px(tx), Y = py(tz);
     g.fillStyle = c.done ? P.named : P.lost;
     g.beginPath(); g.arc(X, Y, F * .28, 0, 6.29); g.fill();
     if(c.name && c.by === "you"){

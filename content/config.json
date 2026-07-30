@@ -564,17 +564,16 @@
     "windAmplitudeZ": 0.1
   },
   "striders": {
+    "_note": "The herd walks the CORRIDOR. bandOffset is how far ahead of (positive) or behind (negative) the dawn line the middle of the herd stays — they follow the grass, which is at grass.bandOffset, so keep the two near each other. spreadX is how far the herd strings out along the journey; lateralFraction is how much of the corridor's half-width they use across it, so they fit a 28 m pass and a 80 m chamber without any per-place tuning. THEY ARE GOING THE SAME WAY YOU ARE, for the same reason. That is the whole point: the biosphere is surveyed by catching up to them, not by crossing them. audibleRange and closeRange feed the soundfield strip, which is how you know whether they are ahead or behind you in a corridor where you cannot see past the next pass.",
     "count": 90,
-    "bandOffset": -120,
-    "herdZ": -430,
-    "spreadX": 300,
-    "zStart": -520,
-    "zRange": 175,
+    "bandOffset": -140,
+    "spreadX": 260,
     "bobRate": 0.85,
     "bobAmplitude": 0.42,
     "audibleRange": 900,
     "closeRange": 320,
-    "_note": "The migration crosses the plateau beyond the north rim, not the canyon floor. herdZ/zStart/zRange are out past the end of the canyon; the animals are fifteen metres tall, so from the floor you see them over the rim before you hear where they are."
+    "lateralFraction": 0.72,
+    "reachAtEnd": 40
   },
   "ashwaiters": {
     "_note": "Currently a damage radius, not a creature. Known issue 2 in HANDOFF.",
@@ -633,7 +632,8 @@
       "radius": 30,
       "duration": 80
     },
-    "_durationNote": "duration is how long a survey takes, in seconds, and it is the ONE cost the player cannot buy their way out of by sprinting. The arithmetic, because it is not obvious: a detour's walking cost scales with 1/speed, so sprint (9 m/s) pays 2.14x less for it than walk (4.2 m/s) — which means no amount of geometry can stop a sprinter taking every finding. Survey time is speed-neutral, so it is the only lever that makes the choice a choice. For a sprinter to be unable to take all six while a walker can still take two or three, duration has to exceed roughly (run - mainLine/sprint - allDetours/sprint) / 4. These were 3 seconds, which was a placeholder; run npm run balance after changing them and read the 'how many of the six' line rather than guessing."
+    "_durationNote": "duration is how long a survey takes, in seconds, and it is the ONE cost the player cannot buy their way out of by sprinting. The arithmetic, because it is not obvious: a detour's walking cost scales with 1/speed, so sprint (9 m/s) pays 2.14x less for it than walk (4.2 m/s) — which means no amount of geometry can stop a sprinter taking every finding. Survey time is speed-neutral, so it is the only lever that makes the choice a choice. For a sprinter to be unable to take all six while a walker can still take two or three, duration has to exceed roughly (run - mainLine/sprint - allDetours/sprint) / 4. These were 3 seconds, which was a placeholder; run npm run balance after changing them and read the 'how many of the six' line rather than guessing.",
+    "_bioNote": "bio is the biosphere and it is the one finding that MOVES: it is surveyed by catching up to the herd, whose x is pinned to the dawn line by striders.bandOffset. followsBand still means 'this objective is wherever the herd is', but it no longer means 'never lost'. The herd walks forward at the same speed as the dawn and eventually walks out past the far end of the path, and that is a real deadline the manifest counts down to — see manifest.bandDeadline(). striders.reachAtEnd is how close to the head of the path a survey can still be taken from."
   },
   "camps": {
     "_note": "Only camp five is here. The Meridian moved across the planet for forty years, so camps one to four are somewhere else on this world and exist only in the record; their findings are recovered from the relay archive at the shelter — see shelter.archive. grantsSurvey is the one that matters: the camp carrying Vantaa's final entry is where the six findings are handed over, and reading it is what puts them on the manifest and starts the clock. Before it there is no manifest and nothing is expiring. Exactly one camp should carry this flag, and it must be one the player can actually reach.",
@@ -898,6 +898,6 @@
       "opacity": 0.72
     }
   },
-  "buildStamp": "build 2026-07-30 · beats along the path v1",
+  "buildStamp": "build 2026-07-30 · the herd on the route v1",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

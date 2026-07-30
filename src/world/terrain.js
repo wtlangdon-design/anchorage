@@ -234,7 +234,14 @@ function bake(pcfg, segs){
 }
 
 export function pathSegments(){ return P ? P.segs : []; }
+// Guarded because manifest.js, props.js and fauna.js all read the plan, and a pure
+// test can construct any of them without ever building a world. Un-baked, the
+// answer is "a corridor of nothing at zero", which is exactly what a caller that
+// has no terrain should see.
+const NOPLAN = { centre: 0, halfWidth: 0, ridgeTop: 0, floor: 0, relief: 0,
+                 pocketDepth: 0, pocketRise: 0, edgePlus: 0, edgeMinus: 0 };
 export function pathPlan(x){
+  if(!TN) return NOPLAN;
   let u = (x - TX0) * TINV;
   if(u < 0) u = 0; else if(u > TN - 1) u = TN - 1;
   const i = u | 0, j = i < TN - 1 ? i + 1 : i, f = u - i;

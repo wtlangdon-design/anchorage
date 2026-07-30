@@ -8,7 +8,10 @@
 // The reference read a global S.t inside dawnX()/tempAt(); climate.js now takes
 // an explicit t, so callers here pass S.t.
 
-import { LETHAL } from "../world/climate.js";
+import { LETHAL, DAWN0, DAWN_V } from "../world/climate.js";
+// A band objective's deadline is "when the herd walks out of the walkable world",
+// which only terrain.js can answer — it owns the path's extent. Read-only.
+import * as terrainPath from "../world/terrain.js";
 
 let S, dawnX, tempAt, lostAtT, shadeAt, config;
 let CRIT = [];
@@ -72,8 +75,38 @@ export function grant(){
 }
 export function onGrant(cb){ grantCb = cb; }
 
-// Reproduces the reference's `dawnX()-230` (config.striders.bandOffset === -230).
+// THE HERD, AND WHY IT IS NOT INFINITE.
+//
+// The biosphere is the one finding that moves: it is surveyed by catching up to the
+// herd, and the herd's x is pinned to the dawn line. It used to be marked
+// followsBand and reported "never lost", which was a lie in two different ways —
+// the old square world's band crossed the walkable ground for about 146 seconds,
+// and it was the tightest objective in the game while claiming to be the loosest.
+//
+// The truth in a corridor is simpler and it is a real deadline: the herd walks
+// FORWARD, at the same speed as the dawn, and at some moment it walks out past the
+// far end and cannot be followed. That moment is when bandTargetX reaches the end
+// of the path, and it is what bandDeadline() returns. The manifest shows a
+// countdown to it like everything else, because it is a countdown like everything
+// else.
 export function bandTargetX(t){ return dawnX(t) + config.striders.bandOffset; }
+// and where the corridor is when the herd is there, so the bearing points at the
+// animals and not at a fixed z from a world that was square
+export function bandTargetZ(t){
+  const p = terrainPath.pathPlan ? terrainPath.pathPlan(bandTargetX(t)) : null;
+  return p ? p.centre : 0;
+}
+// When the herd passes the last ground the player can stand on. `reach` is how
+// close to the head of the path a survey can still be taken from.
+export function bandDeadline(){
+  const segs = terrainPath.pathSegments ? terrainPath.pathSegments() : [];
+  if(!segs.length) return Infinity;
+  const endX = segs[segs.length - 1].x1;
+  const reach = (config.striders && config.striders.reachAtEnd) || 0;
+  const x = endX - reach - config.striders.bandOffset;
+  const t = (x - DAWN0) / DAWN_V;
+  return t > 0 ? t : 0;
+}
 
 export function complete(id, by, name){
   const c = crit(id);
@@ -89,7 +122,8 @@ export function targetCrit(){
   for(const c of CRIT){
     if(c.done || c.lost) continue;
     const tx = c.band ? bandTargetX(S.t) : c.x;
-    if(Math.hypot(tx - S.px, c.z - S.pz) <= c.r) return c;
+    const tz = c.band ? bandTargetZ(S.t) : c.z;
+    if(Math.hypot(tx - S.px, tz - S.pz) <= c.r) return c;
   }
   return null;
 }
@@ -100,8 +134,11 @@ export function targetCrit(){
 export function updateLost(){
   if(!granted) return;              // nothing is expiring before the manifest exists
   CRIT.forEach(c => {
-    if(c.done || c.lost || c.band) return;
-    if(tempAt(c.x, S.t, c.shade) > LETHAL){
+    if(c.done || c.lost) return;
+    // The band objective is not lost to heat — the herd stays in the survivable
+    // window, that is why they migrate. It is lost when they walk out of the world.
+    const gone = c.band ? S.t >= bandDeadline() : tempAt(c.x, S.t, c.shade) > LETHAL;
+    if(gone){
       c.lost = true;
       if(lostCb) lostCb(c);
     }
@@ -115,6 +152,6 @@ export function state(){
   return CRIT.map(c => ({
     id: c.id, name: c.name, done: c.done, by: c.by, lost: c.lost,
     x: c.x, z: c.z,
-    timeLeft: c.band ? Infinity : lostAtT(c.x, c.shade) - S.t
+    timeLeft: (c.band ? bandDeadline() : lostAtT(c.x, c.shade)) - S.t
   }));
 }
