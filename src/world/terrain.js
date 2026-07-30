@@ -112,6 +112,11 @@ let CZ, HW, RT, BS, FR;      // centre z, half-width, ridge top, floor base, flo
 // climb rather than a walk. Two more flat arrays, no extra work per call beyond one
 // compare and one multiply.
 let PD, PR;
+// CN is how much of the sky this stretch of trail has closed over, 0..1. It is the
+// SHADE MECHANIC's new source: rock walls do not shade a corridor whose sun is at
+// +x, but a canopy does, and where the canopy breaks the ground cooks. Baked here so
+// shadeAt costs one lookup rather than a survey of the vegetation.
+let CN;
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -128,6 +133,7 @@ function layout(pcfg){
       kind: s.kind, id: s.id, character: s.character || "",
       x0: x, x1: x + s.length, length: s.length,
       halfWidth: s.halfWidth, centre: s.centre, ridgeTop: s.ridgeTop,
+      canopy: typeof s.canopy === "number" ? s.canopy : 0,
       pocket: s.pocket || null,
       relief: typeof s.floorRelief === "number" ? s.floorRelief : 1,
       baseIn: base, sill, sillRun, drop, dropRun, dropTail: s.dropTail || 0,
@@ -171,7 +177,7 @@ function bake(pcfg, segs){
   TN = Math.ceil((x1 - TX0) / TSTEP) + 2;
   CZ = new Float32Array(TN); HW = new Float32Array(TN); RT = new Float32Array(TN);
   BS = new Float32Array(TN); FR = new Float32Array(TN);
-  PD = new Float32Array(TN); PR = new Float32Array(TN);
+  PD = new Float32Array(TN); PR = new Float32Array(TN); CN = new Float32Array(TN);
 
   // The near end opens out to the ash: the floor widens all the way to the
   // containment toe, so the corridor has a mouth rather than a wall and the heat
@@ -186,7 +192,7 @@ function bake(pcfg, segs){
   // there is the width, and the width changes fast enough (116 m over `blend`) that
   // the ridge sweeping in is far too steep to ride.
   const mouth = { halfWidth: pcfg.outerHalfWidth, centre: first.centre,
-                  ridgeTop: first.ridgeTop, relief: first.relief };
+                  ridgeTop: first.ridgeTop, relief: first.relief, canopy: 0 };
 
   let k = 0;
   for(let i = 0; i < TN; i++){
@@ -205,6 +211,7 @@ function bake(pcfg, segs){
       f = smooth((x - (g.x1 - half)) / pcfg.blend);
     }
     CZ[i] = lerp(a.centre, bseg.centre, f);
+    CN[i] = lerp(a.canopy === undefined ? 0 : a.canopy, bseg.canopy === undefined ? 0 : bseg.canopy, f);
     HW[i] = lerp(a.halfWidth, bseg.halfWidth, f);
     RT[i] = lerp(a.ridgeTop, bseg.ridgeTop, f);
     FR[i] = lerp(a.relief, bseg.relief, f);
@@ -238,7 +245,7 @@ export function pathSegments(){ return P ? P.segs : []; }
 // test can construct any of them without ever building a world. Un-baked, the
 // answer is "a corridor of nothing at zero", which is exactly what a caller that
 // has no terrain should see.
-const NOPLAN = { centre: 0, halfWidth: 0, ridgeTop: 0, floor: 0, relief: 0,
+const NOPLAN = { centre: 0, halfWidth: 0, ridgeTop: 0, floor: 0, relief: 0, canopy: 0,
                  pocketDepth: 0, pocketRise: 0, edgePlus: 0, edgeMinus: 0 };
 export function pathPlan(x){
   if(!TN) return NOPLAN;
@@ -249,6 +256,7 @@ export function pathPlan(x){
   return { centre: lerp(CZ[i], CZ[j], f), halfWidth: hw,
            ridgeTop: lerp(RT[i], RT[j], f), floor: lerp(BS[i], BS[j], f),
            relief: lerp(FR[i], FR[j], f),
+           canopy: lerp(CN[i], CN[j], f),
            pocketDepth: pd, pocketRise: lerp(PR[i], PR[j], f),
            // the floor's edge on each side, pocket included
            edgePlus: lerp(CZ[i], CZ[j], f) + hw + (pd > 0 ? pd : 0),

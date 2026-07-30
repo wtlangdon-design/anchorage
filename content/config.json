@@ -2,13 +2,13 @@
   "_note": "Every tunable number in the game. If a number appears in a .js file, it belongs here instead. Changing anything under 'climate', 'player.speed', or any site x/z means re-running the balance check.",
   "world": {
     "_scaleNote": "One number for the size of the whole world. 1 is the nominal canyon: 600 m from end to end, 250 m across. Everything measured in metres multiplies by this at load. Deliberately NOT scaled: how fast you walk, how close you must stand to survey something, and anything vertical — you are the same size whatever the world does.",
-    "_stripNote": "The world is a STRIP now, not a square: lengthX along the direction of travel, widthZ across it. size is kept as the longer of the two for anything that still wants one number. segmentsX/segmentsZ are the terrain mesh's vertex grid — keep them near 4 m spacing in both, or the sills and the one-way drops stop rendering as steps.",
+    "_stripNote": "The world is a STRIP: lengthX along the direction of travel, widthZ across it. size is the longer of the two for anything that still wants one number. segmentsX/segmentsZ are the terrain mesh's vertex grid — 4 m along the trail and 2 m across it, because the trail is only 7 m wide in the tunnels and a coarser grid across would render a seven-metre tunnel as two triangles.",
     "scale": 1.0,
     "lengthX": 2800,
-    "widthZ": 560,
+    "widthZ": 340,
     "size": 2800,
     "segmentsX": 700,
-    "segmentsZ": 140,
+    "segmentsZ": 170,
     "segments": 115,
     "chartCell": 8,
     "sunDirection": {
@@ -41,10 +41,11 @@
       "_note": "Silhouette only, and they must stay OUTSIDE the strip. The world is 2800 m long, so a ring at the old 2100 m put hills inside the corridor; minDistance is now past the far end. They are 82-99% fog by the time you see them."
     },
     "scatterRocks": {
-      "count": 180,
+      "count": 60,
       "minScale": 0.6,
       "scaleRange": 3,
-      "spreadFraction": 0.92
+      "spreadFraction": 0.92,
+      "_note": "Loose rock, scattered. Cut hard when the world became a jungle: each of these is its own draw call, where the whole jungle is six, and a trail under closed canopy has very little bare rock showing."
     },
     "palette": {
       "_note": "Ground colour, baked into the terrain mesh once at load. Costs nothing at runtime — change these freely. Each triple is r,g,b in 0..1. 'ash' is the flat ground, 'rock' is what steep slopes show, 'broadWarm' drifts the tone slowly across the map so large areas are not one flat colour.",
@@ -89,9 +90,9 @@
       ]
     },
     "path": {
-      "_note": "THE PATH. A one-way journey along +x: a chain of chambers linked by narrow passes, walked in one direction, with the beats found along it in sequence. WHY +x, derived and not assumed: dawnX(t) = dawn0 + t*dawnVelocity with dawnVelocity positive, so the dawn line sweeps toward +x. tempAt puts the heat BEHIND it (low x is hot; at t=600 the ground at x=-1400 is 73 C and at x=+1400 it is -45 C), and lostAtT(x) rises by 50 seconds every 100 m of +x. So the only way to stay alive is forward, and a site walked past is gone — CLAUDE.md invariant 1 as a fact of geometry rather than a number to keep tuning. NOTHING ELSE ENFORCES IT. Do not add anything that does. The lethal edge trails the dawn line by (lethal+lethalMargin)/k = 1280 m, so the whole 2560 m of path is eaten between t=465s and t=1715s.",
-      "_shapeNote": "TWO LAYERS, same split as the old crevice and for the same measured reason. The OUTER wall is containment: its toe is a straight line at |z| = outerHalfWidth and nothing may make it depend on x, because a wall line that moves in the direction of travel is a diagonal ramp that a flood fill will walk straight up. Its crest is an ABSOLUTE elevation, so as the floor steps down through the one-way drops the walls get taller. The INNER RIDGE is everything you actually see and walk between — the chamber walls and the pass throats. It is capped in height and its plan may wander freely, because the worst a player can do by riding it is stand on top of a ridge inside the box. THE PLAN IS BAKED. Every quantity that varies along the path is sampled into 1-D tables at `step` metres once at load, so heightAt does one index and one lerp instead of noise — which is why a 2560 m path costs LESS per call than the 600 m crevice did.",
-      "_segmentNote": "The chain, in order, walked from first to last. Alternate chamber and pass; the loader does not require it but the shape only reads if you do. length/halfWidth/centre are metres: length along x, halfWidth the floor's half-width in z, centre the floor's centreline in z. Offsetting `centre` between consecutive segments is what stops you seeing the next chamber through a pass — a straight pass you can see down is not a pass. ridgeTop is how high the rock beside the floor stands above the local floor. THE FLOOR PROFILE, and this is where one-way comes from: a segment rises by `sill` over `sillRun` metres at its start, runs flat, falls by `drop` over `dropRun` metres, then runs flat for `dropTail` more. A smoothstep drop's steepest grade is 1.5*drop/dropRun; above player.maxClimbGrade that transition can be walked down and NOT back up, and the door has closed behind you. No script, no animation, no invisible wall — just ground. The sill also hides the next chamber's floor from this one. dropTail must be at least half of `blend` or the drop happens while the corridor is still changing shape, and a moving wall beside a drop is a ramp. POCKETS are the detours. A pocket hangs off ONE side of the corridor: `side` is -1 or +1 in z, `at` is where along the segment it centres (0..1), `length` how much of the journey it spans, `depth` how far it reaches off the main line, and `rise` how many metres of climb per metre of depth — a rise makes it a climb rather than a walk. `gives` is the finding that sits at its head, and it is documentation only: the site's real position is in config.sites. THE MAIN LINE IS SAFE FORWARD PROGRESS; the pockets are what cost time, and the dawn charges for time. That is the whole game.",
+      "_note": "THE TRAIL. A game trail through jungle, walked one way (+x). The herd tramples it through new growth every ninety days: that is why a path exists at all, why it runs the direction it runs, and why following it means following them. WHY +x, derived and not assumed: dawnX(t) = dawn0 + t*dawnVelocity with dawnVelocity positive, so the dawn line sweeps toward +x. Water arrives at dawn and growth is explosive and brief — the jungle comes up in the hours after the line passes, grows for one local day, and burns as the heat arrives. The player is walking inside that one day: ahead of them it is still coming up, behind them it is burning. There is no going back into the burn, which is the same one-way rule the rock had, wearing the right skin. NOTHING ELSE ENFORCES IT. Do not add anything that does.",
+      "_shapeNote": "TWO LAYERS still, and the reason is unchanged and measured. The OUTER wall is containment: its toe is a straight line at |z| = outerHalfWidth and nothing may make it depend on x, because a line that moves in the direction of travel is a diagonal ramp a flood fill will walk up. The INNER RIDGE is now a low bank of root mass and torn earth at the trail's edge rather than a cliff — ridgeTop is metres, not tens of metres — and what the player SEES as a wall is the vegetation standing on it (see the jungle block). The bank still does the containing, and it does it with ridgeLip: a discontinuity at the trail's edge that no stride can cross. THE PLAN IS BAKED into 1-D tables at `step` metres, so heightAt does one index and one lerp and the whole 2510 m trail costs less per call than a 600 m crevice did.",
+      "_segmentNote": "The chain, in order, walked from first to last. Alternate chamber and pass; the loader does not require it but the shape only reads if you do. length/halfWidth/centre are metres: length along x, halfWidth the TRAIL's half-width in z, centre its centreline in z. Tunnels are 7-9 m across, clearings 14-20 m. The `end` clearing is the widest at 20 m because the third grave sits 8 m off the centreline there and the beats are fixed. canopy is 0..1: how much of the sky this stretch has closed over, which is the shade mechanic — see the jungle block. Offsetting `centre` between consecutive segments is what stops you seeing the next chamber through a pass — a straight pass you can see down is not a pass. ridgeTop is how high the rock beside the floor stands above the local floor. THE FLOOR PROFILE, and this is where one-way comes from: a segment rises by `sill` over `sillRun` metres at its start, runs flat, falls by `drop` over `dropRun` metres, then runs flat for `dropTail` more. A smoothstep drop's steepest grade is 1.5*drop/dropRun; above player.maxClimbGrade that transition can be walked down and NOT back up, and the door has closed behind you. No script, no animation, no invisible wall — just ground. The sill also hides the next chamber's floor from this one. dropTail must be at least half of `blend` or the drop happens while the corridor is still changing shape, and a moving wall beside a drop is a ramp. POCKETS are the detours. A pocket hangs off ONE side of the corridor: `side` is -1 or +1 in z, `at` is where along the segment it centres (0..1), `length` how much of the journey it spans, `depth` how far it reaches off the main line, and `rise` how many metres of climb per metre of depth — a rise makes it a climb rather than a walk. `gives` is the finding that sits at its head, and it is documentation only: the site's real position is in config.sites. THE MAIN LINE IS SAFE FORWARD PROGRESS; the pockets are what cost time, and the dawn charges for time. That is the whole game.",
       "startX": -1280,
       "step": 2,
       "blend": 26,
@@ -100,101 +101,107 @@
         {
           "kind": "chamber",
           "id": "landing",
-          "character": "the ash still blows in behind you; the near end is open and the heat will seal it",
+          "character": "the trail comes out of the burn behind you; the growth here is already browning",
           "length": 240,
-          "halfWidth": 34,
+          "halfWidth": 9,
           "centre": 0,
-          "ridgeTop": 20,
+          "ridgeTop": 7,
           "sill": 0,
           "sillRun": 0,
           "drop": 0,
           "dropRun": 0,
           "dropTail": 0,
-          "floorRelief": 0.8
+          "floorRelief": 0.8,
+          "canopy": 0.34
         },
         {
           "kind": "pass",
           "id": "throat-one",
-          "character": "a sill you walk over — the first time you cannot see what is next",
+          "character": "seven metres of trail under closed canopy — the first place you cannot see ahead",
           "length": 70,
-          "halfWidth": 14,
+          "halfWidth": 3.5,
           "centre": -44,
-          "ridgeTop": 32,
+          "ridgeTop": 9,
           "sill": 8,
           "sillRun": 28,
           "drop": 8,
           "dropRun": 28,
           "dropTail": 0,
-          "floorRelief": 0.5
+          "floorRelief": 0.5,
+          "canopy": 0.9
         },
         {
           "kind": "chamber",
           "id": "slot",
-          "character": "tight and dark: thirty-four metres across with thirty-eight metres of rock either side",
+          "character": "close and dark; the undergrowth meets over the trail and you walk in green light",
           "length": 250,
-          "halfWidth": 17,
+          "halfWidth": 8,
           "centre": -60,
-          "ridgeTop": 38,
+          "ridgeTop": 10,
           "sill": 0,
           "sillRun": 0,
           "drop": 0,
           "dropRun": 0,
           "dropTail": 0,
-          "floorRelief": 0.6
+          "floorRelief": 0.6,
+          "canopy": 0.86
         },
         {
           "kind": "pass",
           "id": "the-step",
-          "character": "ONE-WAY: a step down you cannot climb back",
+          "character": "ONE-WAY: the trail drops off a root-bound step you cannot climb back",
           "length": 60,
-          "halfWidth": 15,
+          "halfWidth": 4,
           "centre": -22,
-          "ridgeTop": 32,
+          "ridgeTop": 9,
           "sill": 6,
           "sillRun": 22,
           "drop": 14,
           "dropRun": 10,
           "dropTail": 16,
-          "floorRelief": 0.5
+          "floorRelief": 0.5,
+          "canopy": 0.88
         },
         {
           "kind": "chamber",
           "id": "hall",
-          "character": "wide with a high ceiling of sky: eighty metres across, forty-six metres of wall",
+          "character": "a clearing where the canopy has broken — the only sky on the route, and the sun gets in",
           "length": 300,
-          "halfWidth": 40,
+          "halfWidth": 9,
           "centre": 18,
-          "ridgeTop": 46,
+          "ridgeTop": 8,
           "sill": 0,
           "sillRun": 0,
           "drop": 0,
           "dropRun": 0,
           "dropTail": 0,
-          "floorRelief": 0.7
+          "floorRelief": 0.7,
+          "canopy": 0.22
         },
         {
           "kind": "pass",
           "id": "the-gate",
-          "character": "ONE-WAY: the door that closes behind the handover",
+          "character": "ONE-WAY: the trail falls away under the closed canopy behind the handover",
           "length": 70,
-          "halfWidth": 14,
+          "halfWidth": 3.5,
           "centre": 56,
-          "ridgeTop": 34,
+          "ridgeTop": 9,
           "sill": 7,
           "sillRun": 24,
           "drop": 12,
           "dropRun": 9,
           "dropTail": 16,
-          "floorRelief": 0.5
+          "floorRelief": 0.5,
+          "canopy": 0.9
         },
         {
           "kind": "chamber",
           "id": "fall",
-          "character": "choked with fallen rock; the floor is the worst ground on the path",
+          "character": "the herd has broken this stretch down; fallen trunks and torn ground",
           "length": 300,
-          "halfWidth": 31,
+          "halfWidth": 8,
           "centre": 76,
-          "ridgeTop": 26,
+          "ridgeTop": 8,
           "sill": 0,
           "sillRun": 0,
           "drop": 0,
@@ -205,19 +212,20 @@
             "side": -1,
             "at": 0.55,
             "length": 120,
-            "depth": 90,
+            "depth": 102,
             "rise": 0.0,
             "gives": "soil"
-          }
+          },
+          "canopy": 0.58
         },
         {
           "kind": "pass",
           "id": "throat-four",
-          "character": "a sill, walkable both ways, with a dead-end notch off it",
+          "character": "a tunnel, and a dead-end notch trampled off it",
           "length": 80,
-          "halfWidth": 15,
+          "halfWidth": 3.5,
           "centre": 34,
-          "ridgeTop": 32,
+          "ridgeTop": 9,
           "sill": 7,
           "sillRun": 28,
           "drop": 7,
@@ -228,19 +236,20 @@
             "side": 1,
             "at": 0.5,
             "length": 58,
-            "depth": 72,
+            "depth": 76,
             "rise": 0.0,
             "gives": "water"
-          }
+          },
+          "canopy": 0.92
         },
         {
           "kind": "chamber",
           "id": "terraces",
-          "character": "stepped ground rising away to one side",
+          "character": "the ground steps up away from the trail on one side, growth climbing it",
           "length": 290,
-          "halfWidth": 24,
+          "halfWidth": 7,
           "centre": 8,
-          "ridgeTop": 34,
+          "ridgeTop": 10,
           "sill": 0,
           "sillRun": 0,
           "drop": 0,
@@ -251,34 +260,36 @@
             "side": 1,
             "at": 0.5,
             "length": 110,
-            "depth": 95,
+            "depth": 103,
             "rise": 0.15,
             "gives": "rad"
-          }
+          },
+          "canopy": 0.74
         },
         {
           "kind": "pass",
           "id": "the-scree",
-          "character": "ONE-WAY: a long scree slope, walkable down and not up",
+          "character": "ONE-WAY: a long wet slope of trampled growth, walkable down and not up",
           "length": 110,
-          "halfWidth": 16,
+          "halfWidth": 4.5,
           "centre": -28,
-          "ridgeTop": 28,
+          "ridgeTop": 8,
           "sill": 5,
           "sillRun": 28,
           "drop": 28,
           "dropRun": 26,
           "dropTail": 20,
-          "floorRelief": 0.6
+          "floorRelief": 0.6,
+          "canopy": 0.8
         },
         {
           "kind": "chamber",
           "id": "meadow",
-          "character": "low walls and a flat floor — the band of grass runs through here",
+          "character": "low growth and standing water; the herd feeds through here and the sky is half open",
           "length": 320,
-          "halfWidth": 38,
+          "halfWidth": 9,
           "centre": -6,
-          "ridgeTop": 18,
+          "ridgeTop": 6,
           "sill": 0,
           "sillRun": 0,
           "drop": 0,
@@ -289,19 +300,20 @@
             "side": -1,
             "at": 0.45,
             "length": 120,
-            "depth": 86,
+            "depth": 107,
             "rise": 0.0,
             "gives": "site"
-          }
+          },
+          "canopy": 0.3
         },
         {
           "kind": "pass",
           "id": "throat-six",
-          "character": "a sill, and a notch that climbs away from it",
+          "character": "a tunnel, and a notch that climbs away from it",
           "length": 80,
-          "halfWidth": 14,
+          "halfWidth": 3.5,
           "centre": 36,
-          "ridgeTop": 32,
+          "ridgeTop": 9,
           "sill": 7,
           "sillRun": 28,
           "drop": 7,
@@ -312,32 +324,34 @@
             "side": 1,
             "at": 0.5,
             "length": 60,
-            "depth": 76,
+            "depth": 78,
             "rise": 0.18,
             "gives": "season"
-          }
+          },
+          "canopy": 0.92
         },
         {
           "kind": "chamber",
           "id": "end",
-          "character": "the far end, closed; the shelter is in here somewhere",
+          "character": "the last clearing; the growth ahead has not come up yet",
           "length": 340,
-          "halfWidth": 33,
+          "halfWidth": 10,
           "centre": 60,
-          "ridgeTop": 30,
+          "ridgeTop": 9,
           "sill": 0,
           "sillRun": 0,
           "drop": 0,
           "dropRun": 0,
           "dropTail": 0,
-          "floorRelief": 0.9
+          "floorRelief": 0.9,
+          "canopy": 0.68
         }
       ],
       "_wallNote": "The inner ridge. run is how far out from the floor's edge the ridge takes to reach its top; the talus pair is a short walkable scree apron then a SQUARE ROOT face, whose gradient at the toe is what stops you. Nothing here contains you — the outer wall does — so these numbers are free to be whatever reads best.",
-      "ridgeRun": 26,
+      "ridgeRun": 14,
       "_outerNote": "The outer wall: containment, and the skyline behind the ridges. halfWidth is the fixed toe line — the one number in this file that must never be made to depend on x. crestY is an ABSOLUTE elevation, not a height above the floor, so the wall grows as the path descends. crestY must stay comfortably above the highest (segment base + ridgeTop) or the two layers cross.",
-      "outerHalfWidth": 200,
-      "outerRun": 46,
+      "outerHalfWidth": 140,
+      "outerRun": 30,
       "outerCrestY": 84,
       "outerCrestVary": 0.18,
       "outerCrestFrequency": 0.0016,
@@ -361,7 +375,7 @@
       "benchEdge": 0.62,
       "_screeNote": "Fallen material at the foot of the ridges, in props.js. Each piece finds the foot of the ridge at its x, measures how steep the rock above it is, and is kept with probability min(1, grade*steepBias)^steepPower — so the debris explains the cliff it came from. count is how many are CONSIDERED; each survivor is a draw call. `chokedSegment` gets a heavy extra pile: that is the chamber choked with fallen rock.",
       "scree": {
-        "count": 220,
+        "count": 90,
         "minScale": 0.45,
         "scaleRange": 2.6,
         "reach": 22,
@@ -369,12 +383,12 @@
         "steepPower": 2,
         "sink": 0.34,
         "chokedSegment": "fall",
-        "chokedCount": 120,
+        "chokedCount": 55,
         "chokedMinScale": 1.4,
         "chokedScaleRange": 5.0
       },
       "_ridgeNote_apron": "THE LIP IS THE CONTAINMENT ARGUMENT. Everything else in the plan drifts along the journey — width, centreline, the ridge's own height — and a drifting wall beside a floor is a staircase: the grade you feel standing still is the wall's slope times how fast the wall moves, and there is always somewhere that product falls under player.maxClimbGrade. A flood fill found three separate versions of that route, each time creeping a couple of metres up the ridge and then traversing the flank for two kilometres over the top of every one-way drop on the path. ridgeLip closes it by being a DISCONTINUITY: the ground jumps this many metres the instant you pass the floor's edge, so the grade of that step is ridgeLip/stride whatever the stride is, and the smaller the step the more steeply it is refused. Nothing that drifts can soften a discontinuity. It also reads as what it is — a scoured slot where the floor meets the wall at a break rather than a slope. Do not replace it with a talus apron; a linear apron is exactly the thing that failed.",
-      "ridgeLip": 3.0
+      "ridgeLip": 2.2
     }
   },
   "sky": {
@@ -452,7 +466,7 @@
     "camera": {
       "fov": 64,
       "near": 0.15,
-      "far": 9000,
+      "far": 140,
       "startYaw": 0.0,
       "startPitch": 0.16,
       "minPitch": -0.42,
@@ -839,19 +853,19 @@
   "render": {
     "maxPixelRatio": 1.7,
     "toneMappingExposure": 1.1,
-    "fogDensity": 0.0016,
-    "fogColour": "0x6f6154",
-    "shadowMapSize": 2048,
-    "shadowCameraExtent": 200,
+    "fogDensity": 0.055,
+    "fogColour": "0x3f4a33",
+    "shadowMapSize": 1024,
+    "shadowCameraExtent": 45,
     "shadowBias": -0.0009,
     "_lightNote": "One warm key (the fixed low sun) and two cool fills. Keeping the key warm and the fills cool is what gives the ground shape; making them the same colour flattens it.",
-    "sunColour": "0xffc98e",
+    "sunColour": "0xffe3b0",
     "sunIntensity": 2.9,
-    "hemisphereSky": "0x6b83ad",
-    "hemisphereGround": "0x241b13",
-    "hemisphereIntensity": 0.3,
-    "bounceColour": "0x5f7ba8",
-    "bounceIntensity": 0.26,
+    "hemisphereSky": "0x54703f",
+    "hemisphereGround": "0x1b2413",
+    "hemisphereIntensity": 0.55,
+    "bounceColour": "0x4e6b3a",
+    "bounceIntensity": 0.34,
     "dustCount": 2600,
     "fpsSampleMs": 500,
     "downgrade": {
@@ -861,8 +875,10 @@
       "disableShadows": true,
       "grassMultiplier": 0.5,
       "pixelRatio": 1,
-      "textureScale": 0.5
-    }
+      "textureScale": 0.5,
+      "jungleMultiplier": 0.6
+    },
+    "_fogNote": "THE FOG IS THE PERFORMANCE BUDGET. THREE.FogExp2 fades as 1 - exp(-(density*depth)^2), so transmittance is 5% at 1.73/density metres and 1% at 2.15/density. At 0.055 that is 31 m and 39 m: the sightline the jungle wants, and the reason this runs faster than the rock corridor did rather than slower. camera.far follows it down — drawing past the fog is drawing nothing — and so does shadowCameraExtent, because a shadow you cannot see through the fog is a shadow map you did not need."
   },
   "mobile": {
     "_note": "What a phone starts at, applied immediately instead of waiting to measure a stutter the player has already seen. These are RENDER-ONLY reductions: the world is still generated in full, so a phone and a desktop see the same rocks in the same places — only fewer of them are drawn. Set 'force' to true or false to override the automatic detection while testing on a desktop.",
@@ -872,7 +888,7 @@
     "striderMultiplier": 0.4,
     "dustMultiplier": 0.25,
     "textureScale": 0.5,
-    "shadowMapSize": 1024,
+    "shadowMapSize": 512,
     "disableShadows": false,
     "fogDensityMultiplier": 1.35,
     "stick": {
@@ -883,7 +899,8 @@
       "sideFraction": 0.45
     },
     "lookSensitivity": 0.006,
-    "pitchSensitivity": 0.005
+    "pitchSensitivity": 0.005,
+    "jungleMultiplier": 0.45
   },
   "props": {
     "_note": "Water and frost surfaces. water.depth is how far the surface sits above the LOWEST ground inside its radius — raise it and the pool spreads and deepens, lower it and it shrinks to nothing. frost.lift is how far the sheet floats above the ground it lies on.",
@@ -898,6 +915,6 @@
       "opacity": 0.72
     }
   },
-  "buildStamp": "build 2026-07-30 · the herd on the route v1",
+  "buildStamp": "build 2026-07-30 · the trail",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

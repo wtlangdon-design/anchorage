@@ -192,7 +192,10 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
   const len = segs[segs.length - 1].x1 - segs[0].x0;
   ok("roughly 2500 m long", len > 2300 && len < 2800, `${len} m`);
   const w = segs.map(g => g.halfWidth * 2);
-  ok("28 to 80 m wide throughout", Math.min(...w) >= 28 && Math.max(...w) <= 80,
+  // A TRAIL, not a corridor: tunnels 7-9 m, clearings 14-20 m. The `end` clearing is
+  // the widest because the third grave sits 8 m off the centreline there and the story
+  // beats are fixed — the world reskins around them, they do not move.
+  ok("a trail 6 to 20 m wide throughout", Math.min(...w) >= 6 && Math.max(...w) <= 20,
      `${Math.min(...w)}-${Math.max(...w)} m`);
   // the lip, measured: one step off the floor's edge must be a wall at any stride
   const limit = c.player.maxClimbGrade;
