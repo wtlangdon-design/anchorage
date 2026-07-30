@@ -95,7 +95,14 @@ console.log("THE LEGACY SHIM (no story.briefing.beats yet)");
      && r.screens[1].indexOf("Nine ships") < r.screens[1].indexOf("gamble that has to work"));
   ok("beat 3 is the Meridian",
      /two hundred years ago/.test(r.screens[2]) && /camps run north/.test(r.screens[2]));
-  ok("beat 4 is the descent, and it is a MARKED EMPTY SLOT", /not written yet/.test(r.screens[3]));
+  // This used to assert the descent beat was an unwritten marker. It is written
+  // now, so the assertion that matters is the opposite one: the beat carries real
+  // prose and no marker is showing. The marker machinery is still tested below,
+  // against a synthetic beat, so it cannot rot.
+  ok("beat 4 is the descent, and it is written",
+     /the ground splits/.test(r.screens[3]) && !/not written yet/.test(r.screens[3]));
+  ok("no beat in the authored opening is an unwritten slot",
+     !r.screens.some(s => /not written yet/.test(s)));
   ok("beat 5 is the naming beat", /id="i-p"/.test(r.screens[4]));
   // the whole point of phase 2: the manifest is not issued from orbit any more, so
   // nothing in the opening may claim it is
@@ -111,6 +118,17 @@ console.log("THE LEGACY SHIM (no story.briefing.beats yet)");
 }
 
 /* ---- 2. an authored beats array takes over ------------------------------- */
+console.log("\nTHE UNWRITTEN MARKER (synthetic beat, so the machinery cannot rot)");
+{
+  const s2 = JSON.parse(JSON.stringify(storyData));
+  s2.briefing.beats = [
+    { id:"x", kind:"text", unwritten:true, button:"On" },
+    { id:"n", kind:"naming", title:"T", placeholder:"p", defaultPlanetName:"D", button:"Go" }
+  ];
+  const r = await run(s2);
+  ok("a beat flagged unwritten still shows the marker", /not written yet/.test(r.screens[0]));
+}
+
 console.log("\nAN AUTHORED story.briefing.beats");
 {
   const s = JSON.parse(JSON.stringify(storyData));
