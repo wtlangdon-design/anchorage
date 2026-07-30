@@ -1004,11 +1004,11 @@
       "reach": 10,
       "colour": "0x5b5330"
     },
-    "_growthNote": "Distances in metres behind the dawn line. Ahead of it (negative) the growth has not come up: scaled down to growthMinScale. From the line back to growthFull it is at full height and greenest. From growthFull back to growthBurn it browns. Past growthBurn it is in the burn: black, collapsed, and the ground there is already lethal.",
-    "growthRise": -1000,
-    "growthFull": 260,
-    "growthBurn": 560,
-    "growthMinScale": 0.18,
+    "_growthNote": "The jungle stands in the twilight band AHEAD of you — it survived the night — and the dawn BURNS it behind you. growthMinScale is how tall the growth still stands at the far end of the route; keep it high or the trail ahead renders as stubs and there is no jungle. growthFull is how many metres behind the dawn line the growth stays full before it starts browning; growthBurn is where it is gone. Keep growthBurn near (lethal+lethalMargin)/k = 1280, so the black ground and the lethal ground arrive together.",
+    "growthRise": -1200,
+    "growthFull": 500,
+    "growthBurn": 1280,
+    "growthMinScale": 0.85,
     "brownColour": "0x7a6330",
     "burnColour": "0x241d16",
     "_canopyNote": "How the roof turns into occlusion. `canopy` on each path segment is the cover over the TRAIL, which is the thinnest cover anywhere: the herd breaks the growth down along it every ninety days, so the roof there is torn and the sun gets in. offBoost is how much more cover you get by stepping off the trail into growth nothing has walked through, reaching its full extra by offFull metres out. That gradient is doing real work — it makes the DETOURS the shaded places and the main line the exposed one, so safe forward progress is also hot progress. The gap field then punches holes in whatever is left, so a nominally closed stretch still has sun coming through in places. gapDepth is how deep those holes go.",
@@ -1033,6 +1033,6 @@
     "offFull": 34,
     "_note_growth": "WHERE THE ONE DAY SITS, in metres BEHIND the dawn line. Negative is ahead of it. These have to be set against where the player actually STANDS relative to that line, which is not obvious: the lethal edge trails the dawn line by about 550 m, so a player running from the heat spends the whole timed run somewhere between 380 m ahead of the line and a few hundred behind it, depending entirely on how much they stop to survey. growthRise was -90 at first, which put the entire visible world inside the 18% stubble zone for anyone who kept walking. At -1000 the growth comes up across the player's whole range instead: young and thin ahead of them, full right behind the line, browning after growthFull, black by growthBurn — which lands in the same place the ground turns lethal. Sprint hard enough and you outrun the growth into bare ground, which is real and is meant to be."
   },
-  "buildStamp": "build 2026-07-30 · jungle prose",
+  "buildStamp": "build 2026-07-30 · the jungle actually renders",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }
