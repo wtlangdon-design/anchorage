@@ -141,8 +141,32 @@ function growth(mat, tipColour, sway){
   mat.onBeforeCompile = sh => {
     sh.uniforms.uDawn = { value: 0 };
     sh.uniforms.uT = { value: 0 };
+    // BISECT: jungle.skipVertexShader true keeps the colour injection but injects
+    // nothing into the vertex stage. Emissive foliage is still invisible WITH the
+    // shader and visible WITHOUT it, and emissive glows regardless of lights or
+    // normals — so whatever is hiding these plants is destroying the geometry, and
+    // only the vertex half can do that.
+    const vBody = J.skipVertexShader ? "" : `
+      vUp = clamp(position.y, 0.0, 1.0);
+      #ifdef USE_INSTANCING
+        float wx = instanceMatrix[3][0];
+        float wz = instanceMatrix[3][2];
+      #else
+        float wx = 0.0; float wz = 0.0;
+      #endif
+      float behind = uDawn - wx;
+      float rise = clamp((behind - ${f(J.growthRise)}) / max(0.001, -${f(J.growthRise)}), 0.0, 1.0);
+      vAge = clamp((behind - ${f(J.growthFull)}) / max(1.0, ${f(J.growthBurn)} - ${f(J.growthFull)}), 0.0, 1.0);
+      float grow = mix(${f(J.growthMinScale)}, 1.0, rise) * (1.0 - 0.55 * vAge);
+      transformed.xyz *= grow;
+      float bend = pow(max(transformed.y, 0.0), 1.6);
+      float ph = wx * 0.09 + wz * 0.13;
+      transformed.x += sin(uT * 1.1 + ph) * ${f(sway)} * bend;
+      transformed.z += cos(uT * 0.8 + ph * 1.3) * ${f(sway * 0.7)} * bend;`;
+    const vFallback = J.skipVertexShader ? "\n      vUp = clamp(position.y, 0.0, 1.0);\n      vAge = 0.0;" : "";
     sh.vertexShader = "uniform float uDawn;\nuniform float uT;\nvarying float vUp;\nvarying float vAge;\n" +
-      sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
+      sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>${vFallback}${vBody}`);
+    const _unused = (`#include <begin_vertex>
       vUp = clamp(position.y, 0.0, 1.0);
       #ifdef USE_INSTANCING
         float wx = instanceMatrix[3][0];
@@ -159,6 +183,7 @@ function growth(mat, tipColour, sway){
       float ph = wx * 0.09 + wz * 0.13;
       transformed.x += sin(uT * 1.1 + ph) * ${f(sway)} * bend;
       transformed.z += cos(uT * 0.8 + ph * 1.3) * ${f(sway * 0.7)} * bend;`);
+    void _unused;
     // green at the tips, darker at the base, browning and then black as it burns
     sh.fragmentShader = "varying float vUp;\nvarying float vAge;\n" +
       sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>

@@ -14,31 +14,31 @@
 // Runtime draws (grass refills, the naming placeholder) come off the SAME stream,
 // so preserving the load order preserves them too.
 
-import { initNoise, rand, fbm } from "./world/noise.js?v=12";
-import { initClimate, dawnX, tempAt, lostAtT } from "./world/climate.js?v=12";
-import * as terrain from "./world/terrain.js?v=12";
-import * as sky from "./world/sky.js?v=12";
-import * as grass from "./world/grass.js?v=12";
-import * as jungle from "./world/jungle.js?v=12";
-import * as debug from "./ui/debug.js?v=12";
-import * as fauna from "./world/fauna.js?v=12";
-import * as props from "./world/props.js?v=12";
-import * as sound from "./world/sound.js?v=12";
-import * as textures from "./world/textures.js?v=12";
-import { applyWorldScale } from "./world/scale.js?v=12";
-import { initGait, poseFor } from "./player/gait.js?v=12";
-import * as rig from "./player/rig.js?v=12";
-import * as controller from "./player/controller.js?v=12";
-import * as suit from "./player/suit.js?v=12";
-import * as clock from "./game/clock.js?v=12";
-import * as manifest from "./game/manifest.js?v=12";
-import * as story from "./game/story.js?v=12";
-import * as endings from "./game/endings.js?v=12";
-import * as hud from "./ui/hud.js?v=12";
-import * as compass from "./ui/compass.js?v=12";
-import * as chart from "./ui/chart.js?v=12";
-import * as panels from "./ui/panels.js?v=12";
-import * as touch from "./ui/touch.js?v=12";
+import { initNoise, rand, fbm } from "./world/noise.js?v=13";
+import { initClimate, dawnX, tempAt, lostAtT } from "./world/climate.js?v=13";
+import * as terrain from "./world/terrain.js?v=13";
+import * as sky from "./world/sky.js?v=13";
+import * as grass from "./world/grass.js?v=13";
+import * as jungle from "./world/jungle.js?v=13";
+import * as debug from "./ui/debug.js?v=13";
+import * as fauna from "./world/fauna.js?v=13";
+import * as props from "./world/props.js?v=13";
+import * as sound from "./world/sound.js?v=13";
+import * as textures from "./world/textures.js?v=13";
+import { applyWorldScale } from "./world/scale.js?v=13";
+import { initGait, poseFor } from "./player/gait.js?v=13";
+import * as rig from "./player/rig.js?v=13";
+import * as controller from "./player/controller.js?v=13";
+import * as suit from "./player/suit.js?v=13";
+import * as clock from "./game/clock.js?v=13";
+import * as manifest from "./game/manifest.js?v=13";
+import * as story from "./game/story.js?v=13";
+import * as endings from "./game/endings.js?v=13";
+import * as hud from "./ui/hud.js?v=13";
+import * as compass from "./ui/compass.js?v=13";
+import * as chart from "./ui/chart.js?v=13";
+import * as panels from "./ui/panels.js?v=13";
+import * as touch from "./ui/touch.js?v=13";
 
 const THREE = window.THREE;
 
@@ -53,8 +53,8 @@ boot();
 async function boot() {
   if (!THREE) return; // the inline fallback in index.html already handled this
   [config, story_data] = await Promise.all([
-    fetch("content/config.json?v=12").then(r => r.json()),
-    fetch("content/story.json?v=12").then(r => r.json())
+    fetch("content/config.json?v=13").then(r => r.json()),
+    fetch("content/story.json?v=13").then(r => r.json())
   ]);
   // resize the world before anything reads a number out of the config. every
   // module below goes on reading plain values and never learns this happened.

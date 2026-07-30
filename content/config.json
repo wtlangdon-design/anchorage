@@ -1039,8 +1039,10 @@
     "plainMaterials": false,
     "_plainNote": "DIAGNOSTIC. true renders all vegetation as flat bright pink with no custom shader. If the plants appear, the growth shader is the fault. Set back to false once the question is answered.",
     "emissiveStrength": 0.42,
-    "_emissiveNote": "Foliage is flat planes with one horizontal normal and the ground decals lie flat, so under a low raking sun they receive almost no diffuse light and render black. A little self-illumination is what makes the jungle readable at all; it is also how leaves actually behave. Lower it if the jungle looks flat or glowing, raise it if it goes dark."
+    "_emissiveNote": "Foliage is flat planes with one horizontal normal and the ground decals lie flat, so under a low raking sun they receive almost no diffuse light and render black. A little self-illumination is what makes the jungle readable at all; it is also how leaves actually behave. Lower it if the jungle looks flat or glowing, raise it if it goes dark.",
+    "skipVertexShader": true,
+    "_bisectNote": "BISECT. true = colour injection only, no vertex injection. If the jungle appears with this true, the vertex half of the growth shader is destroying the geometry."
   },
-  "buildStamp": "BUILD 07-30 #12 · jungle visible",
+  "buildStamp": "BUILD 07-30 #13 · BISECT no-vertex",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }
