@@ -1,4 +1,4 @@
-import * as tex from "./textures.js?v=15";
+import * as tex from "./textures.js?v=16";
 
 // world/jungle.js — what fills the trail.
 //
@@ -174,8 +174,8 @@ function frondMask(){
       const taper = Math.pow(1 - v, 0.55);          // narrows toward the tip
       const rib = dx < 0.035 * taper + 0.008;
       // leaflets: a comb along the rib, alternating, shrinking with height
-      const comb = Math.abs(Math.sin((v * 26 + (u > 0.5 ? 0.5 : 0)) * Math.PI));
-      const reach = 0.42 * taper * (0.45 + 0.55 * comb);
+      const comb = Math.pow(Math.abs(Math.sin((v * 30 + (u > 0.5 ? 0.5 : 0)) * Math.PI)), 0.6);
+      const reach = 0.30 * taper * (0.18 + 0.82 * comb);   // deeper gaps between leaflets
       const leaf = dx < reach && v < 0.985;
       const on = rib || leaf;
       a[i] = a[i + 1] = a[i + 2] = 255;
@@ -294,14 +294,22 @@ function build(name, geo, mat, list, cast){
     && Math.abs(o.z) <= limit);
   const im = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length));
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(),
-        v = new THREE.Vector3(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+        v = new THREE.Vector3(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0),
+        tintC = new THREE.Color();
   list.forEach((o, i) => {
     q.setFromAxisAngle(up, o.rotY);
     v.set(o.x, o.y, o.z); sc.set(o.sx, o.sy, o.sx);
     m.compose(v, q, sc); im.setMatrixAt(i, m);
+    // a flat uniform green reads as cardboard; a little variation reads as a plant
+    if(im.setColorAt && J.instanceTint > 0){
+      const t = 1 - J.instanceTint * 0.5 + rand() * J.instanceTint;
+      tintC.setRGB(t, t * (0.94 + rand() * 0.12), t * 0.9);
+      im.setColorAt(i, tintC);
+    }
   });
   im.count = list.length;
   im.instanceMatrix.needsUpdate = true;
+  if(im.instanceColor) im.instanceColor.needsUpdate = true;
   im.frustumCulled = false;      // the instances span the whole trail; one bounds test would keep them all
   im.castShadow = !!cast; im.receiveShadow = true;
   scene.add(im);

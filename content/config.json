@@ -903,7 +903,7 @@
     "sunIntensity": 2.9,
     "hemisphereSky": "0x86a06e",
     "hemisphereGround": "0x2e2a1c",
-    "hemisphereIntensity": 0.85,
+    "hemisphereIntensity": 0.62,
     "bounceColour": "0x4e6b3a",
     "bounceIntensity": 0.34,
     "dustCount": 2600,
@@ -966,8 +966,8 @@
       "radiusRange": 4.5,
       "spread": 26,
       "lean": 0.22,
-      "colour": "0x78A858",
-      "tipColour": "0xC6F777",
+      "colour": "0x24401A",
+      "tipColour": "0x527F2C",
       "_spreadNote": "spread is how far off the trail centreline the canopy may sit, doubled. It was 150, which put the roof at |z| ~ 143 — on top of the outer walls at |z| 140, not over the trail. Keep it near the trail width or there is no roof and no shade."
     },
     "trunk": {
@@ -978,7 +978,7 @@
       "radiusRange": 0.5,
       "spread": 34,
       "lean": 0.1,
-      "colour": "0x89785F",
+      "colour": "0x3A2F22",
       "_spreadNote": "How far beyond the trail edge trunks may stand. Was 150, which threw them past the terrain edge at |z| 170 entirely."
     },
     "understory": {
@@ -989,23 +989,23 @@
       "radiusRange": 1.6,
       "bandInner": 0.2,
       "bandOuter": 26,
-      "colour": "0x74A54E",
-      "tipColour": "0xCFFF72"
+      "colour": "0x2C4A1B",
+      "tipColour": "0x6E9B33"
     },
     "fern": {
       "count": 7000,
       "minScale": 0.55,
       "scaleRange": 1.1,
       "reach": 7,
-      "colour": "0x86C24E",
-      "tipColour": "0xFDFF83"
+      "colour": "0x35591F",
+      "tipColour": "0x7FAE3A"
     },
     "litter": {
       "count": 4200,
       "minScale": 0.6,
       "scaleRange": 1.4,
       "reach": 10,
-      "colour": "0xA29662"
+      "colour": "0x4A3F26"
     },
     "_growthNote": "The jungle stands in the twilight band AHEAD of you — it survived the night — and the dawn BURNS it behind you. growthMinScale is how tall the growth still stands at the far end of the route; keep it high or the trail ahead renders as stubs and there is no jungle. growthFull is how many metres behind the dawn line the growth stays full before it starts browning; growthBurn is where it is gone. Keep growthBurn near (lethal+lethalMargin)/k = 1280, so the black ground and the lethal ground arrive together.",
     "growthRise": -1200,
@@ -1036,9 +1036,11 @@
     "offFull": 34,
     "_note_growth": "WHERE THE ONE DAY SITS, in metres BEHIND the dawn line. Negative is ahead of it. These have to be set against where the player actually STANDS relative to that line, which is not obvious: the lethal edge trails the dawn line by about 550 m, so a player running from the heat spends the whole timed run somewhere between 380 m ahead of the line and a few hundred behind it, depending entirely on how much they stop to survey. growthRise was -90 at first, which put the entire visible world inside the 18% stubble zone for anyone who kept walking. At -1000 the growth comes up across the player's whole range instead: young and thin ahead of them, full right behind the line, browning after growthFull, black by growthBurn — which lands in the same place the ground turns lethal. Sprint hard enough and you outrun the growth into bare ground, which is real and is meant to be.",
     "_lightNote": "These colours and render.hemisphereIntensity are what make the jungle READABLE. The canopy shadows everything under it, so a dark green understory in its own shadow renders as black — the forest was fully built, correctly sized and drawing 348k triangles, and simply could not be seen. If it looks flat or washed out, lower hemisphereIntensity first, then these colours.",
-    "emissiveStrength": 0.42,
-    "_emissiveNote": "Foliage is flat planes with one horizontal normal and the ground decals lie flat, so under a low raking sun they receive almost no diffuse light and render black. A little self-illumination is what makes the jungle readable at all; it is also how leaves actually behave. Lower it if the jungle looks flat or glowing, raise it if it goes dark."
+    "emissiveStrength": 0.2,
+    "_emissiveNote": "Foliage is flat planes with one horizontal normal and the ground decals lie flat, so under a low raking sun they receive almost no diffuse light and render black. A little self-illumination is what makes the jungle readable at all; it is also how leaves actually behave. Lower it if the jungle looks flat or glowing, raise it if it goes dark.",
+    "instanceTint": 0.3,
+    "_tintNote": "instanceTint: how much each plant's colour varies from its neighbours, 0 = every plant identical. Flat uniform colour is what made the jungle read as cardboard."
   },
-  "buildStamp": "BUILD 07-30 #15 · leaf shapes",
+  "buildStamp": "BUILD 07-30 #16 · foliage colour",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

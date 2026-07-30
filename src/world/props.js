@@ -34,11 +34,11 @@
 // The grave plates are the story, so they are the one place the texture budget
 // is spent per-object: five plates, five engraving maps. See TUNING.plate.grave.
 
-import * as tex from "./textures.js?v=15";
+import * as tex from "./textures.js?v=16";
 // props needs to know where the corridor's floor edge is at a given x, and only
 // terrain.js knows — it owns the baked plan. Read-only, and no cycle: terrain.js
 // does not import props.
-import * as terrainPath from "./terrain.js?v=15";
+import * as terrainPath from "./terrain.js?v=16";
 
 // TODO(lead): lift into config.json (suggested homes: props.rock, props.metal,
 // props.plate). `seed` is the texture hash seed and has nothing to do with
