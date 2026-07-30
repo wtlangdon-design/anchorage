@@ -117,6 +117,16 @@ const hex = v => { const n = Number(v);
 // instanceMatrix[3][0] is its world x. That is how each plant knows where it stands
 // without a per-instance attribute of its own.
 function growth(mat, tipColour, sway){
+  // DIAGNOSTIC SWITCH. Set jungle.plainMaterials true in config.json and the custom
+  // growth shader is not injected at all: the plants render as flat, bright, unlit
+  // colour. If they become visible under this and not otherwise, the fault is in the
+  // shader above and nowhere else. If they stay invisible, the shader is exonerated
+  // and the cause is further down. This exists to answer that question in one load.
+  if(J.plainMaterials){
+    mat.color = new THREE.Color(0xff3ba7);   // deliberately impossible to miss
+    mat.emissive = new THREE.Color(0x7a1c4e);
+    return mat;
+  }
   mat.onBeforeCompile = sh => {
     sh.uniforms.uDawn = { value: 0 };
     sh.uniforms.uT = { value: 0 };
