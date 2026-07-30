@@ -116,84 +116,45 @@ const hex = v => { const n = Number(v);
 // One subtlety worth knowing: instanceMatrix[3] is the instance's translation, so
 // instanceMatrix[3][0] is its world x. That is how each plant knows where it stands
 // without a per-instance attribute of its own.
-function growth(mat, tipColour, sway){
-  // DIAGNOSTIC SWITCH. Set jungle.plainMaterials true in config.json and the custom
-  // growth shader is not injected at all: the plants render as flat, bright, unlit
-  // colour. If they become visible under this and not otherwise, the fault is in the
-  // shader above and nowhere else. If they stay invisible, the shader is exonerated
-  // and the cause is further down. This exists to answer that question in one load.
-  if(J.plainMaterials){
-    mat.color = new THREE.Color(0xff3ba7);   // deliberately impossible to miss
-    mat.emissive = new THREE.Color(0x7a1c4e);
-    return mat;
+/* The growth shader is gone.
+ *
+ * It injected hand-written GLSL into three's Lambert shader to do three things:
+ * a base-to-tip colour gradient, browning and burning behind the dawn line, and a
+ * per-vertex growth scale. It was written blind, nobody ever saw it render, and it
+ * made every plant invisible for thirteen builds. All three effects are achievable
+ * with stock three.js features that are far harder to get wrong:
+ *
+ *   base-to-tip gradient -> baked into the geometry as vertex colours, once
+ *   browning and burning -> per-instance colour, refreshed when the band moves
+ *   growth scale         -> dropped; it was never visible and it cost us the module
+ *
+ * If you want the shader back, it is in git history at build #13.
+ */
+function tintByHeight(geo, baseHex, tipHex){
+  const pos = geo.getAttribute("position");
+  let lo = Infinity, hi = -Infinity;
+  for(let i = 0; i < pos.count; i++){ const y = pos.getY(i); if(y < lo) lo = y; if(y > hi) hi = y; }
+  const span = Math.max(1e-6, hi - lo);
+  const base = new THREE.Color(Number(baseHex)), tip = new THREE.Color(Number(tipHex));
+  const c = new THREE.Color(), arr = [];
+  for(let i = 0; i < pos.count; i++){
+    c.copy(base).lerp(tip, Math.pow((pos.getY(i) - lo) / span, 0.85));
+    arr.push(c.r, c.g, c.b);
   }
-
-  // Foliage is a flat plane with ONE horizontal normal, and the ground decals point
-  // straight down. Under a low raking sun that means almost no diffuse light, so the
-  // plants rendered black however bright their colour was — which is exactly what the
-  // pink test proved, because pink also set emissive and emissive needs no normal.
-  // A little self-illumination is also just how foliage reads: leaves scatter light
-  // through themselves rather than only bouncing it off the front.
-  if(J.emissiveStrength > 0){
-    const c = mat.color.clone().multiplyScalar(J.emissiveStrength);
-    mat.emissive = c;
-  }
-  mat.onBeforeCompile = sh => {
-    sh.uniforms.uDawn = { value: 0 };
-    sh.uniforms.uT = { value: 0 };
-    // BISECT: jungle.skipVertexShader true keeps the colour injection but injects
-    // nothing into the vertex stage. Emissive foliage is still invisible WITH the
-    // shader and visible WITHOUT it, and emissive glows regardless of lights or
-    // normals — so whatever is hiding these plants is destroying the geometry, and
-    // only the vertex half can do that.
-    const vBody = J.skipVertexShader ? "" : `
-      vUp = clamp(position.y, 0.0, 1.0);
-      #ifdef USE_INSTANCING
-        float wx = instanceMatrix[3][0];
-        float wz = instanceMatrix[3][2];
-      #else
-        float wx = 0.0; float wz = 0.0;
-      #endif
-      float behind = uDawn - wx;
-      float rise = clamp((behind - ${f(J.growthRise)}) / max(0.001, -${f(J.growthRise)}), 0.0, 1.0);
-      vAge = clamp((behind - ${f(J.growthFull)}) / max(1.0, ${f(J.growthBurn)} - ${f(J.growthFull)}), 0.0, 1.0);
-      float grow = mix(${f(J.growthMinScale)}, 1.0, rise) * (1.0 - 0.55 * vAge);
-      transformed.xyz *= grow;
-      float bend = pow(max(transformed.y, 0.0), 1.6);
-      float ph = wx * 0.09 + wz * 0.13;
-      transformed.x += sin(uT * 1.1 + ph) * ${f(sway)} * bend;
-      transformed.z += cos(uT * 0.8 + ph * 1.3) * ${f(sway * 0.7)} * bend;`;
-    const vFallback = J.skipVertexShader ? "\n      vUp = clamp(position.y, 0.0, 1.0);\n      vAge = 0.0;" : "";
-    sh.vertexShader = "uniform float uDawn;\nuniform float uT;\nvarying float vUp;\nvarying float vAge;\n" +
-      sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>${vFallback}${vBody}`);
-    const _unused = (`#include <begin_vertex>
-      vUp = clamp(position.y, 0.0, 1.0);
-      #ifdef USE_INSTANCING
-        float wx = instanceMatrix[3][0];
-        float wz = instanceMatrix[3][2];
-      #else
-        float wx = 0.0; float wz = 0.0;
-      #endif
-      float behind = uDawn - wx;
-      float rise = clamp((behind - ${f(J.growthRise)}) / max(0.001, -${f(J.growthRise)}), 0.0, 1.0);
-      vAge = clamp((behind - ${f(J.growthFull)}) / max(1.0, ${f(J.growthBurn)} - ${f(J.growthFull)}), 0.0, 1.0);
-      float grow = mix(${f(J.growthMinScale)}, 1.0, rise) * (1.0 - 0.55 * vAge);
-      transformed.xyz *= grow;
-      float bend = pow(max(transformed.y, 0.0), 1.6);
-      float ph = wx * 0.09 + wz * 0.13;
-      transformed.x += sin(uT * 1.1 + ph) * ${f(sway)} * bend;
-      transformed.z += cos(uT * 0.8 + ph * 1.3) * ${f(sway * 0.7)} * bend;`);
-    void _unused;
-    // green at the tips, darker at the base, browning and then black as it burns
-    sh.fragmentShader = "varying float vUp;\nvarying float vAge;\n" +
-      sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
-      vec3 live = mix(diffuseColor.rgb, ${hex(tipColour)}, vUp * 0.85);
-      vec3 dying = mix(live, ${hex(J.brownColour)}, clamp(vAge * 1.6, 0.0, 1.0));
-      diffuseColor.rgb = mix(dying, ${hex(J.burnColour)}, clamp((vAge - 0.6) * 2.5, 0.0, 1.0));`);
-    shaders.push(sh);
-  };
-  return mat;
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(arr, 3));
+  return geo;
 }
+
+function foliageMaterial(baseHex){
+  const m = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  // Foliage is flat planes with one horizontal normal; under a raking sun they take
+  // almost no diffuse light. A little self-illumination is what makes a jungle read,
+  // and it is also how leaves behave.
+  if(J.emissiveStrength > 0)
+    m.emissive = new THREE.Color(Number(baseHex)).multiplyScalar(J.emissiveStrength);
+  return m;
+}
+
 
 /* -------------------------------------------------------------- geometry ---
    Low-poly and cheap. Every one of these is built ONCE and instanced, so the
@@ -301,9 +262,8 @@ export function buildJungle(){
                sx: U.minRadius + r3 * U.radiusRange, sy: h };
     });
     counts.understory = list.length;
-    build("understory", frondGeometry(),
-      growth(new THREE.MeshLambertMaterial({ color: Number(U.colour), side: THREE.DoubleSide }),
-             U.tipColour, 0.10), list, false);
+    build("understory", tintByHeight(frondGeometry(), U.colour, U.tipColour),
+      foliageMaterial(U.colour), list, false);
   }
 
   // 2. trunks, out in the growth beyond the understory
@@ -319,8 +279,8 @@ export function buildJungle(){
                sx: Tk.minRadius + r3 * Tk.radiusRange, sy: h };
     });
     counts.trunk = list.length;
-    build("trunk", trunkGeometry(),
-      growth(new THREE.MeshLambertMaterial({ color: Number(Tk.colour) }), Tk.colour, 0.02), list, true);
+    build("trunk", tintByHeight(trunkGeometry(), Tk.colour, Tk.colour),
+      foliageMaterial(Tk.colour), list, true);
   }
 
   // 3. the canopy. Its density follows the segment's own canopy value, so a clearing
@@ -337,9 +297,8 @@ export function buildJungle(){
                sx: C.minRadius + r4 * C.radiusRange, sy: -(h * 0.42) };
     });
     counts.canopy = list.length;
-    build("canopy", crownGeometry(),
-      growth(new THREE.MeshLambertMaterial({ color: Number(C.colour), side: THREE.DoubleSide }),
-             C.tipColour, 0.06), list, true);
+    build("canopy", tintByHeight(crownGeometry(), C.colour, C.tipColour),
+      foliageMaterial(C.colour), list, true);
   }
 
   // 4. ferns, on the trail itself — the only layer the player walks through
@@ -351,9 +310,8 @@ export function buildJungle(){
       return { x, z, y: heightAt(x, z) - 0.05, rotY: r3 * 6.28, sx: s, sy: s * (1.3 + r4 * 0.9) };
     });
     counts.fern = list.length;
-    build("fern", frondGeometry(),
-      growth(new THREE.MeshLambertMaterial({ color: Number(F.colour), side: THREE.DoubleSide }),
-             F.tipColour, 0.16), list, false);
+    build("fern", tintByHeight(frondGeometry(), F.colour, F.tipColour),
+      foliageMaterial(F.colour), list, false);
   }
 
   // 5. litter, flat on the trail
@@ -365,9 +323,8 @@ export function buildJungle(){
       return { x, z, y: heightAt(x, z) + 0.03, rotY: r3 * 6.28, sx: s * (1 + r4), sy: s };
     });
     counts.litter = list.length;
-    build("litter", litterGeometry(),
-      growth(new THREE.MeshLambertMaterial({ color: Number(L.colour), side: THREE.DoubleSide }),
-             L.colour, 0.0), list, false);
+    build("litter", tintByHeight(litterGeometry(), L.colour, L.colour),
+      foliageMaterial(L.colour), list, false);
   }
 
   // 6. standing water, in the low ground. Not growth, so it gets no growth shader —
@@ -404,10 +361,9 @@ export function buildJungle(){
 // whole jungle from a static model into one day of growth. Mission time, not the wall
 // clock: the growth state is a fact about the planet, not an animation.
 export function setGrowth(dawnLineX, animT){
-  for(const sh of shaders){
-    if(sh.uniforms.uDawn) sh.uniforms.uDawn.value = dawnLineX;
-    if(sh.uniforms.uT) sh.uniforms.uT.value = animT;
-  }
+  // The per-frame growth/burn was a shader uniform. With the shader gone this is a
+  // no-op; the burn is a per-instance colour question now, and is not wired yet.
+  // Kept so main.js keeps its call site and the wiring stays obvious.
 }
 
 // Render-only, as with the grass: every plant was generated and still shades and
