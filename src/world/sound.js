@@ -119,8 +119,11 @@ export function updateAudio(S, dt) {
     const W = A.wind;
     const lift = clamp01((gy - W.elevationStart) / W.elevationRange);
     const heat = clamp01((T - W.heatStart) / W.heatRange);
-    const gust = 1 + W.gustDepth * (0.6 * Math.sin(S.t * W.gustRate * 6.28318) +
-                                    0.4 * Math.sin(S.t * W.gustRate * 10.7 + 1.3));
+    // the wall clock, not mission time: the wind has to be gusting before the
+    // clock starts, or the grace period sounds like a held breath
+    const wt = S.animT === undefined ? S.t : S.animT;
+    const gust = 1 + W.gustDepth * (0.6 * Math.sin(wt * W.gustRate * 6.28318) +
+                                    0.4 * Math.sin(wt * W.gustRate * 10.7 + 1.3));
     const windTarget = (W.gain + W.elevationGain * lift + W.heatGain * heat) * gust;
     sm.wind = approach(sm.wind, Math.max(0, windTarget), step, A.smoothing.wind);
     sm.windHz = approach(sm.windHz, W.lowpassHz + W.elevationLowpassAdd * lift, step, A.smoothing.wind);

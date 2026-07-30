@@ -28,6 +28,7 @@ import { initGait, poseFor } from "./player/gait.js";
 import * as rig from "./player/rig.js";
 import * as controller from "./player/controller.js";
 import * as suit from "./player/suit.js";
+import * as clock from "./game/clock.js";
 import * as manifest from "./game/manifest.js";
 import * as story from "./game/story.js";
 import * as endings from "./game/endings.js";
@@ -84,7 +85,11 @@ function init() {
   const CELL = config.world.chartCell, GW = Math.ceil(config.world.size / CELL);
   const sp = config.player.spawn;
   S = {
-    t: 0, integrity: 100, water: 100, oxy: 100,
+    // t is MISSION time and does not advance until the clock starts; animT is the
+    // wall clock and always does. game/clock.js owns both — nothing else in the
+    // codebase may add to S.t, and clock.test.js fails if anything tries.
+    t: 0, animT: 0, clockStarted: false, clockStartReason: null,
+    integrity: 100, water: 100, oxy: 100,
     px: sp.x, pz: sp.z, heading: Math.PI, speed: 0,
     camYaw: camCfg.startYaw, camPitch: camCfg.startPitch, fp: true,
     name: "", ship: "", planet: "",
@@ -111,6 +116,7 @@ function init() {
 
   // ---- pure cores ----
   initClimate(config.climate);
+  clock.initClock(config, story_data, { S });
   initGait(config.gait);
   // must come before any build: the modules paint their maps as they build.
   // Textures use their own hash, never the world PRNG, so this cannot disturb
@@ -286,8 +292,13 @@ function animate() {
     }
   }
 
-  if (S.started && !paused && !S.dead && !S.ended) {
-    S.t += dt;
+  // The wall clock always advances; mission time only advances once the clock has
+  // started, and the grace countdown only runs while the sim is actually running.
+  // One call, so there is exactly one place in the codebase that moves either.
+  const running = S.started && !paused && !S.dead && !S.ended;
+  clock.tick(dt, running);
+
+  if (running) {
     controller.updateMovement(dt);          // ref 1105-1123
     // how much of the sun the rock is taking off this patch of ground. Everything
     // that asks for a temperature this frame is handed it.
@@ -316,10 +327,14 @@ function animate() {
   // can see on the rock is the shadow that is keeping you alive
   sun.position.set(S.px + SUNDIR.x * SUN_D * SUN_COS, gy + SUN_D * SUN_SIN, S.pz + SUNDIR.z * SUN_D * SUN_COS);
 
-  grass.setWind(S.t);                        // ref 1177
+  // animation only, so these ride the wall clock and keep running through the
+  // grace period: the world has to be alive before the clock is.
+  grass.setWind(S.animT);                    // ref 1177
   controller.updateCamera(dt);               // ref 1179-1194
-  sky.updateDust(S.px, S.pz, gy, S.t);       // ref 1195-1196
-  fauna.updateStriders(S.t);                 // ref 1197
+  sky.updateDust(S.px, S.pz, gy, S.animT);   // ref 1195-1196
+  // the herd's band is pinned to the dawn line (mission time, so it holds still
+  // during the grace period); their gait is animation (wall clock, so they walk)
+  fauna.updateStriders(S.t, S.animT);        // ref 1197
 
   hud.updateFps(dt);                         // measuring tool, toggled with F
   hud.updateGauges();                        // ref 1199

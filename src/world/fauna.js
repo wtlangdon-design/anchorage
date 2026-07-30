@@ -39,13 +39,19 @@ export function buildStriders(){
   updateStriders(0);
 }
 
-export function updateStriders(t){
+// Two clocks, and the herd needs both. Where the band IS is pinned to the dawn
+// line, which is mission time — so before the clock starts the herd holds its
+// ground instead of drifting west. Whether the herd is MOVING is animation, so the
+// bob rides the wall clock and they keep walking on the spot through the grace
+// period. animT defaults to t so a caller that only has one clock still works.
+export function updateStriders(t, animT){
+  if(animT === undefined) animT = t;
   const m=new THREE.Matrix4(),q=new THREE.Quaternion(),
         v=new THREE.Vector3(),sc=new THREE.Vector3();
   const cx=dawnX(t)+config.striders.bandOffset;
   strider.forEach(im=>{const {off,sc:sk,data}=im.userData;
     for(let i=0;i<data.length;i++){const d=data[i];
-      const x=cx+d.dx,bob=Math.sin(t*config.striders.bobRate*d.sp+d.ph)*config.striders.bobAmplitude;
+      const x=cx+d.dx,bob=Math.sin(animT*config.striders.bobRate*d.sp+d.ph)*config.striders.bobAmplitude;
       v.set(x+off[0],heightAt(x,d.z)+off[1]+bob,d.z+off[2]);
       q.setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
       sc.set(sk[0],sk[1],sk[2]);m.compose(v,q,sc);im.setMatrixAt(i,m)}

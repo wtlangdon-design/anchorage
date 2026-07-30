@@ -236,6 +236,10 @@
   },
   "climate": {
     "_note": "The whole clock. dawn0 is where the dawn line starts in metres; dawnVelocity is metres per second. lethal is the temperature that kills a site. A site at x becomes lost at (x + (lethal + 12) / k - dawn0) / dawnVelocity seconds.",
+    "_graceNote": "THE GRACE PERIOD. Mission time (S.t) does not advance until the clock starts, and until it does the dawn line does not move, no ground heats and nothing can be lost — every function in climate.js is a pure function of t and is simply handed a t that is not going anywhere. The world is not frozen, only the clock: grass, wind, gait, dust and the soundfield all ride S.animT, which runs from the first frame. backstopSeconds is the safety net for a player who never trips the story trigger; set it to 0 to remove the net entirely, in which case the clock only ever starts from the story. See src/game/clock.js.",
+    "grace": {
+      "backstopSeconds": 300
+    },
     "dawn0": -900,
     "dawnVelocity": 2.0,
     "lethal": 52,
@@ -708,6 +712,6 @@
       "opacity": 0.72
     }
   },
-  "buildStamp": "build 2026-07-30 · arms v2",
+  "buildStamp": "build 2026-07-30 · split clock v1",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

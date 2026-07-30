@@ -89,7 +89,10 @@ export function drawSound(){
     const dd = Math.hypot(dn.x - S.px, dn.z - S.pz);
     if(dd < config.ashwaiters.soundNullRadius) nul = Math.max(nul, 1 - dd / config.ashwaiters.soundNullRadius); });
   S.null_ = nul; const amb = 1 - nul;
-  for(let i = 0; i < 70; i++){ const x = i / 70 * w, a = (.13 + .08 * Math.sin(S.t * .9 + i * .7)) * amb;
+  // the bars are animation, so they ride the wall clock and keep breathing through
+  // the grace period; where the herd and the dens ARE is mission time, above
+  const at = S.animT === undefined ? S.t : S.animT;
+  for(let i = 0; i < 70; i++){ const x = i / 70 * w, a = (.13 + .08 * Math.sin(at * .9 + i * .7)) * amb;
     s2.fillStyle = `rgba(143,198,212,${.16 * amb + .02})`; s2.fillRect(x, h / 2 - a * h / 2, w / 70 - 1, a * h); }
   src.forEach(sc => { let dd = ((sc.a - S.camYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
     if(Math.abs(dd) > config.compass.visibleArc) return;
