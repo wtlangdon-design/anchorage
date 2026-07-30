@@ -276,7 +276,37 @@
       "firstPersonEyeHeight": 1.74
     },
     "_climbNote": "maxClimbGrade is the steepest ground the suit will take, as a rise over run: 0.8 is about 39 degrees. The canyon walls are far steeper than this, which is what keeps you in the canyon — there is no invisible wall anywhere in this game.",
-    "maxClimbGrade": 0.8
+    "maxClimbGrade": 0.8,
+    "hands": {
+      "_note": "The first-person arms. rest* is arms down (barely out of frame); raise* is the scanner held up while surveying. Angles are radians: bigger shoulder swings the whole arm forward, bigger elbow folds the forearm up. leftBias and leftRaiseShare keep the two arms from being mirror images, which is what made them look wrong.",
+      "shoulderX": 0.19,
+      "shoulderY": -0.24,
+      "shoulderZ": -0.04,
+      "upperLen": 0.25,
+      "foreLen": 0.28,
+      "upperTopR": 0.055,
+      "upperBotR": 0.046,
+      "foreTopR": 0.048,
+      "foreBotR": 0.04,
+      "gloveR": 0.05,
+      "restShoulder": 0.45,
+      "restElbow": 1.75,
+      "restShoulderOut": 0.17,
+      "restElbowTwist": 0.1,
+      "raiseShoulder": 0.95,
+      "raiseElbow": 2.0,
+      "raiseShoulderOut": 0.06,
+      "raiseElbowTwist": -0.25,
+      "leftBias": 0.1,
+      "leftRaiseShare": 0.45,
+      "gaitSwing": 0.16,
+      "bobY": 0.012,
+      "bobPitch": 0.03,
+      "raiseSmoothing": 0.1,
+      "swayGain": 1.6,
+      "swaySmoothing": 0.18,
+      "swayDecay": 0.9
+    }
   },
   "gait": {
     "_note": "The elbow base bend of 0.30 rad is load-bearing. A straight arm reads as a robot. gait.test.js asserts it never goes below this.",

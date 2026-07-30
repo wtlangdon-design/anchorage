@@ -166,7 +166,8 @@ function init() {
   });
 
   controller.initController(config, story_data, {
-    THREE, S, cam, getPlayer: rig.getPlayer, getHands: rig.getHands, heightAt: terrain.heightAt,
+    THREE, S, cam, getPlayer: rig.getPlayer, getHands: rig.getHands,
+    setHandPose: rig.setHandPose, heightAt: terrain.heightAt,
     toast: hud.toast, visorEl: document.getElementById("visor"),
     actions: {
       interact,

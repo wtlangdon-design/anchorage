@@ -4,7 +4,7 @@
 // camera (ref 1179-1194). Zero behaviour change.
 
 let config, story;
-let THREE, S, cam, getPlayer, getHands, heightAt, toast, visorEl, actions;
+let THREE, S, cam, getPlayer, getHands, setHandPose, heightAt, toast, visorEl, actions;
 
 const keys={};
 let drag=false,lx=0,ly=0;
@@ -34,6 +34,7 @@ export function initController(cfg, st, deps){
   cam = deps.cam;
   getPlayer = deps.getPlayer;
   getHands = deps.getHands;
+  setHandPose = deps.setHandPose;
   heightAt = deps.heightAt;
   toast = deps.toast;
   visorEl = deps.visorEl;
@@ -119,7 +120,6 @@ export function updateCamera(dt){
   cam.position.set(S.px+Math.cos(S.bob*.5)*.02*k,gy+camCfg.firstPersonEyeHeight+Math.sin(S.bob)*.035*k,S.pz);
   const dir=new THREE.Vector3(Math.cos(S.camYaw),Math.sin(-S.camPitch)*1.25,-Math.sin(S.camYaw)); // TODO(lead): 1.25 pitch-look multiplier not in config
   cam.lookAt(cam.position.clone().add(dir));
-  const hands=getHands();
-  hands.rotation.x=Math.sin(S.bob*.5)*.05*k;
-  hands.position.y=-Math.abs(Math.sin(S.bob))*.012*k;
+  // Arms rest low and out of frame; the scanner comes up while surveying.
+  if(setHandPose) setHandPose(S.surveying ? 1 : 0, S.bob, k, S.camYaw);
 }

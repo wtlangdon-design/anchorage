@@ -18,6 +18,8 @@
 import * as tex from "../world/textures.js";
 
 let THREE, scene, cam, heightAt, S;
+let CFG = null;
+let armR_fp = null, armL_fp = null, lastYaw = null, sway = 0, raiseNow = 0;
 let player, hands, legL, legR, armL, armR;
 let MATS = null;
 
@@ -78,6 +80,7 @@ const TUNING = {
 };
 
 export function initRig(config, story, deps){
+  CFG = config;
   THREE = deps.THREE;
   scene = deps.scene;
   cam = deps.cam;
@@ -530,32 +533,111 @@ export function buildPlayer(){
 export function buildHands(){
   hands = new THREE.Group();
   const M = suitMaterials();
+  const H = (CFG.player && CFG.player.hands) || {};
 
-  // the forearm profile, shifted so it is centred on its origin like the
-  // cylinder it replaces
-  const fore = segProfile(0.042, 0.052, 0.30).map(p => V2(p.x, p.y + 0.15));
-  const foreGeo = new THREE.LatheGeometry(fore, 12);
-  const cuffGeo = new THREE.TorusGeometry(0.052, 0.016, 6, 16);
-  const gloveGeo = new THREE.SphereGeometry(0.048, 12, 10);
-
-  const mkArm = sx => {
-    const g = new THREE.Group();
-    const f = new THREE.Mesh(foreGeo, M.fabric);
-    f.rotation.x = Math.PI / 2.15; f.position.set(0, 0, -.13); g.add(f);
-    const c2 = new THREE.Mesh(cuffGeo, M.fitting);
-    c2.position.set(0, .01, -.27); g.add(c2);                 // torus already rings +z
-    const gl = new THREE.Mesh(gloveGeo, M.shell);
-    gl.scale.set(1, .85, 1.15); gl.position.set(0, -.01, .01); g.add(gl);
-    g.position.set(sx, -.14, -.30); return g;
+  // A limb segment that hangs from its own origin down -y, so a parent group's
+  // rotation.x swings it forward (toward -z, which is where the camera looks).
+  const limb = (rTop, rBot, len) => {
+    const pts = [];
+    for(let i = 0; i <= 6; i++){
+      const t = i / 6;
+      pts.push(new THREE.Vector2(Math.max(.002, rTop + (rBot - rTop) * t), -len * t));
+    }
+    pts.push(new THREE.Vector2(.002, -len));
+    return new THREE.LatheGeometry(pts, 12);
   };
-  const R = mkArm(.16), L = mkArm(-.17);
 
+  const upperGeo = limb(H.upperTopR, H.upperBotR, H.upperLen);
+  const foreGeo  = limb(H.foreTopR,  H.foreBotR,  H.foreLen);
+  const cuffGeo  = new THREE.TorusGeometry(H.foreBotR + .006, .014, 6, 14);
+  const gloveGeo = new THREE.SphereGeometry(H.gloveR, 12, 10);
+
+  // shoulder -> upper arm -> elbow -> forearm -> glove.
+  // Before this there was no shoulder and no elbow: one forearm rotated 84
+  // degrees, so both arms pointed straight out of the chest, permanently.
+  const mkArm = side => {
+    const shoulder = new THREE.Group();
+    shoulder.position.set(side * H.shoulderX, H.shoulderY, H.shoulderZ);
+
+    const up = new THREE.Mesh(upperGeo, M.fabric);
+    shoulder.add(up);
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -H.upperLen;
+    shoulder.add(elbow);
+
+    const el = new THREE.Mesh(new THREE.SphereGeometry(H.upperBotR * 1.15, 10, 8), M.fabricWorn || M.fabric);
+    elbow.add(el);
+
+    const f = new THREE.Mesh(foreGeo, M.fabric);
+    elbow.add(f);
+
+    const cuff = new THREE.Mesh(cuffGeo, M.fitting);
+    cuff.rotation.x = Math.PI / 2; cuff.position.y = -H.foreLen + .02; elbow.add(cuff);
+
+    const gl = new THREE.Mesh(gloveGeo, M.shell);
+    gl.scale.set(1, 1.08, .92);
+    gl.position.y = -H.foreLen - H.gloveR * .5;
+    elbow.add(gl);
+
+    shoulder.userData = { elbow, glove: gl, side };
+    return shoulder;
+  };
+
+  armR_fp = mkArm(1); armL_fp = mkArm(-1);
+
+  // the scanner rides the right glove, so it moves with the hand
   const scan = new THREE.Mesh(new THREE.BoxGeometry(.10, .055, .15), M.fitting);
-  scan.position.set(0, .01, .05); R.add(scan);
+  scan.position.set(0, .01, -.06); armR_fp.userData.glove.add(scan);
   const face = new THREE.Mesh(new THREE.PlaneGeometry(.072, .032), M.display);
-  face.position.set(0, .030, .05); face.rotation.x = -Math.PI / 2.4; R.add(face);
+  face.position.set(0, .032, -.06); face.rotation.x = -Math.PI / 2.4;
+  armR_fp.userData.glove.add(face);
 
-  hands.add(R); hands.add(L); hands.visible = true; cam.add(hands); scene.add(cam);
+  hands.add(armR_fp); hands.add(armL_fp);
+  hands.visible = true; cam.add(hands); scene.add(cam);
+  setHandPose(0, 0, 0, 0);
+}
+
+/* Pose the first-person arms.
+ *   raise  0..1  — 0 is arms down and out of frame, 1 is scanner up and readable
+ *   phase        — gait phase, for opposed sway
+ *   k      0..1  — how fast the player is moving
+ *   yaw          — current camera yaw, for the arms to lag behind a turn
+ */
+export function setHandPose(raise, phase, k, yaw){
+  if(!armR_fp) return;
+  const H = (CFG.player && CFG.player.hands) || {};
+
+  raiseNow += (raise - raiseNow) * (H.raiseSmoothing || .12);
+  const r = raiseNow;
+
+  // arms lag a fast turn and settle back — this is most of what sells them
+  if(lastYaw === null) lastYaw = yaw;
+  let d = yaw - lastYaw;
+  while(d >  Math.PI) d -= Math.PI * 2;
+  while(d < -Math.PI) d += Math.PI * 2;
+  lastYaw = yaw;
+  sway += (d * (H.swayGain || 1.6) - sway) * (H.swaySmoothing || .18);
+  sway *= (H.swayDecay || .90);
+  hands.rotation.y = Math.max(-.5, Math.min(.5, sway));
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+  [armR_fp, armL_fp].forEach(arm => {
+    const isR = arm.userData.side > 0;
+    const bias = isR ? 0 : (H.leftBias || .10);   // never symmetrical
+    const rr = isR ? r : r * (H.leftRaiseShare || .45);
+
+    // opposed gait swing, and the arms still swing a little when idle
+    const sw = Math.sin(phase + (isR ? 0 : Math.PI)) * (H.gaitSwing || .16) * k * (1 - rr * .7);
+
+    arm.rotation.x = lerp(H.restShoulder, H.raiseShoulder, rr) + bias + sw;
+    arm.rotation.z = arm.userData.side * lerp(H.restShoulderOut, H.raiseShoulderOut, rr);
+    arm.userData.elbow.rotation.x = lerp(H.restElbow, H.raiseElbow, rr) - sw * .5;
+    arm.userData.elbow.rotation.y = arm.userData.side * lerp(H.restElbowTwist, H.raiseElbowTwist, rr);
+  });
+
+  hands.position.y = -Math.abs(Math.sin(phase)) * (H.bobY || .012) * k;
+  hands.rotation.x = Math.sin(phase * .5) * (H.bobPitch || .03) * k;
 }
 
 // Assign the joint angles gait.js already computed. No gait math lives here.
