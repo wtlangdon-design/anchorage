@@ -48,7 +48,9 @@
         "kind": "naming",
         "title": "CS 4-9 b",
         "subtitle": "Second planet · unnamed",
-        "body": "Eighty-eight day rotation. Gravity 1.3 g. A habitable band three hundred kilometres wide, moving west at fifteen and a half kilometres an hour, forever.",
+        "body": [
+          "Eighty-eight day rotation. Gravity 1.3 g. A habitable band three hundred kilometres wide, moving west at fifteen and a half kilometres an hour, forever."
+        ],
         "placeholder": "name the world",
         "hint": "This is the name the fleet will read.",
         "defaultPlanetName": "Meridian's World",
