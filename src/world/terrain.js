@@ -307,8 +307,18 @@ export function initTerrain(cfg, story, deps){
 // Twelve heightAt calls at worst, and it exits early once fully blocked. Called
 // once a frame for the player and once at load for each site.
 export function shadeAt(x, z){
+  // THE CANOPY IS THE OCCLUSION NOW, and the terrain is what is left of the old
+  // mechanism. A rock wall cannot shade a corridor whose sun sits at +x ALONG it —
+  // only the pass shoulders ever did, and the trail's banks are two metres tall. A
+  // roof can. So this returns the greater of the two: the ground's own shadow, and
+  // how much of the sky the jungle has closed over.
+  //
+  // climate.js is untouched by any of this. It takes occlusion as a parameter and
+  // always did; all that changed is where the number comes from.
+  const canopy = canopySource ? canopySource(x, z) : 0;
+  if(canopy >= 1) return 1;
   const y = heightAt(x, z);
-  let s = 0;
+  let s = canopy;
   for(let i = 1; i <= SH.samples; i++){
     const d = i * SH.step;
     const over = (heightAt(x + d, z) - (y + d * SH.tan)) / SH.soft;
@@ -316,6 +326,12 @@ export function shadeAt(x, z){
   }
   return s < 0 ? 0 : s;
 }
+
+// world/jungle.js hands its canopyAt in here. Injected rather than imported so
+// terrain.js does not depend on the jungle — a world with no vegetation still has a
+// working shade term, and the tests can build terrain alone.
+let canopySource = null;
+export function setCanopySource(fn){ canopySource = fn; }
 
 const smooth = t => t * t * (3 - 2 * t);
 const sat = t => t < 0 ? 0 : t > 1 ? 1 : t;

@@ -30,6 +30,7 @@ import { initClimate, dawnX, lostAtT, tempAt, LETHAL } from "../src/world/climat
 import { applyWorldScale } from "../src/world/scale.js";
 import { initNoise, fbm } from "../src/world/noise.js";
 import * as terrain from "../src/world/terrain.js";
+import * as jungle from "../src/world/jungle.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(join(here, "../content/config.json"), "utf8"));
@@ -39,6 +40,15 @@ initClimate(config.climate);
 // far longer, so balance has to measure the world with its shadow in place
 terrain.initTerrain(config, {}, { THREE: {}, scene: { add(){} }, rand: () => 0.5, fbm });
 initNoise(config.terrain.noiseSeed);
+// THE CANOPY IS THE OCCLUSION NOW, so a measurement that leaves it out is measuring
+// a world the player never walks in. jungle.canopyAt needs only the baked plan and
+// the noise field — no geometry is built here, so no PRNG is consumed and the
+// world's draw order is untouched.
+jungle.initJungle(config, {}, {
+  THREE: {}, scene: { add(){} }, rand: () => 0.5,
+  fbm, heightAt: terrain.heightAt, pathPlan: terrain.pathPlan,
+});
+terrain.setCanopySource(jungle.canopyAt);
 const shadeAt = terrain.shadeAt;
 const segs = terrain.pathSegments();
 const plan = terrain.pathPlan;

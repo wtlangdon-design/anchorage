@@ -915,6 +915,82 @@
       "opacity": 0.72
     }
   },
-  "buildStamp": "build 2026-07-30 · the trail",
+  "jungle": {
+    "_note": "THE JUNGLE. Everything that fills the trail, and all of it INSTANCED — one draw call per layer, not one per plant. Five layers, each a count and a size range:\n  canopy      the roof. Wide low-poly crowns on tall stems, thickest where the path.segments canopy value is high and absent where it breaks.\n  trunk       what holds the canopy up. Tapered columns, leaning.\n  understory  the WALL. Dense mid-height mass standing on the bank at the trail's edge; this is what the player reads as impassable, and it is why the containment bank underneath only has to be a couple of metres tall.\n  fern        knee-to-chest growth spilling onto the trail itself.\n  litter      fallen fronds and debris flat on the ground.\nGROWTH STATE is not baked. Every layer's vertex shader is handed the dawn line's position each frame and scales and tints each instance by how far behind that line it stands: still coming up ahead of it, full at it, browning behind it, black in the burn. One uniform a frame; the GPU does the rest. growthRise/growthFull/growthBurn are those distances in metres BEHIND the dawn line.\nTHE CANOPY IS THE SHADE MECHANIC. A rock wall cannot shade a corridor whose sun sits at +x along it, but a roof can. terrain.shadeAt returns the greater of the terrain's own occlusion and the canopy's, and climate.js is untouched — it takes occlusion as a parameter and always did. gapFrequency/gapDepth are the holes in the roof: where the canopy breaks the sun gets in and that ground cooks on schedule.",
+    "canopy": {
+      "count": 5200,
+      "minHeight": 13,
+      "heightRange": 9,
+      "minRadius": 5.0,
+      "radiusRange": 4.5,
+      "spread": 150,
+      "lean": 0.22,
+      "colour": "0x3d5c28",
+      "tipColour": "0x6f8f3c"
+    },
+    "trunk": {
+      "count": 2600,
+      "minHeight": 12,
+      "heightRange": 10,
+      "minRadius": 0.22,
+      "radiusRange": 0.5,
+      "spread": 150,
+      "lean": 0.1,
+      "colour": "0x4a3f2e"
+    },
+    "understory": {
+      "count": 9000,
+      "minHeight": 3.2,
+      "heightRange": 3.4,
+      "minRadius": 1.1,
+      "radiusRange": 1.6,
+      "bandInner": 0.2,
+      "bandOuter": 26,
+      "colour": "0x35521f",
+      "tipColour": "0x6b8a34"
+    },
+    "fern": {
+      "count": 7000,
+      "minScale": 0.55,
+      "scaleRange": 1.1,
+      "reach": 7,
+      "colour": "0x40631f",
+      "tipColour": "0x86a63e"
+    },
+    "litter": {
+      "count": 4200,
+      "minScale": 0.6,
+      "scaleRange": 1.4,
+      "reach": 10,
+      "colour": "0x5b5330"
+    },
+    "_growthNote": "Distances in metres behind the dawn line. Ahead of it (negative) the growth has not come up: scaled down to growthMinScale. From the line back to growthFull it is at full height and greenest. From growthFull back to growthBurn it browns. Past growthBurn it is in the burn: black, collapsed, and the ground there is already lethal.",
+    "growthRise": -90,
+    "growthFull": 260,
+    "growthBurn": 560,
+    "growthMinScale": 0.18,
+    "brownColour": "0x7a6330",
+    "burnColour": "0x241d16",
+    "_canopyNote": "How the roof turns into occlusion. `canopy` on each path segment is the cover over the TRAIL, which is the thinnest cover anywhere: the herd breaks the growth down along it every ninety days, so the roof there is torn and the sun gets in. offBoost is how much more cover you get by stepping off the trail into growth nothing has walked through, reaching its full extra by offFull metres out. That gradient is doing real work — it makes the DETOURS the shaded places and the main line the exposed one, so safe forward progress is also hot progress. The gap field then punches holes in whatever is left, so a nominally closed stretch still has sun coming through in places. gapDepth is how deep those holes go.",
+    "gapFrequency": 0.021,
+    "gapOctaves": 2,
+    "gapGain": 3.2,
+    "gapDepth": 0.42,
+    "_waterNote": "Water arrives at dawn, so the low ground is wet. Standing water is an instanced flat quad wherever the trail's own floor sits more than `pondBelow` metres under the local mean; streams run the length of the trail's lowest line.",
+    "water": {
+      "count": 2600,
+      "pondBelow": 0.12,
+      "minRadius": 1.4,
+      "radiusRange": 3.6,
+      "lift": 0.06,
+      "opacity": 0.62,
+      "colour": "0x2c3a2e",
+      "reach": 6
+    },
+    "_meshNote": "EVERY LAYER IS ONE DRAW CALL. 26k plants in six InstancedMeshes, against 598 individually-drawn rocks before this pass and 300 after it. If you raise a count, you are buying instances, not draw calls — that is the trade this module exists to make.",
+    "offBoost": 0.46,
+    "offFull": 34
+  },
+  "buildStamp": "build 2026-07-30 · the jungle",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

@@ -19,6 +19,7 @@ import { initClimate, dawnX, tempAt, lostAtT } from "./world/climate.js";
 import * as terrain from "./world/terrain.js";
 import * as sky from "./world/sky.js";
 import * as grass from "./world/grass.js";
+import * as jungle from "./world/jungle.js";
 import * as fauna from "./world/fauna.js";
 import * as props from "./world/props.js";
 import * as sound from "./world/sound.js";
@@ -76,6 +77,9 @@ function init() {
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(Number(config.render.fogColour), config.render.fogDensity);
   const camCfg = config.player.camera;
+  // far follows the fog down. Under FogExp2 at 0.055 nothing past ~40 m contributes a
+  // pixel, so a 9 km far plane was 9 km of depth precision and frustum spent on
+  // geometry the fog had already eaten.
   cam = new THREE.PerspectiveCamera(camCfg.fov, innerWidth / innerHeight, camCfg.near, camCfg.far);
   SUNDIR = config.world.sunDirection;
   const elev = (config.world.sunElevationDeg || 0) * Math.PI / 180;
@@ -132,6 +136,10 @@ function init() {
   terrain.initTerrain(config, story_data, worldDeps);
   sky.initSky(config, story_data, worldDeps);
   grass.initGrass(config, story_data, worldDeps);
+  jungle.initJungle(config, story_data, { ...worldDeps, pathPlan: terrain.pathPlan });
+  // the canopy becomes the shade term's occlusion source. Injected, not imported, so
+  // terrain.js still works with no jungle in front of it.
+  terrain.setCanopySource(jungle.canopyAt);
   fauna.initFauna(config, story_data, worldDeps);
   props.initProps(config, story_data, worldDeps);
 
@@ -215,6 +223,7 @@ function init() {
   terrain.buildTerrain();                 // no draws
   terrain.buildFarHills();                // draws
   grass.buildGrass();                     // draws (via refill)
+  jungle.buildJungle();                   // draws — five instanced layers plus the water
   fauna.buildStriders();                  // draws
   props.buildPlaces();                    // draws
   fauna.buildDenMeshes();                 // no draws (the reference built these at the tail of buildPlaces)
@@ -251,6 +260,7 @@ function init() {
   if (onMobile) {
     const m = config.mobile;
     grass.applyDowngrade(m.grassMultiplier);
+    jungle.applyDowngrade(m.jungleMultiplier);
     fauna.applyDowngrade(m.striderMultiplier);
     sky.applyDowngrade(m.dustMultiplier);
     textures.setQuality(m.textureScale);
@@ -299,6 +309,7 @@ function animate() {
       if (fA / fN < dg.fpsThreshold) {
         if (dg.disableShadows) renderer.shadowMap.enabled = false;
         grass.applyDowngrade();
+        jungle.applyDowngrade(dg.jungleMultiplier);
         renderer.setPixelRatio(dg.pixelRatio);
         // redraw every generated map at half size, in place
         textures.setQuality(dg.textureScale);
@@ -343,6 +354,9 @@ function animate() {
 
   // animation only, so these ride the wall clock and keep running through the
   // grace period: the world has to be alive before the clock is.
+  // the dawn line's position is what turns the jungle from a model into one day of
+  // growth: still coming up ahead of it, full at it, browning and then burning behind
+  jungle.setGrowth(dawnX(S.t), S.animT);
   grass.setWind(S.animT);                    // ref 1177
   controller.updateCamera(dt);               // ref 1179-1194
   sky.updateDust(S.px, S.pz, gy, S.animT);   // ref 1195-1196
