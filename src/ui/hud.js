@@ -95,8 +95,14 @@ export function renderManifest(){
 
   const got = list.filter(c => c.done).length, lost = list.filter(c => c.lost && !c.done).length;
   const lostStr = lost ? story.ui.manifestLostTemplate.replace("{n}", lost) : "";
+  // The build stamp lives here because this line stays visible even when the
+  // manifest is collapsed on a phone. It is the only way to tell at a glance
+  // whether the browser served a cached copy of the game.
+  const stamp = config.buildStamp
+    ? `<span style="display:block;opacity:.32;font-size:8px;letter-spacing:.1em;margin-top:4px">${config.buildStamp}</span>`
+    : "";
   document.getElementById("tasknote").innerHTML =
-    story.ui.manifestNoteTemplate.replace("{done}", got).replace("{lost}", lostStr);
+    story.ui.manifestNoteTemplate.replace("{done}", got).replace("{lost}", lostStr) + stamp;
 }
 
 /* ---------- gauges ---------- */

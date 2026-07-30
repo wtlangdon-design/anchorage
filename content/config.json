@@ -707,5 +707,7 @@
       "lift": 0.12,
       "opacity": 0.72
     }
-  }
+  },
+  "buildStamp": "build 2026-07-30 · arms v2",
+  "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }
