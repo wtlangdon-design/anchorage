@@ -17,8 +17,8 @@
 //     where it is drawing. The screen calls it at panel size; the export calls it
 //     at print size on an off-screen canvas. There is no second code path to drift.
 
-import { LETHAL, K } from "../world/climate.js?v=8";
-import { hash2 } from "../world/textures.js?v=8";
+import { LETHAL, K } from "../world/climate.js?v=9";
+import { hash2 } from "../world/textures.js?v=9";
 
 let config, story, S, manifest, storyMod, heightAt, dawnX;
 // The world is a STRIP now, so the chart's grid is rectangular: GWX cells along the

@@ -1,7 +1,7 @@
 // player/suit.js — per-frame life-support drain, refill, ashwaiter damage, and the
 // three failure checks. Ported verbatim from the reference animate loop (ref 1133-1147).
 
-import { LETHAL } from "../world/climate.js?v=8";
+import { LETHAL } from "../world/climate.js?v=9";
 
 let config, story;
 let S, tempAt, toast, fail, getDens, waterPos, oxyPositions;

@@ -12,7 +12,7 @@
 // they are going the same way for the same reason, and the biosphere is surveyed by
 // catching up to them rather than by crossing their path.
 
-import * as terrainPath from "./terrain.js?v=8";
+import * as terrainPath from "./terrain.js?v=9";
 
 let THREE, scene, rand, heightAt, dawnX, tempAt, config;
 const DENS=[];

@@ -14,7 +14,7 @@
 //             which never touches the world PRNG, so the maps below cannot move
 //             a single rock.
 
-import * as tex from "./textures.js?v=8";
+import * as tex from "./textures.js?v=9";
 
 let THREE, scene, rand, config;
 let SUNDIR, SUNC = 1, SUNS = 0.055;

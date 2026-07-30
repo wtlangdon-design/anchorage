@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- index.html is the one file that cannot cache-bust itself: the browser must read
+     it to discover the versioned module URLs. GitHub Pages sends max-age=600 for it,
+     so a push can be live and invisible for ten minutes. These help some browsers
+     revalidate; the reliable answer is to open the page with ?v=<build> on the URL. -->
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>The Anchorage — v5</title>
 <style>
@@ -296,6 +302,6 @@ body.touch #task.open{max-height:78vh;overflow-y:auto}
 <script>if(!window.THREE){document.body.innerHTML=
 '<div style="padding:40px;font-family:monospace;color:#C8D4DC">Could not load the 3D library from the network. Try reloading.</div>'}</script>
 
-<script type="module" src="src/main.js?v=8"></script>
+<script type="module" src="src/main.js?v=9"></script>
 </body>
 </html>
