@@ -39,8 +39,10 @@
       {
         "id": "descent",
         "kind": "text",
-        "unwritten": true,
-        "_write_here": "YOURS TO WRITE. The descent: the crevice seen from above, and the fact that something down there is still under power. Delete \"unwritten\" and add a \"body\": [ \"...\", \"...\" ] array of paragraphs. Until then the game shows a visible marker in its place.",
+        "body": [
+          "You come in low over the ash. For two hundred kilometres it is flat and pale and the same, and then the ground splits — a crevice, six hundred metres end to end, walls steep enough to hold shadow on the floor while the sun crosses. It is the only shade on this hemisphere. It is why you are landing here and not anywhere else.",
+          "There is a light in it. Small, steady, and two hundred years old. Nothing in the <em>Meridian</em>'s filed record accounts for a light."
+        ],
         "button": "Continue"
       },
       {
