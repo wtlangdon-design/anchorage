@@ -5,15 +5,17 @@
 // the wind shader are art and stay inline. Zero behaviour change.
 
 let THREE, scene, rand, heightAt, dawnX, S, config;
+let LX, LZ;
 let grass, gShader=null;
-let GRASS_MAX, SIZE;
+let GRASS_MAX;
 
 export function initGrass(cfg, story, deps){
   THREE = deps.THREE; scene = deps.scene; rand = deps.rand;
   heightAt = deps.heightAt; dawnX = deps.dawnX; S = deps.S;
   config = cfg;
   GRASS_MAX = config.grass.maxBlades;
-  SIZE = config.world.size;
+  LX = config.world.lengthX || config.world.size;
+  LZ = config.world.widthZ || config.world.size;
 }
 
 function bladeGeometry(){
@@ -60,8 +62,10 @@ function refillGrass(t){
         v=new THREE.Vector3(),sc=new THREE.Vector3(),col=new THREE.Color();
   let n=0;
   for(let i=0;i<GRASS_MAX*4&&n<GRASS_MAX;i++){                       // TODO(lead): *4 loop cap not in config
-    const x=c+(rand()-.5)*config.grass.spawnWidth,z=(rand()-.5)*SIZE*.97;   // TODO(lead): SIZE*.97 z-fraction not in config
-    if(x<-SIZE/2||x>SIZE/2)continue;
+    // the world is a strip: the band's width is measured along the journey (x) and
+    // the scatter across it (z), so these are two different world dimensions now
+    const x=c+(rand()-.5)*config.grass.spawnWidth,z=(rand()-.5)*LZ*.97;   // TODO(lead): .97 z-fraction not in config
+    if(x<-LX/2||x>LX/2)continue;
     if(rand()>Math.exp(-Math.pow((x-c)/config.grass.falloffSigma,2)))continue;
     v.set(x,heightAt(x,z)-.03,z);                                   // TODO(lead): -.03 y-offset not in config
     q.setFromAxisAngle(new THREE.Vector3(0,1,0),rand()*6.28);

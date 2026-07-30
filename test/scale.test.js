@@ -51,16 +51,26 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
   ok("camp/grave/shelter positions scale",
      near(c.camps.c5.x, base.camps.c5.x * s) && near(c.graves.g5.z, base.graves.g5.z * s) && near(c.shelter.x, base.shelter.x * s));
   ok("spawn scales", near(c.player.spawn.x, base.player.spawn.x * s));
-  ok("the canyon scales in every horizontal dimension",
-     near(c.terrain.canyon.length, base.terrain.canyon.length * s)
-     && near(c.terrain.canyon.width, base.terrain.canyon.width * s)
-     && near(c.terrain.canyon.west.toe, base.terrain.canyon.west.toe * s)
-     && near(c.terrain.canyon.west.run, base.terrain.canyon.west.run * s)
-     && near(c.terrain.canyon.east.buttress.run, base.terrain.canyon.east.buttress.run * s));
-  ok("canyon wall HEIGHT scales too, so the room stays a room",
-     near(c.terrain.canyon.west.height, base.terrain.canyon.west.height * s)
-     && near(c.terrain.canyon.west.buttress.height, base.terrain.canyon.west.buttress.height * s)
-     && near(c.terrain.canyon.northEnd.height, base.terrain.canyon.northEnd.height * s));
+  ok("the path scales in every horizontal dimension",
+     near(c.terrain.path.startX, base.terrain.path.startX * s)
+     && near(c.terrain.path.outerHalfWidth, base.terrain.path.outerHalfWidth * s)
+     && near(c.terrain.path.ridgeRun, base.terrain.path.ridgeRun * s)
+     && near(c.terrain.path.blend, base.terrain.path.blend * s));
+  ok("wall HEIGHT scales too, so the corridor stays a corridor",
+     near(c.terrain.path.outerCrestY, base.terrain.path.outerCrestY * s)
+     && near(c.terrain.path.farEnd.crestY, base.terrain.path.farEnd.crestY * s));
+  ok("every segment of the chain scales, including its floor profile",
+     c.terrain.path.segments.every((sg, i) => {
+       const b = base.terrain.path.segments[i];
+       return ["length","halfWidth","centre","ridgeTop","sill","sillRun","drop","dropRun","dropTail"]
+         .every(k => near(sg[k], b[k] * s, 1e-6));
+     }));
+  ok("and so the one-way transitions stay one-way at every scale",
+     c.terrain.path.segments.every((sg, i) => {
+       const b = base.terrain.path.segments[i];
+       if (!b.drop || !b.dropRun) return true;
+       return near(1.5 * sg.drop / sg.dropRun, 1.5 * b.drop / b.dropRun, 1e-9);
+     }));
   ok("den spread scales", near(c.ashwaiters.denSpreadX.range, base.ashwaiters.denSpreadX.range * s));
   ok("strider spread and herd z scale",
      near(c.striders.spreadX, base.striders.spreadX * s) && near(c.striders.herdZ, base.striders.herdZ * s));
@@ -120,50 +130,51 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
      && near(ratio(x => x.grass.bandOffset), s) && near(ratio(x => x.world.size), s));
 }
 
-// 6. THE ROOM. The crevice has to stay a room at every scale, and after the
-//    reshaping there are exactly two properties that make it one. Both are
-//    checked here because both have already been broken once.
+// 6. THE CORRIDOR. Two properties keep the journey a journey at any scale, and
+//    both have already been broken once during this rebuild.
 //
-//    (a) AT THE OUTER TOE — the fixed line in x where the containment face
-//        starts — the ground must never stand higher than the buttress cap.
-//        Anything higher is a shelf, and a shelf lets the player begin the face
-//        part-way up it instead of at its foot. An earlier version let the
-//        buttress plateau run out past the toe and a flood fill walked out over
-//        it at the south end. This is measured against heightAt, not assumed.
+//    (a) THE LIP. The ridge beside the floor starts with a vertical step of
+//        path.ridgeLip. Everything else in the plan drifts along the journey —
+//        width, centreline, ridge height — and a drifting wall beside a floor is a
+//        staircase whose grade is the wall's slope times the drift rate; there is
+//        always somewhere that product falls under the climb limit. A flood fill
+//        found three separate versions of that route. A discontinuity is the only
+//        thing a drift cannot soften, so the lip must stay a lip: no talus
+//        fractions, no apron, no smoothing.
 //
-//    (b) FROM THAT CAP, the face above must still have a band the player cannot
-//        cross: steeper than the climb limit over a realistic step, and wider
-//        than one step so it cannot be jumped in a single frame. The face is a
-//        square root, so the sampled grade falls as the step grows — the check
-//        uses a sprint stride, the largest step the controller ever takes.
+//    (b) THE ONE-WAY DROPS. A smoothstep drop's steepest grade is
+//        1.5*drop/dropRun; above player.maxClimbGrade it can be walked down and
+//        not back up, and that is the whole mechanism by which a site walked past
+//        is gone. Checked here, per segment, at every scale.
 {
-  const STRIDE = 0.5;                       // sprint 9 m/s at a bad 18 fps
   for (const scale of [1, 0.55, 2]) {
     const c = load(); c.world.scale = scale; applyWorldScale(c);
-    const cy = c.terrain.canyon, limit = c.player.maxClimbGrade;
-    for (const side of ["west", "east"]) {
-      const W = cy[side], B = W.buttress;
-      const cap = B.height * (1 + B.crestVary);              // tallest the buttress gets
-      const drop = W.height * (1 - W.crestVary) - cap;       // shortest face above it
-      const A = (1 - W.talusHeight) / (2 * (1 - W.talusFraction));
-      const toeGrade = drop * (1 - W.talusHeight)
-                     * Math.sqrt(STRIDE / (W.run * (1 - W.talusFraction))) / STRIDE;
-      const bandWide = W.run * (1 - W.talusFraction)
-                     * Math.pow(A * drop / (limit * W.run), 2);
-      ok(`scale ${scale} ${side}: the face above the buttress is unclimbable`,
-         toeGrade > limit * 1.5,
-         `sampled grade ${toeGrade.toFixed(2)} over a ${STRIDE} m stride vs limit ${limit}`);
-      ok(`scale ${scale} ${side}: the unclimbable band is wider than one stride`,
-         bandWide > STRIDE * 3,
-         `band is ${bandWide.toFixed(1)} m wide`);
-    }
+    const p = c.terrain.path, limit = c.player.maxClimbGrade;
+    ok(`scale ${scale}: the ridge still starts with a lip, not a slope`,
+       typeof p.ridgeLip === "number" && p.ridgeLip > 0
+       && p.ridgeTalusFraction === undefined && p.ridgeTalusHeight === undefined,
+       `ridgeLip ${p.ridgeLip}`);
+    // A lip of L is refused at any stride shorter than L/limit metres. The
+    // controller's longest possible stride is one sprint frame at main.js's dt cap,
+    // and that is NOT scaled — the surveyor keeps walking at 9 m/s in a half-size
+    // world — so a shrunk world has a proportionally weaker lip and this is the
+    // check that says how far that can go.
+    const longestStride = c.player.sprintSpeed * 0.05;   // main.js clamps dt to 0.05
+    ok(`scale ${scale}: the lip is refused even at the longest stride the loop allows`,
+       p.ridgeLip / longestStride > limit,
+       `${(p.ridgeLip / longestStride).toFixed(2)} vs ${limit} at a ${longestStride} m stride`);
+    const oneWay = p.segments.filter(sg => sg.drop > 0 && sg.dropRun > 0
+                                     && 1.5 * sg.drop / sg.dropRun > limit);
+    ok(`scale ${scale}: at least two transitions cannot be walked back up`,
+       oneWay.length >= 2, `${oneWay.length}: ${oneWay.map(s => s.id).join(", ")}`);
+    for (const sg of oneWay)
+      ok(`scale ${scale}: ${sg.id} clears the drop before the plan starts blending`,
+         sg.dropTail >= p.blend * 0.5,
+         `dropTail ${sg.dropTail} vs half-blend ${p.blend * 0.5}`);
   }
 }
 
-// 6b. and the toe line itself, measured. This is the property every irregular
-//     thing in the crevice is allowed to exist because of: the buttress in front
-//     may wander as much as it likes, but at x = toe the rock is never higher
-//     than the cap the buttress is allowed to reach.
+// 6b. and the chain itself, measured against the terrain rather than the config.
 {
   globalThis.document = globalThis.document || { createElement: () => ({
     width: 0, height: 0,
@@ -174,19 +185,28 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
   const c = load();
   noise.initNoise(c.terrain.noiseSeed);
   terrain.initTerrain(c, {}, { THREE: null, scene: null, rand: noise.rand, fbm: noise.fbm });
-  const cy = c.terrain.canyon, halfL = cy.length / 2;
-  for (const side of ["west", "east"]) {
-    const W = cy[side], B = W.buttress, sgn = side === "west" ? 1 : -1;
-    // the cap, plus what the floor's own relief and cross-fall can add on top
-    const allowed = B.height * (1 + B.crestVary) + cy.floorRelief + 4;
-    let worst = -Infinity, worstZ = 0;
-    for (let z = -halfL; z <= halfL; z += 3) {
-      const y = terrain.heightAt(sgn * W.toe, z);
-      if (y > worst) { worst = y; worstZ = z; }
+  const segs = terrain.pathSegments();
+  const chambers = segs.filter(g => g.kind === "chamber");
+  ok("five to seven chambers", chambers.length >= 5 && chambers.length <= 7, `${chambers.length}`);
+  const len = segs[segs.length - 1].x1 - segs[0].x0;
+  ok("roughly 2500 m long", len > 2300 && len < 2800, `${len} m`);
+  const w = segs.map(g => g.halfWidth * 2);
+  ok("28 to 80 m wide throughout", Math.min(...w) >= 28 && Math.max(...w) <= 80,
+     `${Math.min(...w)}-${Math.max(...w)} m`);
+  // the lip, measured: one step off the floor's edge must be a wall at any stride
+  const limit = c.player.maxClimbGrade;
+  let worst = Infinity, worstAt = null;
+  for (const g of chambers) {
+    const x = (g.x0 + g.x1) / 2, p = terrain.pathPlan(x);
+    for (const stride of [0.07, 0.35, 0.5]) {
+      const on = terrain.heightAt(x, p.centre + p.halfWidth - 0.01);
+      const off = terrain.heightAt(x, p.centre + p.halfWidth + stride);
+      const grade = (off - on) / stride;
+      if (grade < worst) { worst = grade; worstAt = `${g.id} at a ${stride} m stride`; }
     }
-    ok(`no shelf at the ${side} toe: ground there stays under the buttress cap`,
-       worst <= allowed, `${worst.toFixed(1)} m at z=${worstZ}, cap+slack is ${allowed.toFixed(1)} m`);
   }
+  ok("stepping off the floor onto the ridge is refused everywhere",
+     worst > limit * 2, `weakest is ${worst.toFixed(1)} in ${worstAt}`);
 }
 
 if (failures) { console.error(`\nscale.test.js: ${failures} failure(s)`); process.exit(1); }

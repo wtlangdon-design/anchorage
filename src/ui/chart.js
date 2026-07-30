@@ -21,7 +21,10 @@ import { LETHAL, K } from "../world/climate.js";
 import { hash2 } from "../world/textures.js";
 
 let config, story, S, manifest, storyMod, heightAt, dawnX;
-let CELL, SIZE, GW;
+// The world is a STRIP now, so the chart's grid is rectangular: GWX cells along the
+// journey, GWZ across it. Every index is ix*GWZ + iz — the same order main.js uses
+// when it allocates S.seen, and the two must not drift apart.
+let CELL, LX, LZ, GWX, GWZ;
 let heights = null;            // corner heights, built once — heightAt is not cheap
 let CH = null;                 // config.chart, cached
 
@@ -33,7 +36,10 @@ export function initChart(cfg, storyArg, deps){
   config = cfg; story = storyArg;
   S = deps.S; manifest = deps.manifest; storyMod = deps.storyMod;
   heightAt = deps.heightAt; dawnX = deps.dawnX;
-  CELL = config.world.chartCell; SIZE = config.world.size; GW = Math.ceil(SIZE / CELL);
+  CELL = config.world.chartCell;
+  LX = config.world.lengthX || config.world.size;
+  LZ = config.world.widthZ || config.world.size;
+  GWX = Math.ceil(LX / CELL); GWZ = Math.ceil(LZ / CELL);
   CH = config.chart;
   heights = null;
 
@@ -44,11 +50,11 @@ export function initChart(cfg, storyArg, deps){
 export function markSeen(){
   const gy = heightAt(S.px, S.pz),
         R = CH.revealBaseRadius + Math.max(0, gy - CH.revealElevationThreshold) * CH.revealPerMetreElevation;
-  const ci = ((S.px + SIZE / 2) / CELL) | 0, cj = ((S.pz + SIZE / 2) / CELL) | 0, rad = Math.ceil(R / CELL);
-  for(let j = cj - rad; j <= cj + rad; j++){ if(j < 0 || j >= GW) continue;
-    for(let i = ci - rad; i <= ci + rad; i++){ if(i < 0 || i >= GW) continue;
-      const wx = (i + .5) * CELL - SIZE / 2, wz = (j + .5) * CELL - SIZE / 2;
-      if(Math.hypot(wx - S.px, wz - S.pz) <= R){ const k = j * GW + i; if(!S.seen[k]){ S.seen[k] = 1; S.seenCount++; } } } }
+  const ci = ((S.px + LX / 2) / CELL) | 0, cj = ((S.pz + LZ / 2) / CELL) | 0, rad = Math.ceil(R / CELL);
+  for(let j = cj - rad; j <= cj + rad; j++){ if(j < 0 || j >= GWZ) continue;
+    for(let i = ci - rad; i <= ci + rad; i++){ if(i < 0 || i >= GWX) continue;
+      const wx = (i + .5) * CELL - LX / 2, wz = (j + .5) * CELL - LZ / 2;
+      if(Math.hypot(wx - S.px, wz - S.pz) <= R){ const k = i * GWZ + j; if(!S.seen[k]){ S.seen[k] = 1; S.seenCount++; } } } }
 }
 
 /* ---------- the surveyor's unsteady hand ---------- */
@@ -84,20 +90,20 @@ function inked(g, x1, y1, x2, y2, amp, salt, segs){
 
 function heightGrid(){
   if(heights) return heights;
-  const n = GW + 1;
-  heights = new Float32Array(n * n);
-  for(let j = 0; j < n; j++) for(let i = 0; i < n; i++)
-    heights[j * n + i] = heightAt(i * CELL - SIZE / 2, j * CELL - SIZE / 2);
+  const nx = GWX + 1, nz = GWZ + 1;
+  heights = new Float32Array(nx * nz);
+  for(let i = 0; i < nx; i++) for(let j = 0; j < nz; j++)
+    heights[i * nz + j] = heightAt(i * CELL - LX / 2, j * CELL - LZ / 2);
   return heights;
 }
 
 // Marching squares, clipped to ground the player has actually walked.
 function contourSegments(hg, level){
-  const n = GW + 1, out = [];
+  const nz = GWZ + 1, out = [];
   const ix = (a, b, t) => a + (b - a) * t;
-  for(let j = 0; j < GW; j++) for(let i = 0; i < GW; i++){
-    if(!S.seen[j * GW + i]) continue;
-    const a = hg[j * n + i], b = hg[j * n + i + 1], c = hg[(j + 1) * n + i + 1], d = hg[(j + 1) * n + i];
+  for(let i = 0; i < GWX; i++) for(let j = 0; j < GWZ; j++){
+    if(!S.seen[i * GWZ + j]) continue;
+    const a = hg[i * nz + j], b = hg[(i + 1) * nz + j], c = hg[(i + 1) * nz + j + 1], d = hg[i * nz + j + 1];
     const idx = (a > level ? 8 : 0) | (b > level ? 4 : 0) | (c > level ? 2 : 0) | (d > level ? 1 : 0);
     if(idx === 0 || idx === 15) continue;
     const top = () => [i + (level - a) / (b - a), j];
@@ -124,29 +130,32 @@ function contourSegments(hg, level){
 // w,h: the drawing surface in those units. Everything else is derived.
 export function drawChart(g, w, h){
   const P = CH.palette, hg = heightGrid();
-  const s = Math.min(w, h) / SIZE, ox = (w - SIZE * s) / 2, oy = (h - SIZE * s) / 2;
-  const px = wx => ox + (wx + SIZE / 2) * s, py = wz => oy + (wz + SIZE / 2) * s;
+  // The world is 2800 x 460, so fitting it as a square would waste four fifths of
+  // the sheet. One scale for both axes — the chart has to stay a MAP, and a chart
+  // with different scales in x and z would read as a lie about the ground.
+  const s = Math.min(w / LX, h / LZ), ox = (w - LX * s) / 2, oy = (h - LZ * s) / 2;
+  const px = wx => ox + (wx + LX / 2) * s, py = wz => oy + (wz + LZ / 2) * s;
   const gx = i => ox + i * CELL * s, gy = j => oy + j * CELL * s;
-  const seen = (i, j) => i >= 0 && j >= 0 && i < GW && j < GW && S.seen[j * GW + i];
+  const seen = (i, j) => i >= 0 && j >= 0 && i < GWX && j < GWZ && S.seen[i * GWZ + j];
 
   g.fillStyle = P.ground; g.fillRect(0, 0, w, h);
   g.lineCap = "round"; g.lineJoin = "round";
 
   // --- the ruled grid the chart was drawn on: faint, and drawn by hand too
   g.strokeStyle = P.grid; g.lineWidth = CH.gridWidth;
-  for(let v = 0; v <= SIZE; v += CH.gridSpacing){
-    inked(g, ox + v * s, oy, ox + v * s, oy + SIZE * s, CH.gridWobble, v, 8);
-    inked(g, ox, oy + v * s, ox + SIZE * s, oy + v * s, CH.gridWobble, v + 7919, 8);
+  for(let v = 0; v <= LX; v += CH.gridSpacing){
+    if(v <= LX) inked(g, ox + v * s, oy, ox + v * s, oy + LZ * s, CH.gridWobble, v, 8);
+    if(v <= LZ) inked(g, ox, oy + v * s, ox + LX * s, oy + v * s, CH.gridWobble, v + 7919, 8);
   }
 
   // --- hachures: short downhill strokes, denser and longer where it is steep.
   // This is what carries relief on a hand-drawn chart, and it only exists where
   // someone has been to see it.
   g.strokeStyle = P.ink; g.lineWidth = CH.hachureWidth;
-  const n = GW + 1;
-  for(let j = 0; j < GW; j++) for(let i = 0; i < GW; i++){
+  const nz = GWZ + 1;
+  for(let i = 0; i < GWX; i++) for(let j = 0; j < GWZ; j++){
     if(!seen(i, j)) continue;
-    const a = hg[j * n + i], b = hg[j * n + i + 1], c = hg[(j + 1) * n + i + 1], d = hg[(j + 1) * n + i];
+    const a = hg[i * nz + j], b = hg[(i + 1) * nz + j], c = hg[(i + 1) * nz + j + 1], d = hg[i * nz + j + 1];
     const dzdx = ((b + c) - (a + d)) / 2, dzdy = ((d + c) - (a + b)) / 2;
     const slope = Math.hypot(dzdx, dzdy) / CELL;
     if(slope < CH.hachureMinSlope) continue;
@@ -186,7 +195,7 @@ export function drawChart(g, w, h){
   // --- the torn edge of what has been walked. Drawn as broken strokes along the
   // boundary, with gaps, so the chart stops rather than ends.
   g.strokeStyle = P.edge; g.lineWidth = CH.edgeWidth;
-  for(let j = 0; j < GW; j++) for(let i = 0; i < GW; i++){
+  for(let i = 0; i < GWX; i++) for(let j = 0; j < GWZ; j++){
     if(!seen(i, j)) continue;
     const x0 = gx(i), y0 = gy(j), x1 = gx(i + 1), y1 = gy(j + 1);
     const sides = [[!seen(i, j - 1), x0, y0, x1, y0], [!seen(i, j + 1), x0, y1, x1, y1],
@@ -203,19 +212,19 @@ export function drawChart(g, w, h){
 
   // --- the clock: the dawn line, and the ground already too hot to reach
   const le = px(dawnX(S.t) - (LETHAL + config.climate.lethalMargin) / K);
-  g.fillStyle = P.lethalWash; g.fillRect(ox, oy, Math.max(0, le - ox), SIZE * s);
+  g.fillStyle = P.lethalWash; g.fillRect(ox, oy, Math.max(0, le - ox), LZ * s);
   g.strokeStyle = P.lethal; g.lineWidth = CH.contourWidth * 1.6;
-  inked(g, le, oy, le, oy + SIZE * s, CH.strokeWobble, 4242, 10);
+  inked(g, le, oy, le, oy + LZ * s, CH.strokeWobble, 4242, 10);
   const dl = px(dawnX(S.t));
   g.strokeStyle = P.dawn; g.lineWidth = CH.contourWidth * 1.6;
   g.setLineDash([7 * CH.dashScale, 6 * CH.dashScale]);
-  inked(g, dl, oy, dl, oy + SIZE * s, CH.strokeWobble, 1717, 10);
+  inked(g, dl, oy, dl, oy + LZ * s, CH.strokeWobble, 1717, 10);
   g.setLineDash([]);
 
   // --- what orbit gave you, and what you have made of it
   const serif = px2 => `italic ${px2}px "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif`;
   const mono = px2 => `${px2}px "SF Mono",Menlo,Consolas,monospace`;
-  const F = CH.labelSize * Math.max(1, s * SIZE / 900);
+  const F = CH.labelSize * Math.max(1, s * LX / 900);
 
   g.font = mono(F * .82);
   g.textAlign = "left";

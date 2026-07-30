@@ -60,12 +60,16 @@ globalThis.document = {
 globalThis.devicePixelRatio = 1;
 
 function setup(seenFraction) {
-  const CELL = config.world.chartCell, GW = Math.ceil(config.world.size / CELL);
+  // rectangular now: the world is a strip, and the seen-grid is GWX x GWZ indexed
+  // ix*GWZ + iz — the same order main.js and ui/chart.js both use
+  const CELL = config.world.chartCell;
+  const GWX = Math.ceil((config.world.lengthX || config.world.size) / CELL);
+  const GWZ = Math.ceil((config.world.widthZ || config.world.size) / CELL);
   const S = { t: 240, px: 0, pz: 0, planet: "Kestrel", name: "Vera", ship: "Kittiwake",
-    knowTruth: false, log: [], seen: new Uint8Array(GW * GW), seenCount: 0 };
+    knowTruth: false, log: [], seen: new Uint8Array(GWX * GWZ), seenCount: 0 };
   if (seenFraction > 0) {
-    for (let j = 0; j < GW; j++) for (let i = 0; i < GW; i++) {
-      if (i / GW < seenFraction) { S.seen[j * GW + i] = 1; S.seenCount++; }
+    for (let i = 0; i < GWX; i++) for (let j = 0; j < GWZ; j++) {
+      if (i / GWX < seenFraction) { S.seen[i * GWZ + j] = 1; S.seenCount++; }
     }
   }
   manifest.initManifest(config, storyData, { S, dawnX, tempAt, lostAtT });

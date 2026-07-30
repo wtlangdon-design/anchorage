@@ -35,6 +35,10 @@
 // is spent per-object: five plates, five engraving maps. See TUNING.plate.grave.
 
 import * as tex from "./textures.js";
+// props needs to know where the corridor's floor edge is at a given x, and only
+// terrain.js knows — it owns the baked plan. Read-only, and no cycle: terrain.js
+// does not import props.
+import * as terrainPath from "./terrain.js";
 
 // TODO(lead): lift into config.json (suggested homes: props.rock, props.metal,
 // props.plate). `seed` is the texture hash seed and has nothing to do with
@@ -387,7 +391,7 @@ function placedFromRecord(group,rec){
 }
 
 export function buildPlaces(){
-  const SIZE=config.world.size;
+  const LX=config.world.lengthX||config.world.size, LZ=config.world.widthZ||config.world.size;
   // Only some of the Meridian's camps and graves are on this ground; the rest
   // exist only in story.json's record. config places what is here, story.json
   // holds the full five and five — and each placed thing keeps its ORDINAL in
@@ -569,79 +573,67 @@ export function buildPlaces(){
    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.28,10,8),
      new THREE.MeshBasicMaterial({color:0x8FC6D4}));
    bulb.position.set(LAST.x,y+3.4,LAST.z);scene.add(bulb)}
-  for(let i=0;i<config.terrain.scatterRocks.count;i++){const x=(rand()-.5)*SIZE*config.terrain.scatterRocks.spreadFraction,z=(rand()-.5)*SIZE*config.terrain.scatterRocks.spreadFraction,s=config.terrain.scatterRocks.minScale+rand()*config.terrain.scatterRocks.scaleRange;
+  for(let i=0;i<config.terrain.scatterRocks.count;i++){const sf=config.terrain.scatterRocks.spreadFraction,x=(rand()-.5)*LX*sf,z=(rand()-.5)*LZ*sf,s=config.terrain.scatterRocks.minScale+rand()*config.terrain.scatterRocks.scaleRange;
     const b=new THREE.Mesh(roughRock(s),rockM);
     b.position.set(x,heightAt(x,z)+s*.4,z);b.rotation.set(rand()*3,rand()*3,rand()*3);put(b)}
 
-  // The collapse at the NORTH end of the crevice — and only the north end. The
-  // south end chokes out instead: the buttresses swell until the floor between
-  // them is a slot, and nothing fell there, so there is nothing lying about.
-  // Two ends, two causes, and this is half of what tells them apart.
-  //
-  // These are the same rough rocks as everywhere else, at boulder scale, sat on
-  // the end slope so that the thing stopping you is a heap of fallen rock you can
-  // see rather than a hillside that merely happens to be steep. They are only
-  // decoration — nothing in this game has collision, so the terrain underneath is
-  // what actually blocks, and it does (see the stacked faces in terrain.js).
-  // Drawn before the scree so every rock, camp and grave placed above keeps the
-  // exact position it had before this pile existed.
-  {
-    const RF = config.terrain.canyon.rockfall, CY = config.terrain.canyon;
-    const halfL = CY.length / 2;
-    const reach = Math.max(CY.west.toe, CY.east.toe) * RF.bandSpread;
-    for(let i = 0; i < RF.count; i++){
-      const x = (rand() - .5) * 2 * reach;
-      // biased toward the outer part of the band, so the pile is deepest where
-      // the ground is already climbing and thins out into the crevice
-      const f = rand();
-      const z = -(halfL - RF.bandDepth * 0.35 + f * f * RF.bandDepth * 1.5);
-      const sc = RF.minScale + rand() * RF.scaleRange;
-      const b = new THREE.Mesh(roughRock(sc), rockM);
-      b.position.set(x, heightAt(x, z) + sc * (1 - RF.sink), z);
-      b.rotation.set(rand() * 3, rand() * 3, rand() * 3);
-      put(b);
-    }
-  }
-
-  // Fallen material at the foot of the walls, so the debris explains the cliff
+  // Fallen material at the foot of the ridges, so the debris explains the cliff
   // above it rather than the ground merely being littered.
   //
   // Placement is rejection-free — it has to be, because a rejection loop would
-  // consume a different number of rand() draws depending on the shape of the
-  // walls and every rock in the world downstream would move. So each piece picks
-  // a z, walks OUTWARD from the axis to find the foot of the wall on that side,
-  // and sits a short way up it. The weighting is the point: `steepBias` raises
-  // the probability of landing under a steep face against a shallow one, using
-  // the local wall gradient measured from heightAt itself, so almost nothing
-  // gathers under the east scree and the heaviest talus lies under the west.
+  // consume a different number of rand() draws depending on the shape of the rock
+  // and every blade and boulder downstream would move. So each piece picks a point
+  // along the journey, asks terrain.js where the floor's edge is at that x, and
+  // sits a short way up it. The weighting is the point: steepBias raises the
+  // probability of landing under a steep face against a shallow one, using the
+  // local gradient measured from heightAt itself.
+  //
+  // One chamber gets a second, much coarser pile on top: path.scree.chokedSegment
+  // names it, and that is the chamber choked with fallen rock.
   {
-    const SC = config.terrain.canyon.scree, CY = config.terrain.canyon;
-    const halfL = CY.length / 2;
-    for(let i = 0; i < SC.count; i++){
-      const z = (rand() - .5) * 2 * (halfL - 8);
-      const west = rand() < .5;
-      const sgn = west ? 1 : -1, toe = west ? CY.west.toe : CY.east.toe;
-      // march in from the containment toe until the ground drops to the floor:
-      // that is the foot of whatever wall is standing here, buttress or cliff
-      let foot = toe;
-      for(let k = 0; k < 24; k++){
-        const a = toe - k * (toe / 24);
-        if(heightAt(sgn * a, z) < 2.5){ foot = a; break; }
+    const SC = config.terrain.path.scree;
+    const segs = terrainPath ? terrainPath.pathSegments() : [];
+    const x0 = segs.length ? segs[0].x0 : 0, x1 = segs.length ? segs[segs.length - 1].x1 : 0;
+    const plan = terrainPath ? terrainPath.pathPlan : null;
+
+    const drop = (n, minS, range, jitter) => {
+      for(let i = 0; i < n; i++){
+        const x = x0 + rand() * (x1 - x0);
+        const side = rand() < .5 ? 1 : -1;
+        const d = rand() * SC.reach;                     // always drawn
+        const sc = minS + rand() * range;                // always drawn
+        const spin = [rand() * 3, rand() * 3, rand() * 3];
+        const keepRoll = rand();                         // always drawn, then judged
+        if(!plan) continue;
+        const p = plan(x);
+        const foot = p.centre + side * p.halfWidth;
+        const grade = Math.abs(heightAt(x, foot + side * 12) - heightAt(x, foot)) / 12;
+        const keep = Math.pow(Math.min(1, grade * SC.steepBias), SC.steepPower);
+        if(keepRoll > keep) continue;
+        const z = foot + side * d;
+        const b = new THREE.Mesh(roughRock(sc * (1 - .5 * d / SC.reach)), rockM);
+        b.position.set(x, heightAt(x, z) + sc * (1 - SC.sink), z);
+        b.rotation.set(spin[0], spin[1], spin[2]);
+        put(b);
       }
-      // how steep is the wall just above this foot? that is what decides whether
-      // there is anything lying here at all
-      const grade = (heightAt(sgn * (foot + 12), z) - heightAt(sgn * foot, z)) / 12;
-      let keep = Math.min(1, grade * SC.steepBias);
-      keep = Math.pow(keep, SC.steepPower);              // sharpens steep vs shallow
-      const d = rand() * SC.reach;                       // always drawn: see above
-      const s = SC.minScale + rand() * SC.scaleRange;    // always drawn
-      const spin = [rand() * 3, rand() * 3, rand() * 3]; // always drawn
-      if(rand() > keep) continue;                        // always drawn, then judged
-      const x = sgn * (foot + d);
-      const b = new THREE.Mesh(roughRock(s * (1 - .5 * d / SC.reach)), rockM);
-      b.position.set(x, heightAt(x, z) + s * (1 - SC.sink), z);
-      b.rotation.set(spin[0], spin[1], spin[2]);
-      put(b);
+    };
+    drop(SC.count, SC.minScale, SC.scaleRange);
+
+    // the choked chamber: boulders across the whole floor, not just its edges
+    const choked = segs.find(g => g.id === SC.chokedSegment);
+    if(choked){
+      for(let i = 0; i < SC.chokedCount; i++){
+        const x = choked.x0 + rand() * choked.length;
+        const f = rand() * 2 - 1;
+        const sc = SC.chokedMinScale + rand() * SC.chokedScaleRange;
+        const spin = [rand() * 3, rand() * 3, rand() * 3];
+        const p = plan ? plan(x) : { centre: 0, halfWidth: 0 };
+        const z = p.centre + f * p.halfWidth;
+        const b = new THREE.Mesh(roughRock(sc), rockM);
+        b.position.set(x, heightAt(x, z) + sc * (1 - SC.sink), z);
+        b.rotation.set(spin[0], spin[1], spin[2]);
+        put(b);
+      }
     }
   }
 }

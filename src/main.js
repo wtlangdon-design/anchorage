@@ -82,7 +82,11 @@ function init() {
   SUN_COS = Math.cos(elev); SUN_SIN = Math.sin(elev);
 
   // ---- game state S (ref 337-346), seeded from config ----
-  const CELL = config.world.chartCell, GW = Math.ceil(config.world.size / CELL);
+  // The chart's seen-grid is rectangular now, because the world is a strip. Index
+  // order is ix*GWZ + iz, and ui/chart.js must agree — it does, in one place each.
+  const CELL = config.world.chartCell;
+  const GWX = Math.ceil((config.world.lengthX || config.world.size) / CELL);
+  const GWZ = Math.ceil((config.world.widthZ || config.world.size) / CELL);
   const sp = config.player.spawn;
   S = {
     // t is MISSION time and does not advance until the clock starts; animT is the
@@ -94,7 +98,7 @@ function init() {
     camYaw: camCfg.startYaw, camPitch: camCfg.startPitch, fp: true,
     name: "", ship: "", planet: "",
     log: [], started: false, dead: false, mouse: false, ended: false,
-    seen: new Uint8Array(GW * GW), seenCount: 0,
+    seen: new Uint8Array(GWX * GWZ), seenCount: 0,
     surveying: null, progress: 0, null_: 0, bob: 0, grassAt: -9999, knowTruth: false, shade: 0
   };
 

@@ -36,7 +36,7 @@
 
 // Multiplied by scale.
 const SCALED = [
-  "world.size", "world.chartCell",
+  "world.lengthX", "world.widthZ", "world.size", "world.chartCell",
 
   "player.spawn.x", "player.spawn.z",
 
@@ -54,35 +54,28 @@ const SCALED = [
 
   "shelter.x", "shelter.z",
 
-  // The canyon: every horizontal dimension of it, so scale 1 is the nominal
-  // 600 x 250 and any other scale is the same room at a different size.
-  // The canyon scales as a unit — HEIGHT INCLUDED, which is the one deliberate
-  // exception to "vertical never scales". The wall's steepest sustained grade is
-  // proportional to height/run, so scaling the run without the height flattens
-  // it: at scale 2 the walls fell to grade 0.52 against a 0.8 climb limit and the
-  // room stopped being a room. Scaling both keeps that ratio, and therefore the
-  // containment, identical at every scale. Everything dimensionless — the width
-  // and crest variation fractions, the talus fractions, the notch's noise-space
-  // half-width, the choke amount, the cross-fall grade, the bench shape — is
-  // scale-free already and is deliberately absent from both tables.
+  // THE PATH. Every horizontal dimension of the journey, so scale 1 is the nominal
+  // 2560 m chain and any other scale is the same journey at a different size.
   //
-  // The FLOOR's vertical detail (floorRelief, channel.depth) is NOT here, for
-  // the same reason it never was: it is surface texture on the ground you stand
-  // on, not part of the room, and a half-size world should not get half-size
-  // benches under the player's feet.
-  "terrain.canyon.length", "terrain.canyon.width", "terrain.canyon.axisWander",
-  "terrain.canyon.west.toe", "terrain.canyon.west.run", "terrain.canyon.west.height",
-  "terrain.canyon.west.buttress.run", "terrain.canyon.west.buttress.height",
-  "terrain.canyon.east.toe", "terrain.canyon.east.run", "terrain.canyon.east.height",
-  "terrain.canyon.east.buttress.run", "terrain.canyon.east.buttress.height",
-  "terrain.canyon.northEnd.run", "terrain.canyon.northEnd.height",
-  "terrain.canyon.southEnd.run", "terrain.canyon.southEnd.height",
-  "terrain.canyon.choke.start", "terrain.canyon.choke.run", "terrain.canyon.choke.leave",
-  "terrain.canyon.channel.amplitude", "terrain.canyon.channel.width",
-  "terrain.canyon.channel.secondWidth",
-  "terrain.canyon.scree.reach",
+  // The path scales as a unit — HEIGHT INCLUDED for the walls, which is the one
+  // deliberate exception to "vertical never scales". A wall's steepest sustained
+  // grade is proportional to height/run, so scaling the run without the height
+  // flattens it and the room stops being a room.
+  //
+  // The FLOOR PROFILE — every segment's sill, sillRun, drop and dropRun — scales
+  // too, and it has to scale TOGETHER or the one-way transitions stop being
+  // one-way: their whole guarantee is 1.5*drop/dropRun > maxClimbGrade, and that
+  // ratio is only preserved if both terms move. The per-segment entries are added
+  // by hand below because scale.js walks fixed paths, not arrays; pathScaledKeys()
+  // is what keeps them in step with however many segments config actually has.
+  "terrain.path.startX", "terrain.path.step", "terrain.path.blend",
+  "terrain.path.openNearEnd",
+  "terrain.path.ridgeRun", "terrain.path.ridgeLip",
+  "terrain.path.outerHalfWidth", "terrain.path.outerRun", "terrain.path.outerCrestY",
+  "terrain.path.farEnd.run", "terrain.path.farEnd.crestY",
+  "terrain.path.scree.reach",
 
-  // backdrop hills sit outside the map and must stay outside it
+  // backdrop hills sit outside the strip and must stay outside it
   "terrain.farHills.minDistance", "terrain.farHills.distanceRange",
   "terrain.farHills.minRadius", "terrain.farHills.radiusRange",
 
@@ -100,12 +93,17 @@ const SCALED = [
   "climate.dawn0", "climate.dawnVelocity"
 ];
 
+// The path's segments are an ordered array of any length, so their metre-valued
+// keys cannot be listed statically. Every one of these is horizontal or is half of
+// a grade ratio that must not change.
+const SEGMENT_SCALED = ["length", "halfWidth", "centre", "ridgeTop",
+                        "sill", "sillRun", "drop", "dropRun", "dropTail"];
+
 // Divided by scale (these are per-metre quantities).
 const INVERSE = [
   "terrain.baseFrequency", "terrain.detailFrequency",
   "terrain.palette.dustFrequency", "terrain.palette.fineFrequency", "terrain.palette.broadFrequency",
-  "terrain.canyon.widthFrequency", "terrain.canyon.crestFrequency",
-  "terrain.canyon.notch.frequency", "terrain.canyon.floorFrequency",
+  "terrain.path.outerCrestFrequency", "terrain.path.floorFrequency",
   // k is the day-side gradient in degrees per metre. nightSlope is exactly the
   // same quantity on the cold side, so it has to steepen with it — otherwise a
   // shrunk world reads the same temperature in the light and 1/scale times colder
@@ -128,7 +126,20 @@ export function applyWorldScale(config) {
   if (typeof s !== "number" || !isFinite(s) || s <= 0 || s === 1) return config;
   for (const p of SCALED) { const v = get(config, p); if (typeof v === "number") set(config, p, v * s); }
   for (const p of INVERSE) { const v = get(config, p); if (typeof v === "number") set(config, p, v / s); }
+  const segs = config.terrain && config.terrain.path && config.terrain.path.segments;
+  if (Array.isArray(segs)) for (const seg of segs)
+    for (const k of SEGMENT_SCALED) if (typeof seg[k] === "number") seg[k] *= s;
   return config;
+}
+
+// Every path key the table above touches, expanded over however many segments the
+// config actually has — so scale.test.js can assert coverage without hard-coding
+// the chain's length.
+export function pathScaledKeys(config) {
+  const segs = (config.terrain && config.terrain.path && config.terrain.path.segments) || [];
+  const out = [];
+  segs.forEach((_, i) => SEGMENT_SCALED.forEach(k => out.push(`terrain.path.segments.${i}.${k}`)));
+  return out;
 }
 
 export const SCALED_PATHS = SCALED;

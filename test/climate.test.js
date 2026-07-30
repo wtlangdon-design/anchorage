@@ -17,7 +17,8 @@ const EPS = 1e-6;
 function ok(name, cond, detail = "") { if (!cond) { failures++; console.error("  FAIL:", name, detail); } else console.log("  ok:", name); }
 function near(a, b, eps = EPS) { return Math.abs(a - b) <= eps; }
 
-const SIZE = config.world.size;
+// the world is a strip; the clock only varies along the journey, so this is lengthX
+const SIZE = config.world.lengthX || config.world.size;
 
 // 1. lostAtT agrees with tempAt: at t = lostAtT(x), x is exactly at the lethal temperature.
 for (const x of [-1700, -1300, -1000, -620, 0, 150, 430, 1200]) {

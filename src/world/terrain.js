@@ -90,52 +90,163 @@ function groundRoughness(u, v) {
 }
 
 let THREE, scene, rand, fbm, config;
-let SIZE, SEG, CY, SH;
+let LX, LZ, SEGX, SEGZ, P, SH;
+
+/* ---------------------------------------------------------------- the plan ---
+   THE PATH IS BAKED. Everything that varies along the journey — the centreline,
+   the floor's half-width, how high the rock beside it stands, the floor's own
+   elevation, how broken the ground is — is a function of x alone, and it is
+   sampled into flat typed arrays once at load. heightAt then does ONE index and
+   ONE lerp to get all five, instead of the four noise samples the crevice needed.
+   A 2560 m path therefore costs less per call than the 600 m crevice did.
+
+   The tables are the reason the chain can be an ordered list in config.json with
+   any number of segments in it: nothing at runtime loops over segments, because
+   at runtime there are no segments, only arrays. */
+let TX0 = 0, TSTEP = 1, TINV = 1, TN = 0;
+let CZ, HW, RT, BS, FR;      // centre z, half-width, ridge top, floor base, floor relief
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// Where each segment sits once the chain is laid end to end, and what the floor
+// does inside it. Exported shape is what the report and the tests read.
+function layout(pcfg){
+  const out = [];
+  let x = pcfg.startX, base = 0;
+  for(const s of pcfg.segments){
+    const sill = s.sill || 0, drop = s.drop || 0;
+    const sillRun = Math.min(s.sillRun || 0, s.length * 0.5);
+    const dropRun = Math.min(s.dropRun || 0, s.length * 0.5);
+    out.push({
+      kind: s.kind, id: s.id, character: s.character || "",
+      x0: x, x1: x + s.length, length: s.length,
+      halfWidth: s.halfWidth, centre: s.centre, ridgeTop: s.ridgeTop,
+      relief: typeof s.floorRelief === "number" ? s.floorRelief : 1,
+      baseIn: base, sill, sillRun, drop, dropRun, dropTail: s.dropTail || 0,
+      baseOut: base + sill - drop,
+      // a smoothstep's steepest slope is 1.5 * rise / run
+      upGrade: sillRun > 0 ? 1.5 * sill / sillRun : Infinity,
+      downGrade: dropRun > 0 ? 1.5 * drop / dropRun : (drop > 0 ? Infinity : 0)
+    });
+    x += s.length;
+    base += sill - drop;
+  }
+  return out;
+}
+
+// The floor's elevation inside one segment: up over the sill, flat, down the drop,
+// then flat again for dropTail metres.
+//
+// dropTail is not cosmetic. The plan's other channels — width, centreline, ridge
+// height — are BLENDED across each segment boundary over `blend` metres, and a
+// blend is a place where the corridor is changing shape. A drop inside that window
+// is a drop with a moving wall beside it, and a moving wall is a ramp. Keeping the
+// drop finished before the blend begins is what makes the one-way transitions
+// provable rather than lucky.
+function floorOf(g, x){
+  if(g.sill > 0 && g.sillRun > 0 && x < g.x0 + g.sillRun)
+    return g.baseIn + g.sill * smooth((x - g.x0) / g.sillRun);
+  if(g.drop > 0 && g.dropRun > 0){
+    const dEnd = g.x1 - g.dropTail, dStart = dEnd - g.dropRun;
+    if(x >= dEnd) return g.baseIn + g.sill - g.drop;
+    if(x > dStart) return g.baseIn + g.sill - g.drop * smooth((x - dStart) / g.dropRun);
+  }
+  return g.baseIn + g.sill;
+}
+
+function bake(pcfg, segs){
+  const half = pcfg.blend * 0.5, open = pcfg.openNearEnd || 0;
+  const first = segs[0], last = segs[segs.length - 1];
+  TX0 = first.x0 - open - pcfg.blend;
+  const x1 = last.x1 + pcfg.blend;
+  TSTEP = pcfg.step; TINV = 1 / TSTEP;
+  TN = Math.ceil((x1 - TX0) / TSTEP) + 2;
+  CZ = new Float32Array(TN); HW = new Float32Array(TN); RT = new Float32Array(TN);
+  BS = new Float32Array(TN); FR = new Float32Array(TN);
+
+  // The near end opens out to the ash: the floor widens all the way to the
+  // containment toe, so the corridor has a mouth rather than a wall and the heat
+  // can come in behind you.
+  //
+  // ridgeTop is DELIBERATELY NOT ramped to zero here, and that is not cosmetic. Let
+  // the ridge die away at the mouth and the mouth becomes an on-ramp: the flat
+  // ground outside joins the bench that lies between every ridge and the outer
+  // wall, and a flood fill walked from the mouth up onto that bench and then along
+  // it for two kilometres, over the top of every one-way drop on the path. Keeping
+  // the ridge at full height through the mouth means the only thing that changes
+  // there is the width, and the width changes fast enough (116 m over `blend`) that
+  // the ridge sweeping in is far too steep to ride.
+  const mouth = { halfWidth: pcfg.outerHalfWidth, centre: first.centre,
+                  ridgeTop: first.ridgeTop, relief: first.relief };
+
+  let k = 0;
+  for(let i = 0; i < TN; i++){
+    const x = TX0 + i * TSTEP;
+    while(k < segs.length - 1 && x >= segs[k].x1) k++;
+    const g = segs[k];
+    // blend across each boundary so nothing in the plan is a step in x — a step
+    // would be a vertical wall in the FLOOR line, and the floor line has to stay
+    // gentle enough that the ridge beside it is the only thing stopping you
+    let a = g, bseg = g, f = 0;
+    if(x < g.x0 + half){
+      a = k > 0 ? segs[k - 1] : mouth; bseg = g;
+      f = smooth(0.5 + (x - g.x0) / pcfg.blend);
+    } else if(x > g.x1 - half){
+      a = g; bseg = k < segs.length - 1 ? segs[k + 1] : g;
+      f = smooth((x - (g.x1 - half)) / pcfg.blend);
+    }
+    CZ[i] = lerp(a.centre, bseg.centre, f);
+    HW[i] = lerp(a.halfWidth, bseg.halfWidth, f);
+    RT[i] = lerp(a.ridgeTop, bseg.ridgeTop, f);
+    FR[i] = lerp(a.relief, bseg.relief, f);
+    // The floor is NOT blended: floorOf is already continuous across boundaries by
+    // construction (baseOut of one equals baseIn of the next), and blending it
+    // would soften exactly the drops that make the journey one-way.
+    BS[i] = x < first.x0 ? floorOf(first, first.x0)
+          : x > last.x1  ? floorOf(last, last.x1)
+          : floorOf(g, x);
+  }
+  return segs;
+}
+
+export function pathSegments(){ return P ? P.segs : []; }
+export function pathPlan(x){
+  let u = (x - TX0) * TINV;
+  if(u < 0) u = 0; else if(u > TN - 1) u = TN - 1;
+  const i = u | 0, j = i < TN - 1 ? i + 1 : i, f = u - i;
+  return { centre: lerp(CZ[i], CZ[j], f), halfWidth: lerp(HW[i], HW[j], f),
+           ridgeTop: lerp(RT[i], RT[j], f), floor: lerp(BS[i], BS[j], f),
+           relief: lerp(FR[i], FR[j], f) };
+}
 
 export function initTerrain(cfg, story, deps){
   THREE = deps.THREE; scene = deps.scene; rand = deps.rand; fbm = deps.fbm;
   config = cfg;
-  SIZE = config.world.size; SEG = config.world.segments;
-  const c = config.terrain.canyon;
+  const w = config.world;
+  LX = w.lengthX || w.size; LZ = w.widthZ || w.size;
+  SEGX = w.segmentsX || w.segments; SEGZ = w.segmentsZ || w.segments;
+  const c = config.terrain.path;
   const inv = v => 1 / Math.max(1e-6, v);
-  const wall = s => ({
-    toe: s.toe, invRun: inv(s.run), height: s.height,
-    talusF: s.talusFraction, talusH: s.talusHeight,
-    crestVary: s.crestVary, share: s.widthShare, notchLevel: s.notchLevel,
-    bRun: s.buttress.run, bHeight: s.buttress.height,
-    bTalusF: s.buttress.talusFraction, bTalusH: s.buttress.talusHeight,
-    bCrestVary: s.buttress.crestVary,
-    // the thickness the choke drives this buttress to: everything but `leave`
-    chokeTo: s.toe - c.choke.leave
-  });
-  const end = s => ({
-    invRun: inv(s.run), height: s.height,
-    talusF: s.talusFraction, talusH: s.talusHeight, rough: s.roughness
-  });
-  // precomputed once so heightAt does no config lookups, no divisions and no
-  // property walks. Every reciprocal in here is a division heightAt does not do.
-  CY = {
-    halfL: c.length / 2,
-    widthF: c.widthFrequency, widthOct: c.widthOctaves,
-    widthVary: c.widthVary, widthGain: c.widthGain,
-    axisWander: c.axisWander,
-    crestF: c.crestFrequency, crestGain: c.crestGain,
-    notchF: c.notch.frequency, notchGain: c.notch.gain,
-    invNotchHalf: inv(c.notch.halfWidth), notchDepth: c.notch.depth,
-    chokeStart: c.choke.start, invChokeRun: inv(c.choke.run),
-    wallW: wall(c.west), wallE: wall(c.east),
-    endN: end(c.northEnd), endS: end(c.southEnd),
+  const segs = layout(c);
+  bake(c, segs);
+  P = {
+    segs,
+    startX: segs[0].x0, endX: segs[segs.length - 1].x1,
+    invRidgeRun: inv(c.ridgeRun), ridgeLip: c.ridgeLip,
+    outerToe: c.outerHalfWidth, invOuterRun: inv(c.outerRun),
+    outerY: c.outerCrestY, outerVary: c.outerCrestVary,
+    outerF: c.outerCrestFrequency, outerGain: c.outerCrestGain,
+    outerTF: c.outerTalusFraction, outerTH: c.outerTalusHeight,
+    endInvRun: inv(c.farEnd.run), endY: c.farEnd.crestY,
+    endTF: c.farEnd.talusFraction, endTH: c.farEnd.talusHeight, endRough: c.farEnd.roughness,
     floorF: c.floorFrequency, floorRelief: c.floorRelief, floorOct: c.floorOctaves,
-    crossFall: c.crossFall, benchSteps: c.benchSteps, invBenchEdge: inv(c.benchEdge),
-    chanAmp: c.channel.amplitude, invChanW: inv(c.channel.width),
-    chanDepth: c.channel.depth, chanSplit: c.channel.splitOffset,
-    invChanW2: inv(c.channel.secondWidth), chanDepth2: c.channel.depth * c.channel.secondDepth
+    crossFall: c.crossFall, benchSteps: c.benchSteps, invBenchEdge: inv(c.benchEdge)
   };
   const cl = config.climate;
   SH = {
     samples: cl.shadeSamples, step: cl.shadeStepMetres,
     soft: Math.max(0.001, cl.shadeSoftnessMetres),
-    // the sun sits at +x (west) at this elevation, so a ray toward it climbs by
+    // the sun sits at +x at this elevation, so a ray toward it climbs by
     // tan(elevation) for every metre travelled in +x
     tan: Math.tan((config.world.sunElevationDeg || 0) * Math.PI / 180)
   };
@@ -204,131 +315,96 @@ function terrace(t, n, invEdge){
   return (i + f * f * (3 - 2 * f)) / n;
 }
 
-// The canyon.
+// THE PATH.
 //
-// It runs north-south — along z — because the dawn line sweeps west along x, so
-// this way the heat crosses the crevice's width (nominally 250 m, in practice
-// anywhere from about 130 to 350) instead of running the length of it. That is
-// the whole reason for the orientation: it makes the west wall the last cover on
-// the map, since the lethal edge arrives from the east (low x) and the sun sits
-// at +x, throwing that wall's shadow back across the floor.
+// A corridor along x, walked in +x, because that is the only direction that stays
+// ahead of the heat: dawnX rises with t, tempAt puts the heat behind the dawn line
+// at low x, and lostAtT(x) buys fifty seconds for every hundred metres of +x.
 //
-// TWO LAYERS, and the split between them is the whole design.
+// TWO LAYERS, and the split between them is load-bearing.
 //
-//   the OUTER wall keeps you in. Its toe line is a STRAIGHT LINE IN X — west.toe
-//   and east.toe — and nothing is allowed to make it depend on z. Its crest
-//   height varies freely, because height variation along a fixed line cannot
-//   change where the steep part starts.
+//   the OUTER wall contains you. Its toe is a straight line at |z| = outerToe and
+//   NOTHING may make it depend on x. A wall line that moves in the direction of
+//   travel is a diagonal ramp: stand still on the face while the line slides under
+//   you and the grade you feel is the wall's own grade times how fast the line
+//   moves, and about 0.03 m of drift per metre is already a walkable 0.2. That was
+//   measured, twice, by a flood fill walking out of two earlier worlds. Its crest
+//   is an ABSOLUTE elevation, so as the floor steps down the wall gets taller.
 //
-//   the BUTTRESS in front of it carries every irregular thing: the pinching and
-//   opening, the notches, the wandering axis, the choke at the south end. It is
-//   capped in height, and its OUTER edge is pinned to the outer wall's toe, so
-//   riding it up gets you a ledge and never a way past the face behind it.
+//   the INNER RIDGE is everything you see: the chamber walls, the pass throats,
+//   the lateral offsets that stop you seeing the next chamber. Its plan wanders
+//   freely and it is capped in height, so the worst a player can do by riding it
+//   is stand on top of a ridge inside the box.
 //
-// WHY, because it is not obvious and it was measured. A wall line that moves in
-// x as you walk along z is a diagonal ramp, and the square-root face does NOT
-// stop it. Stand still on the wall while the line slides sideways under you and
-// the grade you feel is the wall's own grade times how fast the line moves —
-// about 0.03 m of drift per metre of length is enough to make that a walkable
-// 0.2. A flood fill under the controller's own walkable() test walked straight
-// out of an earlier version of this crevice on exactly that route: onto the east
-// scree at 15 m, a hundred metres north at a fixed x while the wall swept under
-// it, and over the crest at 48 m without ever climbing anything. The toe pin is
-// what buys the irregularity back.
+// ONE-WAY BY GROUND, and by nothing else. The floor's elevation is part of the
+// baked plan, and where a segment's drop is steep enough that 1.5*drop/dropRun
+// exceeds player.maxClimbGrade, that transition can be walked down and not back
+// up. No script, no animation, no invisible wall. The sill in front of each drop
+// does the other half of the job: it hides the next chamber's floor from this one.
 //
-// Called thousands of times a frame. FOUR noise samples on the floor, five under
-// an end. Everything else is arithmetic, and every field below is a function of
-// z alone and read once, which is why three separate features can ride each one.
+// Called thousands of times a frame, and it is CHEAPER than the crevice was: one
+// table index and one lerp give the centreline, the width, the ridge height, the
+// floor and the local roughness. The only noise on the floor is the floor's own
+// relief; the outer wall's crest costs a second sample, and only within its run.
 export function heightAt(x, z){
-  // ---- the three fields ---------------------------------------------------
-  //   wv  width: 3 octaves, so the crevice pinches and opens on several scales
-  //       at once and never settles into a period the eye can follow.
-  //   cv  the slow field: the west crest line, the axis wander and the channel's
-  //       course all ride it. One sample, three jobs.
-  //   nv  notches: one octave, read at a different LEVEL on each wall so the two
-  //       sides never notch at the same z, and so there is no list to loop over.
-  // The gains are there because this fbm swings about +/-0.28, not +/-1; they
-  // bring each field up to full range so the clamps below are real bounds.
-  const wv = clampS(fbm(z * CY.widthF, 5.1, CY.widthOct) * CY.widthGain);
-  const cv = clampS(fbm(0.37, z * CY.crestF, 2) * CY.crestGain);
-  const nv = clampS(fbm(z * CY.notchF, 71.3, 1) * CY.notchGain);
+  // ---- the plan, straight out of the baked tables --------------------------
+  let u = (x - TX0) * TINV;
+  if(u < 0) u = 0; else if(u > TN - 1) u = TN - 1;
+  const i = u | 0, j = i < TN - 1 ? i + 1 : i, f = u - i;
+  const cz   = CZ[i] + (CZ[j] - CZ[i]) * f;
+  const hw   = HW[i] + (HW[j] - HW[i]) * f;
+  const rt   = RT[i] + (RT[j] - RT[i]) * f;
+  const base = BS[i] + (BS[j] - BS[i]) * f;
 
-  const W = x >= 0 ? CY.wallW : CY.wallE;        // +x is west: the wall that shades
-  const ax = x >= 0 ? x : -x;
+  // ---- the inner ridge: the wall of whatever chamber or pass this is -------
+  // THE LIP is the whole containment argument, so it is worth being clear about.
+  // Everything else in the plan drifts along the journey — the width, the
+  // centreline, the ridge's own height — and a drifting wall beside a floor is a
+  // staircase: whatever slope the wall has, the grade the player feels while
+  // standing still is that slope times how fast the wall moves, and there is always
+  // somewhere the product falls under maxClimbGrade. A flood fill found three
+  // separate versions of that route. The lip closes it by being a DISCONTINUITY:
+  // the ground jumps by ridgeLip the instant you pass the floor's edge, so the
+  // grade of that step is ridgeLip/stride whatever the stride is, and the smaller
+  // the step the more steeply it is refused. Nothing that drifts can soften it.
+  const az = z >= cz ? z - cz : cz - z;
+  const rt2 = (az - hw) * P.invRidgeRun;
+  const rf = rt2 > 0 ? (rt2 >= 1 ? 1 : Math.sqrt(rt2)) : 0;
+  let h = base + (rt2 > 0 ? P.ridgeLip + rf * rt : 0);
 
-  // ---- the buttress: everything irregular, capped in height ----------------
-  // Its thickness is what the width field actually swings. A notch is simply the
-  // buttress going missing, so the floor runs back to the foot of the main cliff
-  // and dead-ends against it. The choke is the buttresses swelling until they
-  // nearly meet.
-  const nr = sat(1 - Math.abs(nv - W.notchLevel) * CY.invNotchHalf);
-  const notch = nr * nr * (3 - 2 * nr);
-  const ck = sat((z - CY.chokeStart) * CY.invChokeRun);
-  let thick = W.bRun * (1 + CY.widthVary * wv * W.share) * (1 - CY.notchDepth * notch);
-  // the choke LERPS the thickness to "everything but `leave` metres of floor",
-  // rather than adding to it — added, a wide place at the south end would close
-  // past the axis and the floor would come out negative
-  thick += (W.chokeTo - thick) * ck * ck * (3 - 2 * ck);
-  if(thick < 4) thick = 4;                       // never divide by nothing
-  // the axis wander slides the buttress bodily, inner and outer edge together
-  const axb = ax - (x >= 0 ? CY.axisWander * cv : -CY.axisWander * cv);
-  const bf = face(1 - (W.toe - axb) / thick, W.bTalusF, W.bTalusH);
-  const bh = W.bHeight * (1 + W.bCrestVary * (W === CY.wallW ? wv : cv));
+  // ---- the outer wall: fixed toe, absolute crest, stacked on the ridge -----
+  // Stacked and not maxed, for the reason the crevice learned the hard way: a max
+  // leaves the ridge's top standing proud past the outer toe as a flat shelf, and
+  // a shelf lets the face above it be started part-way up.
+  const azo = z >= 0 ? z : -z;
+  const ot = sat((azo - P.outerToe) * P.invOuterRun);
+  if(ot > 0){
+    const crest = P.outerY * (1 + P.outerVary *
+      clampS(fbm(x * P.outerF, 0.31, 2) * P.outerGain));
+    const top = base + rt;
+    if(crest > top) h += face(ot, P.outerTF, P.outerTH) * (crest - top);
+  }
 
-  // ---- the outer wall: fixed toe, free crest, and it rises FROM the buttress -
-  // Not max(buttress, wall) — STACKED. Taking the max leaves the buttress's top
-  // standing proud past the outer toe as a flat shelf, and a shelf is a way to
-  // start the face above it from twenty-nine metres up instead of from the
-  // floor. The flood fill found exactly that at the south end and walked out
-  // over it. Stacked, the outer face begins at whatever the buttress left and
-  // ends at the crest, so there is no shelf anywhere and no height the player
-  // can bring to the face that the face did not already account for.
-  const ot = sat((ax - W.toe) * W.invRun);
-  // The crest is not level — it rises and falls along the crevice, which is what
-  // gives the shadow it throws a shape instead of a straight edge. The two walls
-  // read different combinations of the two slow fields, so they do not rise and
-  // fall together. Clamped above, so the lowest possible crest is
-  // height*(1-crestVary) and the wall is unclimbable by construction rather than
-  // by luck.
-  const crest = W.height * (1 + W.crestVary * (W === CY.wallW ? cv : (wv - cv) * 0.5));
-  let h = bf * bh + face(ot, W.talusF, W.talusH) * (crest - bh);
-  const w = bf;                                  // how far into rock we are, 0..1
-
-  // ---- the ends, which do not match ---------------------------------------
-  // North is the collapse: a lumpy heap, and props.js piles boulders on it.
-  // South is the smooth narrowing the choke above has already begun. Same
-  // result, different cause. The face underneath is what actually stops you.
-  //
-  // Stacked for the same reason the outer wall is: the end LIFTS whatever is
-  // already here up towards its own crest rather than replacing it, so arriving
-  // at the end along the top of a buttress does not skip the part of the face
-  // that does the blocking. Where the wall is already higher than the end, the
-  // end does nothing.
-  const E = z < 0 ? CY.endN : CY.endS;
-  const et = sat((Math.abs(z) - CY.halfL) * E.invRun);
+  // ---- the far end: closed. The near end is open to the ash. --------------
+  const et = sat((x - P.endX) * P.endInvRun);
   if(et > 0){
-    const lump = E.rough > 0 ? 1 + E.rough * fbm(x * 0.02, 4.7, 2) : 1;
-    const top = E.height * lump;
-    if(top > h) h += (top - h) * face(et, E.talusF, E.talusH);
+    const lump = 1 + P.endRough * fbm(z * 0.02, 7.3, 2);
+    const top = P.endY * lump;
+    if(top > h) h += (top - h) * face(et, P.endTF, P.endTH);
   }
 
   // ---- the floor ----------------------------------------------------------
-  const fm = 1 - w * 0.75;                       // all of it fades into the wall
-  // cross-fall: never level across its width, and the direction it tips reverses
-  // along the length. Rides the width field, so it costs nothing.
-  h += CY.crossFall * x * wv * fm;
-  // a braided channel, two threads, wandering on the slow field. Parabolic, not
-  // a cusp: flat along its own bed, steepest on the banks, nowhere steep enough
-  // to be an obstacle.
-  const chx = CY.chanAmp * cv;
-  const u1 = (x - chx) * CY.invChanW, q1 = 1 - u1 * u1;
-  const u2 = (x + chx * CY.chanSplit) * CY.invChanW2, q2 = 1 - u2 * u2;
-  let cut = q1 > 0 ? q1 * q1 * CY.chanDepth : 0;
-  if(q2 > 0){ const c2 = q2 * q2 * CY.chanDepth2; if(c2 > cut) cut = c2; }
-  h -= cut * fm;
-  // relief, terraced into low benches — the harder beds left standing
-  const fr = fbm(x * CY.floorF, z * CY.floorF, CY.floorOct);
-  h += (terrace(fr * 0.5 + 0.5, CY.benchSteps, CY.invBenchEdge) * 2 - 1) * CY.floorRelief * fm;
+  // Nothing but the floor gets floor detail. Letting it bleed up the ridge would
+  // put a couple of metres of relief right where the lip is trying to be exactly
+  // ridgeLip tall, and a metre of favourable relief is a metre off the lip.
+  const fm = rt2 > 0 ? 0 : (FR[i] + (FR[j] - FR[i]) * f);
+  if(fm > 0.001){
+    // never level across the corridor, and which way it tips follows the plan's
+    // own wander, so it costs nothing
+    h += P.crossFall * (z - cz) * fm;
+    const fr = fbm(x * P.floorF, z * P.floorF, P.floorOct);
+    h += (terrace(fr * 0.5 + 0.5, P.benchSteps, P.invBenchEdge) * 2 - 1) * P.floorRelief * fm;
+  }
   return h;
 }
 
@@ -352,7 +428,9 @@ export function heightAt(x, z){
 // small enough that a 512 map still gives ~4 cm texels.
 export function buildTerrain(){
   const P=config.terrain.palette, D=P.slopeSampleDistance;
-  const geo=new THREE.PlaneGeometry(SIZE,SIZE,SEG,SEG);geo.rotateX(-Math.PI/2);
+  // A STRIP, not a square: the world is 2800 x 460 now. PlaneGeometry's second
+  // dimension becomes z after the rotateX, so widthZ is the height argument.
+  const geo=new THREE.PlaneGeometry(LX,LZ,SEGX,SEGZ);geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position,col=[];
   for(let i=0;i<pos.count;i++){
     const x=pos.getX(i),z=pos.getZ(i),y=heightAt(x,z);pos.setY(i,y);
@@ -377,13 +455,14 @@ export function buildTerrain(){
   geo.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
   geo.computeVertexNormals();
 
-  // PlaneGeometry UVs run 0..1 across the whole SIZE, so the repeat count is the
-  // number of tiles across the map: world.size / tileMetres.
-  const rep = SIZE / TUNING.tileMetres;
+  // PlaneGeometry UVs run 0..1 across each dimension, so on a strip the two repeat
+  // counts differ — one tile per tileMetres in BOTH directions, or the ground's
+  // grain would be stretched six times longer along the corridor than across it.
+  const repX = LX / TUNING.tileMetres, repZ = LZ / TUNING.tileMetres;
   const normalMap = tex.normalTexture("groundNormal", tex.sizeFor("groundNormal", 512),
-    groundHeight, TUNING.normalStrength, { repeat: [rep, rep] });
+    groundHeight, TUNING.normalStrength, { repeat: [repX, repZ] });
   const roughnessMap = tex.texture("groundRough", tex.sizeFor("groundRough", 256),
-    size => tex.greyPixels(size, groundRoughness), { repeat: [rep, rep] });
+    size => tex.greyPixels(size, groundRoughness), { repeat: [repX, repZ] });
 
   const mat = new THREE.MeshStandardMaterial({
     vertexColors: true,

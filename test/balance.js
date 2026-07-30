@@ -188,19 +188,25 @@ if (allSprint.best === all.length) {
 }
 
 // ---- THE CLOCK, as the player actually meets it ---------------------------
-// Site reachability stopped being the interesting number the moment the world
-// became a 600 m room: everything is a short walk away. What bites now is the
-// ground itself. The dawn line crosses the canyon from the east, the west wall
-// throws shade back across the floor, and the survivable floor becomes a stripe
-// that narrows against that wall. This measures the stripe.
+// The world is a 2560 m corridor walked in one direction now, so the dawn line no
+// longer crosses it — it runs ALONG it, eating the path from behind. The samples
+// below are the real corridor floor, taken from terrain.js's baked plan, and the
+// percentages are what fraction of the whole journey is still standable.
+//
+// PHASE 2 REWRITES THIS FILE for the linear route: per-finding detour distances,
+// what each detour costs, and how many of the six can actually be taken. What is
+// here is the crevice-era analysis pointed at the new ground so it still runs.
 {
-  const CY = config.terrain.canyon, suit = config.suit;
-  const halfW = CY.width / 2, halfL = CY.length / 2;
+  const suit = config.suit;
+  const segs = terrain.pathSegments();
   const sample = [];
-  for (let z = -halfL + 20; z <= halfL - 20; z += 20)
-    for (let x = -halfW + 5; x <= halfW - 5; x += 5) sample.push([x, z, shadeAt(x, z)]);
+  for (let x = segs[0].x0 + 10; x <= segs[segs.length - 1].x1 - 10; x += 10) {
+    const p = terrain.pathPlan(x);
+    for (let f = -0.85; f <= 0.85; f += 0.34)
+      sample.push([x, p.centre + f * p.halfWidth, shadeAt(x, p.centre + f * p.halfWidth)]);
+  }
   const shadedFrac = sample.filter(p => p[2] > 0.5).length / sample.length;
-  console.log(`\n  THE FLOOR: ${sample.length} sample points, ${(100 * shadedFrac).toFixed(0)}% of it in the west wall's shade`);
+  console.log(`\n  THE FLOOR: ${sample.length} points along the corridor, ${(100 * shadedFrac).toFixed(0)}% of it shaded`);
   console.log(`  survivable floor over time (below ${suit.heatDamageThreshold} C = no suit damage; below ${LETHAL} C = ground not lost):`);
   let firstBite = null, firstForced = null, allGone = null;
   for (let t = 600; t <= 2600; t += 100) {
@@ -212,11 +218,31 @@ if (allSprint.best === all.length) {
     if (t % 200 === 0)
       console.log(`     t=${String(t).padStart(4)}s   ${(100 * safe).toFixed(0).padStart(3)}% comfortable   ${(100 * alive).toFixed(0).padStart(3)}% survivable`);
   }
-  console.log(`\n  the floor first starts burning at t=${firstBite}s`);
-  console.log(`  over half of it is gone by t=${firstForced}s — from here the shade is not optional`);
+  console.log(`\n  the corridor first starts burning at t=${firstBite}s`);
+  console.log(`  over half of it is gone by t=${firstForced}s`);
   console.log(`  the last of it goes at t=${allGone === null ? ">2600" : allGone}s`);
-  ok("there is a window where the floor is comfortable everywhere", firstBite !== null && firstBite > 600);
-  ok("the heat eventually forces the player into the shade", firstForced !== null, "never forced");
+  // NOT "comfortable everywhere". The corridor now runs ALONG the thermal gradient
+  // instead of across it, so its two ends are 2560 m apart in temperature and there
+  // is no instant at which the whole thing is comfortable — the near end is already
+  // cooking while the far end is still frozen. That is the shape working, not a
+  // failure. What has to be true is the local statement: the ground where the player
+  // is standing when the clock starts is not yet hurting them.
+  {
+    const here = tempAt(origin.x, 0, shadeAt(origin.x, origin.z));
+    console.log(`  ground at ${originName} when the clock starts: ${here.toFixed(0)} C ` +
+                `(suit takes damage above ${suit.heatDamageThreshold})`);
+    ok("the ground where the clock starts is not already hurting you",
+       here < suit.heatDamageThreshold, `${here.toFixed(0)} C`);
+  }
+  // and the front sweeps the whole journey, so every metre of it is taken eventually
+  {
+    const x0 = segs[0].x0, x1 = segs[segs.length - 1].x1;
+    const near = lostAtT(x0, 0), far = lostAtT(x1, 0);
+    console.log(`  the lethal edge reaches the near end at t=${near.toFixed(0)}s ` +
+                `and the far end at t=${far.toFixed(0)}s — ${(far - near).toFixed(0)}s of journey`);
+    ok("the heat eats the whole corridor from behind", far > near && isFinite(far));
+  }
+  ok("the heat eventually forces the player forward", firstForced !== null, "never forced");
   ok("shaded ground outlasts open ground by a wide margin",
      lostAtT(0, 1) > lostAtT(0, 0) * 1.5,
      `open ${lostAtT(0, 0).toFixed(0)}s vs shaded ${lostAtT(0, 1).toFixed(0)}s`);
