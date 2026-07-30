@@ -1039,6 +1039,6 @@
     "emissiveStrength": 0.42,
     "_emissiveNote": "Foliage is flat planes with one horizontal normal and the ground decals lie flat, so under a low raking sun they receive almost no diffuse light and render black. A little self-illumination is what makes the jungle readable at all; it is also how leaves actually behave. Lower it if the jungle looks flat or glowing, raise it if it goes dark."
   },
-  "buildStamp": "BUILD 07-30 #14 · no custom shader",
+  "buildStamp": "BUILD 07-30 #15 · leaf shapes",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

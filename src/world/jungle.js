@@ -1,3 +1,5 @@
+import * as tex from "./textures.js?v=15";
+
 // world/jungle.js — what fills the trail.
 //
 // The habitable band is 300 km of twilight sweeping west. Water arrives at dawn and
@@ -145,8 +147,71 @@ function tintByHeight(geo, baseHex, tipHex){
   return geo;
 }
 
-function foliageMaterial(baseHex){
+// Flat quads read as pale cardboard slabs. An alpha mask cut into the quad is what
+// turns a rectangle into a leaf, and it is the single technique that separates
+// "green blocks" from "foliage". Painted in code, no asset files.
+function addPlanarUVs(geo){
+  if(geo.getAttribute("uv")) return geo;
+  const p = geo.getAttribute("position");
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for(let i = 0; i < p.count; i++){
+    const x = p.getX(i), y = p.getY(i);
+    if(x < x0) x0 = x; if(x > x1) x1 = x;
+    if(y < y0) y0 = y; if(y > y1) y1 = y;
+  }
+  const sx = Math.max(1e-6, x1 - x0), sy = Math.max(1e-6, y1 - y0), uv = [];
+  for(let i = 0; i < p.count; i++)
+    uv.push((p.getX(i) - x0) / sx, (p.getY(i) - y0) / sy);
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  return geo;
+}
+
+// A frond: central rib, leaflets stepping out and shortening toward the tip.
+function frondMask(){
+  return tex.texture("frond", tex.sizeFor("frond", 128), (size) => tex.fillPixels(size, (x, y, a, i) => {
+      const u = x / size, v = y / size;            // v=0 base, v=1 tip
+      const dx = Math.abs(u - 0.5);
+      const taper = Math.pow(1 - v, 0.55);          // narrows toward the tip
+      const rib = dx < 0.035 * taper + 0.008;
+      // leaflets: a comb along the rib, alternating, shrinking with height
+      const comb = Math.abs(Math.sin((v * 26 + (u > 0.5 ? 0.5 : 0)) * Math.PI));
+      const reach = 0.42 * taper * (0.45 + 0.55 * comb);
+      const leaf = dx < reach && v < 0.985;
+      const on = rib || leaf;
+      a[i] = a[i + 1] = a[i + 2] = 255;
+      a[i + 3] = on ? 255 : 0;
+    }), { srgb: false });
+}
+
+// A canopy crown seen from below: dense in the middle, ragged at the rim.
+function crownMask(){
+  return tex.texture("crown", tex.sizeFor("crown", 128), (size) => tex.fillPixels(size, (x, y, a, i) => {
+      const u = x / size, v = y / size;
+      const dx = u - 0.5, dy = v - 0.5;
+      const r = Math.hypot(dx, dy) * 2;
+      const ang = Math.atan2(dy, dx);
+      const ragged = 0.78 + 0.20 * Math.sin(ang * 7) + 0.10 * Math.sin(ang * 17 + 1.3);
+      const gap = tex.fbmTile(u * 6, v * 6, 6, 3, 21) > 0.72;   // holes to see sky through
+      a[i] = a[i + 1] = a[i + 2] = 255;
+      a[i + 3] = (r < ragged && !gap) ? 255 : 0;
+    }), { srgb: false });
+}
+
+// Scattered fallen leaves, so the ground decals are not solid plates.
+function litterMask(){
+  return tex.texture("litterleaves", tex.sizeFor("litterleaves", 128), (size) => tex.fillPixels(size, (x, y, a, i) => {
+      const u = x / size, v = y / size;
+      const n = tex.fbmTile(u * 5, v * 5, 5, 3, 7);
+      a[i] = a[i + 1] = a[i + 2] = 255;
+      a[i + 3] = n > 0.52 ? 255 : 0;
+    }), { srgb: false });
+}
+
+function foliageMaterial(baseHex, mask){
   const m = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  // alphaTest, not transparent: no sorting cost, no blend order bugs, and it cuts a
+  // leaf silhouette out of the quad instead of leaving a solid slab.
+  if(mask){ m.map = mask; m.alphaTest = 0.45; }
   // Foliage is flat planes with one horizontal normal; under a raking sun they take
   // almost no diffuse light. A little self-illumination is what makes a jungle read,
   // and it is also how leaves behave.
@@ -262,8 +327,8 @@ export function buildJungle(){
                sx: U.minRadius + r3 * U.radiusRange, sy: h };
     });
     counts.understory = list.length;
-    build("understory", tintByHeight(frondGeometry(), U.colour, U.tipColour),
-      foliageMaterial(U.colour), list, false);
+    build("understory", addPlanarUVs(tintByHeight(frondGeometry(), U.colour, U.tipColour)),
+      foliageMaterial(U.colour, frondMask()), list, false);
   }
 
   // 2. trunks, out in the growth beyond the understory
@@ -280,7 +345,7 @@ export function buildJungle(){
     });
     counts.trunk = list.length;
     build("trunk", tintByHeight(trunkGeometry(), Tk.colour, Tk.colour),
-      foliageMaterial(Tk.colour), list, true);
+      foliageMaterial(Tk.colour, null), list, true);
   }
 
   // 3. the canopy. Its density follows the segment's own canopy value, so a clearing
@@ -297,8 +362,8 @@ export function buildJungle(){
                sx: C.minRadius + r4 * C.radiusRange, sy: -(h * 0.42) };
     });
     counts.canopy = list.length;
-    build("canopy", tintByHeight(crownGeometry(), C.colour, C.tipColour),
-      foliageMaterial(C.colour), list, true);
+    build("canopy", addPlanarUVs(tintByHeight(crownGeometry(), C.colour, C.tipColour)),
+      foliageMaterial(C.colour, crownMask()), list, true);
   }
 
   // 4. ferns, on the trail itself — the only layer the player walks through
@@ -310,8 +375,8 @@ export function buildJungle(){
       return { x, z, y: heightAt(x, z) - 0.05, rotY: r3 * 6.28, sx: s, sy: s * (1.3 + r4 * 0.9) };
     });
     counts.fern = list.length;
-    build("fern", tintByHeight(frondGeometry(), F.colour, F.tipColour),
-      foliageMaterial(F.colour), list, false);
+    build("fern", addPlanarUVs(tintByHeight(frondGeometry(), F.colour, F.tipColour)),
+      foliageMaterial(F.colour, frondMask()), list, false);
   }
 
   // 5. litter, flat on the trail
@@ -323,8 +388,8 @@ export function buildJungle(){
       return { x, z, y: heightAt(x, z) + 0.03, rotY: r3 * 6.28, sx: s * (1 + r4), sy: s };
     });
     counts.litter = list.length;
-    build("litter", tintByHeight(litterGeometry(), L.colour, L.colour),
-      foliageMaterial(L.colour), list, false);
+    build("litter", addPlanarUVs(tintByHeight(litterGeometry(), L.colour, L.colour)),
+      foliageMaterial(L.colour, litterMask()), list, false);
   }
 
   // 6. standing water, in the low ground. Not growth, so it gets no growth shader —

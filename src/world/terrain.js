@@ -24,7 +24,7 @@
 //     shader chunk is `#elif defined( USE_BUMPMAP )`. So there is no second normal
 //     slot to put a larger-scale relief in. See the note above buildTerrain.
 
-import * as tex from "./textures.js?v=14";
+import * as tex from "./textures.js?v=15";
 
 // TODO(lead): lift into config.json (suggested home: terrain.surface).
 // Nothing here touches the world PRNG: `seed` below is the texture hash's seed,
