@@ -203,12 +203,17 @@ function bake(pcfg, segs){
     // would be a vertical wall in the FLOOR line, and the floor line has to stay
     // gentle enough that the ridge beside it is the only thing stopping you
     let a = g, bseg = g, f = 0;
+    // A blend factor OUTSIDE 0..1 does not interpolate, it extrapolates. Before the
+    // first segment (x - g.x0) is negative and unbounded, which drove f far negative
+    // and made lerp() return absurd values: halfWidth came out as -12388 at the head
+    // of the table, and every jungle instance placed there landed 12 km sideways.
+    const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
     if(x < g.x0 + half){
       a = k > 0 ? segs[k - 1] : mouth; bseg = g;
-      f = smooth(0.5 + (x - g.x0) / pcfg.blend);
+      f = clamp01(smooth(clamp01(0.5 + (x - g.x0) / pcfg.blend)));
     } else if(x > g.x1 - half){
       a = g; bseg = k < segs.length - 1 ? segs[k + 1] : g;
-      f = smooth((x - (g.x1 - half)) / pcfg.blend);
+      f = clamp01(smooth(clamp01((x - (g.x1 - half)) / pcfg.blend)));
     }
     CZ[i] = lerp(a.centre, bseg.centre, f);
     CN[i] = lerp(a.canopy === undefined ? 0 : a.canopy, bseg.canopy === undefined ? 0 : bseg.canopy, f);

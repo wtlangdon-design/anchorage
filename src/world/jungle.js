@@ -207,6 +207,16 @@ function place(count, pick){
 }
 
 function build(name, geo, mat, list, cast){
+  // One central bound for every layer. Previously only the trunk layer checked its
+  // z at all, and it checked against the world's LENGTH instead of its half-width,
+  // so four of the six layers could be placed outside the walls the player stands
+  // between — or off the terrain entirely. Anything non-finite is dropped too: a NaN
+  // in an instance matrix silently kills the whole draw call, not just that instance.
+  const limit = LZ;
+  list = list.filter(o => o
+    && Number.isFinite(o.x) && Number.isFinite(o.y) && Number.isFinite(o.z)
+    && Number.isFinite(o.sx) && Number.isFinite(o.sy)
+    && Math.abs(o.z) <= limit);
   const im = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length));
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(),
         v = new THREE.Vector3(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);

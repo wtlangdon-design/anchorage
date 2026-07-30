@@ -14,6 +14,13 @@ let fpsEl = null;
 
 export function initHud(cfg, storyArg, deps){
   config = cfg; story = storyArg;
+  // The stamp used to live in the manifest footer, which is hidden until the manifest
+  // is granted — so during the whole opening there was no way to tell which build was
+  // on screen. It goes in the readout panel instead, which is visible from frame one.
+  {
+    const el = document.getElementById("buildstamp");
+    if(el && cfg.buildStamp) el.textContent = cfg.buildStamp;
+  }
   S = deps.S; manifest = deps.manifest; storyMod = deps.storyMod;
   dawnX = deps.dawnX; tempAt = deps.tempAt; lostAtT = deps.lostAtT;
 
@@ -120,14 +127,8 @@ export function renderManifest(){
 
   const got = list.filter(c => c.done).length, lost = list.filter(c => c.lost && !c.done).length;
   const lostStr = lost ? story.ui.manifestLostTemplate.replace("{n}", lost) : "";
-  // The build stamp lives here because this line stays visible even when the
-  // manifest is collapsed on a phone. It is the only way to tell at a glance
-  // whether the browser served a cached copy of the game.
-  const stamp = config.buildStamp
-    ? `<span style="display:block;opacity:.32;font-size:8px;letter-spacing:.1em;margin-top:4px">${config.buildStamp}</span>`
-    : "";
   document.getElementById("tasknote").innerHTML =
-    story.ui.manifestNoteTemplate.replace("{done}", got).replace("{lost}", lostStr) + stamp;
+    story.ui.manifestNoteTemplate.replace("{done}", got).replace("{lost}", lostStr);
 }
 
 /* ---------- gauges ---------- */
