@@ -371,4 +371,4 @@ export function applyDowngrade(mult){
   for(const l of layers) l.mesh.count = Math.max(1, Math.floor(l.full * _m));
 }
 
-export function stats(){ return { layers: layers.map(l => ({ name: l.name, count: l.full })), placed: PLACED }; }
+export function stats(){ return { layers: layers.map(l => ({ name: l.name, count: l.full, uuid: l.mesh.uuid })), placed: PLACED }; }

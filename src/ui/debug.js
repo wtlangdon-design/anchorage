@@ -78,7 +78,10 @@ function render(){
       near = isFinite(best) ? best.toFixed(0) + "m" : "-";
       nearY = "  y=" + by.toFixed(1);
     }
-    const name = (st && st.layers[i] && st.layers[i].name) || ("mesh" + i);
+    // match by uuid: scene traversal order is NOT the order layers were built, and
+    // labelling by index silently mislabels every row.
+    const hit = st && st.layers.find(l => l.uuid === o.uuid);
+    const name = hit ? hit.name : ("other" + i);
     L.push("  " + name.padEnd(11) +
       " n=" + String(o.count).padStart(5) +
       " v=" + String(pos ? pos.count : 0).padStart(3) +

@@ -901,9 +901,9 @@
     "_lightNote": "One warm key (the fixed low sun) and two cool fills. Keeping the key warm and the fills cool is what gives the ground shape; making them the same colour flattens it.",
     "sunColour": "0xffe3b0",
     "sunIntensity": 2.9,
-    "hemisphereSky": "0x54703f",
-    "hemisphereGround": "0x1b2413",
-    "hemisphereIntensity": 0.55,
+    "hemisphereSky": "0x86a06e",
+    "hemisphereGround": "0x2e2a1c",
+    "hemisphereIntensity": 0.85,
     "bounceColour": "0x4e6b3a",
     "bounceIntensity": 0.34,
     "dustCount": 2600,
@@ -966,8 +966,8 @@
       "radiusRange": 4.5,
       "spread": 26,
       "lean": 0.22,
-      "colour": "0x3d5c28",
-      "tipColour": "0x6f8f3c",
+      "colour": "0x78A858",
+      "tipColour": "0xC6F777",
       "_spreadNote": "spread is how far off the trail centreline the canopy may sit, doubled. It was 150, which put the roof at |z| ~ 143 — on top of the outer walls at |z| 140, not over the trail. Keep it near the trail width or there is no roof and no shade."
     },
     "trunk": {
@@ -978,7 +978,7 @@
       "radiusRange": 0.5,
       "spread": 34,
       "lean": 0.1,
-      "colour": "0x4a3f2e",
+      "colour": "0x89785F",
       "_spreadNote": "How far beyond the trail edge trunks may stand. Was 150, which threw them past the terrain edge at |z| 170 entirely."
     },
     "understory": {
@@ -989,23 +989,23 @@
       "radiusRange": 1.6,
       "bandInner": 0.2,
       "bandOuter": 26,
-      "colour": "0x35521f",
-      "tipColour": "0x6b8a34"
+      "colour": "0x74A54E",
+      "tipColour": "0xCFFF72"
     },
     "fern": {
       "count": 7000,
       "minScale": 0.55,
       "scaleRange": 1.1,
       "reach": 7,
-      "colour": "0x40631f",
-      "tipColour": "0x86a63e"
+      "colour": "0x86C24E",
+      "tipColour": "0xFDFF83"
     },
     "litter": {
       "count": 4200,
       "minScale": 0.6,
       "scaleRange": 1.4,
       "reach": 10,
-      "colour": "0x5b5330"
+      "colour": "0xA29662"
     },
     "_growthNote": "The jungle stands in the twilight band AHEAD of you — it survived the night — and the dawn BURNS it behind you. growthMinScale is how tall the growth still stands at the far end of the route; keep it high or the trail ahead renders as stubs and there is no jungle. growthFull is how many metres behind the dawn line the growth stays full before it starts browning; growthBurn is where it is gone. Keep growthBurn near (lethal+lethalMargin)/k = 1280, so the black ground and the lethal ground arrive together.",
     "growthRise": -1200,
@@ -1034,8 +1034,9 @@
     "_meshNote": "EVERY LAYER IS ONE DRAW CALL. 26k plants in six InstancedMeshes, against 598 individually-drawn rocks before this pass and 300 after it. If you raise a count, you are buying instances, not draw calls — that is the trade this module exists to make.",
     "offBoost": 0.46,
     "offFull": 34,
-    "_note_growth": "WHERE THE ONE DAY SITS, in metres BEHIND the dawn line. Negative is ahead of it. These have to be set against where the player actually STANDS relative to that line, which is not obvious: the lethal edge trails the dawn line by about 550 m, so a player running from the heat spends the whole timed run somewhere between 380 m ahead of the line and a few hundred behind it, depending entirely on how much they stop to survey. growthRise was -90 at first, which put the entire visible world inside the 18% stubble zone for anyone who kept walking. At -1000 the growth comes up across the player's whole range instead: young and thin ahead of them, full right behind the line, browning after growthFull, black by growthBurn — which lands in the same place the ground turns lethal. Sprint hard enough and you outrun the growth into bare ground, which is real and is meant to be."
+    "_note_growth": "WHERE THE ONE DAY SITS, in metres BEHIND the dawn line. Negative is ahead of it. These have to be set against where the player actually STANDS relative to that line, which is not obvious: the lethal edge trails the dawn line by about 550 m, so a player running from the heat spends the whole timed run somewhere between 380 m ahead of the line and a few hundred behind it, depending entirely on how much they stop to survey. growthRise was -90 at first, which put the entire visible world inside the 18% stubble zone for anyone who kept walking. At -1000 the growth comes up across the player's whole range instead: young and thin ahead of them, full right behind the line, browning after growthFull, black by growthBurn — which lands in the same place the ground turns lethal. Sprint hard enough and you outrun the growth into bare ground, which is real and is meant to be.",
+    "_lightNote": "These colours and render.hemisphereIntensity are what make the jungle READABLE. The canopy shadows everything under it, so a dark green understory in its own shadow renders as black — the forest was fully built, correctly sized and drawing 348k triangles, and simply could not be seen. If it looks flat or washed out, lower hemisphereIntensity first, then these colours."
   },
-  "buildStamp": "BUILD 07-30 #6 · press ? for readout",
+  "buildStamp": "BUILD 07-30 #7 · jungle lit",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }
