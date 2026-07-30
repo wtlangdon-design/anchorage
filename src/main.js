@@ -14,31 +14,31 @@
 // Runtime draws (grass refills, the naming placeholder) come off the SAME stream,
 // so preserving the load order preserves them too.
 
-import { initNoise, rand, fbm } from "./world/noise.js";
-import { initClimate, dawnX, tempAt, lostAtT } from "./world/climate.js";
-import * as terrain from "./world/terrain.js";
-import * as sky from "./world/sky.js";
-import * as grass from "./world/grass.js";
-import * as jungle from "./world/jungle.js";
-import * as debug from "./ui/debug.js";
-import * as fauna from "./world/fauna.js";
-import * as props from "./world/props.js";
-import * as sound from "./world/sound.js";
-import * as textures from "./world/textures.js";
-import { applyWorldScale } from "./world/scale.js";
-import { initGait, poseFor } from "./player/gait.js";
-import * as rig from "./player/rig.js";
-import * as controller from "./player/controller.js";
-import * as suit from "./player/suit.js";
-import * as clock from "./game/clock.js";
-import * as manifest from "./game/manifest.js";
-import * as story from "./game/story.js";
-import * as endings from "./game/endings.js";
-import * as hud from "./ui/hud.js";
-import * as compass from "./ui/compass.js";
-import * as chart from "./ui/chart.js";
-import * as panels from "./ui/panels.js";
-import * as touch from "./ui/touch.js";
+import { initNoise, rand, fbm } from "./world/noise.js?v=8";
+import { initClimate, dawnX, tempAt, lostAtT } from "./world/climate.js?v=8";
+import * as terrain from "./world/terrain.js?v=8";
+import * as sky from "./world/sky.js?v=8";
+import * as grass from "./world/grass.js?v=8";
+import * as jungle from "./world/jungle.js?v=8";
+import * as debug from "./ui/debug.js?v=8";
+import * as fauna from "./world/fauna.js?v=8";
+import * as props from "./world/props.js?v=8";
+import * as sound from "./world/sound.js?v=8";
+import * as textures from "./world/textures.js?v=8";
+import { applyWorldScale } from "./world/scale.js?v=8";
+import { initGait, poseFor } from "./player/gait.js?v=8";
+import * as rig from "./player/rig.js?v=8";
+import * as controller from "./player/controller.js?v=8";
+import * as suit from "./player/suit.js?v=8";
+import * as clock from "./game/clock.js?v=8";
+import * as manifest from "./game/manifest.js?v=8";
+import * as story from "./game/story.js?v=8";
+import * as endings from "./game/endings.js?v=8";
+import * as hud from "./ui/hud.js?v=8";
+import * as compass from "./ui/compass.js?v=8";
+import * as chart from "./ui/chart.js?v=8";
+import * as panels from "./ui/panels.js?v=8";
+import * as touch from "./ui/touch.js?v=8";
 
 const THREE = window.THREE;
 

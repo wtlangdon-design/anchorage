@@ -15,7 +15,7 @@
 // order and one extra draw here moves every rock in the world. All the variation
 // on the suit comes from the texture library's own integer hash instead.
 
-import * as tex from "../world/textures.js";
+import * as tex from "../world/textures.js?v=8";
 
 let THREE, scene, cam, heightAt, S;
 let CFG = null;

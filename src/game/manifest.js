@@ -8,10 +8,10 @@
 // The reference read a global S.t inside dawnX()/tempAt(); climate.js now takes
 // an explicit t, so callers here pass S.t.
 
-import { LETHAL, DAWN0, DAWN_V } from "../world/climate.js";
+import { LETHAL, DAWN0, DAWN_V } from "../world/climate.js?v=8";
 // A band objective's deadline is "when the herd walks out of the walkable world",
 // which only terrain.js can answer — it owns the path's extent. Read-only.
-import * as terrainPath from "../world/terrain.js";
+import * as terrainPath from "../world/terrain.js?v=8";
 
 let S, dawnX, tempAt, lostAtT, shadeAt, config;
 let CRIT = [];
