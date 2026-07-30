@@ -20,6 +20,7 @@ import * as terrain from "./world/terrain.js";
 import * as sky from "./world/sky.js";
 import * as grass from "./world/grass.js";
 import * as jungle from "./world/jungle.js";
+import * as debug from "./ui/debug.js";
 import * as fauna from "./world/fauna.js";
 import * as props from "./world/props.js";
 import * as sound from "./world/sound.js";
@@ -113,7 +114,8 @@ function init() {
     S, controller,
     actions: {
       interact, openChart: chart.openChart, openLog: panels.openLog,
-      transmit: endings.transmit, toggleMute: sound.toggleMute, toggleFps: hud.toggleFps
+      transmit: endings.transmit, toggleMute: sound.toggleMute, toggleFps: hud.toggleFps,
+      toggleDebug: () => debug.toggleDebug()
     }
   });
   if (onMobile) {
@@ -201,6 +203,7 @@ function init() {
       closeOverlay: panels.closeOverlay,
       cancelSurvey: panels.cancelSurvey,
       toggleFps: hud.toggleFps,
+      toggleDebug: () => debug.toggleDebug(),
       toggleMute: sound.toggleMute
     }
   });
@@ -226,7 +229,13 @@ function init() {
   terrain.buildTerrain();                 // no draws
   terrain.buildFarHills();                // draws
   grass.buildGrass();                     // draws (via refill)
-  jungle.buildJungle();                   // draws — five instanced layers plus the water
+  jungle.buildJungle();
+
+  // an on-screen readout, because the only person who can see this game cannot open
+  // a browser console on a phone. G, or the "?" button.
+  debug.initDebug(config, story_data, {
+    renderer, scene, S, THREE, heightAt: terrain.heightAt, jungleStats: jungle.stats
+  });                   // draws — five instanced layers plus the water
   fauna.buildStriders();                  // draws
   props.buildPlaces();                    // draws
   fauna.buildDenMeshes();                 // no draws (the reference built these at the tail of buildPlaces)

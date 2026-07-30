@@ -101,6 +101,7 @@ export function initTouch(cfg, story, deps){
   });
   bind("btn-mute", () => actions.toggleMute());
   bind("btn-fps", () => actions.toggleFps());
+  bind("btn-dbg", () => actions.toggleDebug && actions.toggleDebug());
   return mobile;
 }
 
