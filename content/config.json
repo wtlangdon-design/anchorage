@@ -647,6 +647,7 @@
     }
   },
   "timing": {
+    "_note": "fleetTransmissionDelayMs is measured from the moment the briefing's naming beat closes and the player steps outside — WALL clock, not mission time, so it fires whether or not the survey has been handed over yet. At 120000 (two minutes) it lands at about the point a player who walked straight to camp five is reading Vantaa's last entry, which may or may not be where it belongs. It is a placeholder block (story.fleetTransmission) and this is the one number that decides when it arrives.",
     "fleetTransmissionDelayMs": 120000,
     "manifestRefreshInterval": 0.4,
     "toastDefaultMs": 4600
@@ -713,6 +714,6 @@
       "opacity": 0.72
     }
   },
-  "buildStamp": "build 2026-07-30 · earned manifest v1",
+  "buildStamp": "build 2026-07-30 · briefing beats v1",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

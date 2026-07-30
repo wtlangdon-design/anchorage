@@ -77,11 +77,21 @@ console.log("\nTHE LAYOUT CAN SURVIVE A SMALL SCREEN");
 
 console.log("\nAUDIO STILL UNLOCKS FROM A TAP (iOS needs a real gesture)");
 {
+  // The briefing is a list of beats now, and leaving it goes through startGame().
+  // The property has not changed: the audio context must be created in the SAME
+  // CALL STACK as the tap, so nothing between the click handler and startAudio()
+  // may await or defer. briefing.test.js separately drives a real click and counts
+  // the call; this checks the shape that makes that possible.
   const p = src("ui/panels.js");
-  const go = p.slice(p.indexOf("const go = () => { S.planet"));
-  ok("startAudio is called synchronously inside the button handler",
-     go.indexOf("startAudio()") < go.indexOf("S.started = true"),
+  const start = p.slice(p.indexOf("function startGame()"));
+  ok("leaving the briefing goes through startGame()", p.includes("function startGame()"));
+  ok("startAudio is called synchronously inside it, before the game is marked started",
+     start.indexOf("startAudio()") >= 0 && start.indexOf("startAudio()") < start.indexOf("S.started = true"),
      "must be in the same call stack as the gesture");
+  const naming = p.slice(p.indexOf('beat.kind === "naming"'));
+  const go = naming.slice(naming.indexOf("const go = () =>"), naming.indexOf("document.getElementById(\"bnx\").onclick = go"));
+  ok("and the naming beat's handler calls it without deferring",
+     /startGame\(\)/.test(go) && !/await|setTimeout|requestAnimationFrame|Promise/.test(go), go.trim());
   ok("the handler is a click handler, which a tap fires", /bnx"\)\.onclick = go/.test(p));
   ok("the audio module was not modified for this",
      /createAudioContext|unlock|touchstart/.test(src("world/sound.js")) === false);

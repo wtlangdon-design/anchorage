@@ -8,15 +8,18 @@
 // Numbers come from config, prose/UI strings from story. Zero behaviour change.
 
 let config, story, S, manifest, storyMod;
-let toast, esc, mmss, renderManifest, rand, lostAtT, startAudio;
+// mmss and lostAtT used to be here for the old briefing's countdown listing. That
+// listing is gone — the manifest is not issued from orbit any more — so they are
+// deliberately not taken from deps. main.js still passes them; harmless.
+let toast, esc, renderManifest, rand, startAudio;
 
 let bstep = 0, bs = null, pending = null;
 
 export function initPanels(cfg, storyArg, deps){
   config = cfg; story = storyArg;
   S = deps.S; manifest = deps.manifest; storyMod = deps.storyMod;
-  toast = deps.toast; esc = deps.esc; mmss = deps.mmss;
-  renderManifest = deps.renderManifest; rand = deps.rand; lostAtT = deps.lostAtT;
+  toast = deps.toast; esc = deps.esc;
+  renderManifest = deps.renderManifest; rand = deps.rand;
   startAudio = deps.startAudio;
 
   bs = document.getElementById("bsheet");
@@ -68,54 +71,169 @@ export function showMsg(html){
 export function closeOverlay(){ document.querySelectorAll(".overlay.on").forEach(o => {
   if(o.id !== "briefing" && o.id !== "naming") o.classList.remove("on"); }); }
 
-/* ---------- briefing ---------- */
+/* ---------- the briefing: an ordered list of BEATS ----------
+
+   The opening is a sequence of screens, one beat each, advanced by the player. The
+   sequence itself lives in story.json under `briefing.beats` — an ordered array —
+   so beats can be added, reordered, cut or rewritten without anyone touching a .js
+   file. Nothing below knows how many there are or what they say.
+
+   THREE KINDS, and a beat is identified by its kind and never by its index, so the
+   order in story.json is genuinely free:
+
+     "commission"  the two name fields. Sets S.name and S.ship.
+     "text"        a title, a subtitle, any number of paragraphs, and a button.
+     "naming"      the planet field. This is the beat that ENDS the briefing and
+                   starts the game, wherever in the array it happens to sit.
+
+   Every field is optional except kind. A beat with no title renders without one; a
+   beat with no button falls back to the next beat's, then to a bare marker. A beat
+   flagged `"unwritten": true` renders a visible, marked empty slot — the same
+   convention as the fleet transmission's placeholder marker. It is deliberately not
+   silently skipped: an unwritten beat should be impossible to forget about.
+
+   Shape:
+     { "kind": "commission", "title": "", "subtitle": "", "body": [],
+       "surveyorLabel": "", "surveyorPlaceholder": "", "defaultSurveyorName": "",
+       "vesselLabel": "", "vesselPlaceholder": "", "defaultShipName": "",
+       "button": "" }
+     { "kind": "text", "title": "", "subtitle": "", "body": ["", ""], "button": "" }
+     { "kind": "text", "unwritten": true, "button": "" }
+     { "kind": "naming", "title": "", "subtitle": "", "body": "",
+       "placeholder": "", "hint": "", "defaultPlanetName": "", "button": "" }
+*/
+
+let BEATS = [];
+
+// Strings the machinery itself needs. Same pattern as the worksheet's T() below:
+// story.json wins the moment the key exists, and until then the fallback is plainly
+// developer text rather than something pretending to be prose.
+const B = (key, fallback) => (story.briefing && story.briefing[key]) || fallback;
+
+function buildBeats(){
+  const br = story.briefing || {};
+  let beats = Array.isArray(br.beats) && br.beats.length ? br.beats.slice() : legacyBeats(br);
+  // The naming beat is what starts the game. Without one the briefing would have no
+  // exit, so rather than hang, put the legacy one back and say so in the console.
+  if(!beats.some(b => b.kind === "naming")){
+    console.warn("briefing: no beat of kind \"naming\" — appending the legacy naming screen, " +
+                 "or the game can never start. Add one to story.briefing.beats.");
+    beats = beats.concat(legacyBeats(br).filter(b => b.kind === "naming"));
+  }
+  return beats;
+}
+
+// LEGACY SHIM — delete this the day story.briefing.beats exists.
+//
+// It builds the beat array out of the step1/step2/step3 keys that are still in
+// story.json, in the order the opening now wants, and it invents no text. Two
+// consequences worth knowing about, both reported rather than papered over:
+//
+//   * step1's two paragraphs are the FLEET beat, not the commission beat, because
+//     "You are the part of that gamble that has to work" only means anything
+//     directly after the sentences that describe the gamble. So the commission
+//     screen is the two fields and its own title, with no prose of its own.
+//   * step2.intro, step2.body[0], step2.neverLostLabel and step2.lostAtPrefix are
+//     NOT used any more and cannot be: they describe an orbital manifest that is no
+//     longer issued from orbit. Only step2's two Meridian paragraphs survive.
+function legacyBeats(br){
+  const s1 = br.step1 || {}, s2 = br.step2 || {}, s3 = br.step3 || {};
+  const s2body = Array.isArray(s2.body) ? s2.body : [];
+  return [
+    { kind: "commission", title: s1.title, subtitle: s1.subtitle, body: [],
+      surveyorLabel: s1.surveyorLabel, surveyorPlaceholder: s1.surveyorPlaceholder,
+      defaultSurveyorName: s1.defaultSurveyorName,
+      vesselLabel: s1.vesselLabel, vesselPlaceholder: s1.vesselPlaceholder,
+      defaultShipName: s1.defaultShipName, button: s1.button },
+    // the fleet
+    { kind: "text", body: Array.isArray(s1.body) ? s1.body : [], button: s2.button },
+    // the Meridian — s2.body[1] and [2]; [0] was about the orbital manifest
+    { kind: "text", subtitle: s2.subtitle, body: s2body.slice(1), button: s2.button },
+    // the descent: nothing written for this yet
+    { kind: "text", unwritten: true, button: s2.button },
+    { kind: "naming", title: s3.title, subtitle: s3.subtitle, body: s3.body,
+      placeholder: s3.placeholder, hint: s3.hint,
+      defaultPlanetName: s3.defaultPlanetName, button: s3.button }
+  ];
+}
+
+// wordless, so it adds no prose: one dot per beat, the current one filled
+function dots(i, n){
+  let out = "";
+  for(let k = 0; k < n; k++)
+    out += `<span style="display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:6px;` +
+           `background:var(--dawnlight);opacity:${k === i ? ".75" : ".2"}"></span>`;
+  return `<div style="margin-top:18px">${out}</div>`;
+}
+
 export function brief(){
-  if(bstep === 0){
-    const st = story.briefing.step1;
-    bs.innerHTML = `<h1>${st.title}</h1><h2>${st.subtitle}</h2>
-    ${st.body.map(p => `<p class="body">${p}</p>`).join("\n")}
+  if(!BEATS.length) BEATS = buildBeats();
+  if(bstep < 0) bstep = 0;
+  if(bstep >= BEATS.length) bstep = BEATS.length - 1;
+  const beat = BEATS[bstep] || {};
+  const nextBeat = BEATS[bstep + 1];
+
+  const head = (beat.title ? `<h1>${beat.title}</h1>` : "")
+             + (beat.subtitle ? `<h2>${beat.subtitle}</h2>` : "");
+  const paras = Array.isArray(beat.body) ? beat.body : beat.body ? [beat.body] : [];
+  const body = paras.map(p => `<p class="body">${p}</p>`).join("\n");
+  // a beat with nothing in it says so, in the same voice as the fleet transmission's
+  // marker: visible, unmistakably not finished prose, and impossible to overlook
+  const slot = beat.unwritten
+    ? `<p class="body" style="opacity:.5;font-style:italic;font-size:13px">${
+        B("unwrittenMarker", "[ this beat is not written yet — see story.briefing.beats ]")}</p>`
+    : "";
+  const label = beat.button || (nextBeat && nextBeat.button) || B("continueButton", "Continue");
+  const advance = () => { bstep++; brief(); };
+
+  if(beat.kind === "commission"){
+    bs.innerHTML = `${head}${body}${slot}
     <div class="rule"></div>
-    <label class="lab">${st.surveyorLabel}</label><input type="text" id="i-n" placeholder="${st.surveyorPlaceholder}">
+    <label class="lab">${beat.surveyorLabel || ""}</label>
+    <input type="text" id="i-n" placeholder="${beat.surveyorPlaceholder || ""}">
     <div style="height:16px"></div>
-    <label class="lab">${st.vesselLabel}</label><input type="text" id="i-s" placeholder="${st.vesselPlaceholder}">
-    <button id="bnx">${st.button}</button>`;
-    const go = () => { S.name = document.getElementById("i-n").value.trim() || st.defaultSurveyorName;
-      S.ship = document.getElementById("i-s").value.trim() || st.defaultShipName; bstep = 1; brief(); };
+    <label class="lab">${beat.vesselLabel || ""}</label>
+    <input type="text" id="i-s" placeholder="${beat.vesselPlaceholder || ""}">
+    <button id="bnx">${label}</button>${dots(bstep, BEATS.length)}`;
+    const go = () => {
+      S.name = document.getElementById("i-n").value.trim() || beat.defaultSurveyorName || "Surveyor";
+      S.ship = document.getElementById("i-s").value.trim() || beat.defaultShipName || "";
+      advance();
+    };
     document.getElementById("bnx").onclick = go;
     bs.querySelectorAll("input").forEach(i => i.addEventListener("keydown", e => { if(e.key === "Enter") go(); }));
     document.getElementById("i-n").focus();
-  } else if(bstep === 1){
-    const st = story.briefing.step2;
-    bs.innerHTML = `<h1>${st.title}</h1><h2>${st.subtitle}</h2>
-    <p class="body">${st.intro}</p>
-    <p class="tiny">${manifest.list().map(c => {
-      const t = c.band ? null : lostAtT(c.x);
-      return `${c.n.toUpperCase().padEnd(20, "·")} ${t === null ? st.neverLostLabel : st.lostAtPrefix + mmss(t)}`;
-    }).join("<br>")}</p>
-    <p class="body">${st.body[0]}</p>
-    <div class="rule"></div>
-    <p class="body">${st.body[1]}</p>
-    <p class="body">${st.body[2]}</p>
-    <button id="bnx">${st.button}</button>`;
-    document.getElementById("bnx").onclick = () => { bstep = 2; brief(); };
-  } else {
-    const st = story.briefing.step3;
-    bs.innerHTML = `<h1>${st.title}</h1><h2>${st.subtitle}</h2>
-    <p class="body">${st.body}</p>
-    <input type="text" id="i-p" placeholder="${st.placeholder}">
-    <div class="hint">${st.hint}</div>
-    <button id="bnx">${st.button}</button>`;
-    const go = () => { S.planet = document.getElementById("i-p").value.trim() || st.defaultPlanetName;
-      // the audio context has to be created inside the gesture that starts the
-      // game, or the browser refuses it. it fails silently if it fails at all.
-      if(startAudio) startAudio();
-      document.getElementById("briefing").classList.remove("on"); S.started = true;
-      toast(story.toasts.viewHint, 6000);
-      setTimeout(transmission, config.timing.fleetTransmissionDelayMs); };
+
+  } else if(beat.kind === "naming"){
+    bs.innerHTML = `${head}${body}${slot}
+    <input type="text" id="i-p" placeholder="${beat.placeholder || ""}">
+    ${beat.hint ? `<div class="hint">${beat.hint}</div>` : ""}
+    <button id="bnx">${label}</button>${dots(bstep, BEATS.length)}`;
+    const go = () => {
+      S.planet = document.getElementById("i-p").value.trim() || beat.defaultPlanetName || "";
+      startGame();
+    };
     document.getElementById("bnx").onclick = go;
     document.getElementById("i-p").focus();
     bs.querySelector("input").addEventListener("keydown", e => { if(e.key === "Enter") go(); });
+
+  } else {
+    bs.innerHTML = `${head}${body}${slot}
+    <button id="bnx">${label}</button>${dots(bstep, BEATS.length)}`;
+    document.getElementById("bnx").onclick = advance;
   }
+}
+
+// Leaving the briefing. Unchanged from what step 3 used to do, lifted out so the
+// naming beat can sit anywhere in the array.
+function startGame(){
+  // the audio context has to be created inside the gesture that starts the game, or
+  // the browser refuses it. it fails silently if it fails at all.
+  if(startAudio) startAudio();
+  document.getElementById("briefing").classList.remove("on");
+  S.started = true;
+  toast(story.toasts.viewHint, 6000);
+  setTimeout(transmission, config.timing.fleetTransmissionDelayMs);
 }
 
 // The fleet transmission is a protected placeholder block — its text is reproduced
