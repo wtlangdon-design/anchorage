@@ -238,7 +238,7 @@
     "_note": "The whole clock. dawn0 is where the dawn line starts in metres; dawnVelocity is metres per second. lethal is the temperature that kills a site. A site at x becomes lost at (x + (lethal + 12) / k - dawn0) / dawnVelocity seconds.",
     "_graceNote": "THE GRACE PERIOD. Mission time (S.t) does not advance until the clock starts, and until it does the dawn line does not move, no ground heats and nothing can be lost — every function in climate.js is a pure function of t and is simply handed a t that is not going anywhere. The world is not frozen, only the clock: grass, wind, gait, dust and the soundfield all ride S.animT, which runs from the first frame. backstopSeconds is the safety net for a player who never trips the story trigger; set it to 0 to remove the net entirely, in which case the clock only ever starts from the story. See src/game/clock.js.",
     "grace": {
-      "backstopSeconds": 300
+      "backstopSeconds": 1200
     },
     "dawn0": -900,
     "dawnVelocity": 2.0,
@@ -452,23 +452,24 @@
     }
   },
   "camps": {
-    "_note": "Only camp five is here. The Meridian moved across the planet for forty years; four camps 130 m apart could never have represented that, so camps one to four are somewhere else on this world and exist only in the record. Their findings are recovered from the relay archive at the shelter — see shelter.archive.",
+    "_note": "Only camp five is here. The Meridian moved across the planet for forty years, so camps one to four are somewhere else on this world and exist only in the record; their findings are recovered from the relay archive at the shelter — see shelter.archive. grantsSurvey is the one that matters: the camp carrying Vantaa's final entry is where the six findings are handed over, and reading it is what puts them on the manifest and starts the clock. Before it there is no manifest and nothing is expiring. Exactly one camp should carry this flag, and it must be one the player can actually reach.",
     "c5": {
       "x": -40,
       "z": -238,
       "radius": 34,
-      "gives": null
+      "gives": null,
+      "grantsSurvey": true
     }
   },
   "graves": {
-    "_note": "Only the deaths from the years they had stopped moving are buried here: raman (24), ruiz (31), vantaa (41). Okonkwo (9) and Demir (17) died while the survey was still travelling and are buried somewhere the player will never go. Their records still exist in story.json — that is where the answer key comes from — but their plates are not in this world, so nothing here states the year they died.",
+    "_note": "Only the deaths from the years they had stopped moving are buried here: raman (24), ruiz (31), vantaa (41). Okonkwo (9) and Demir (17) died while the survey was still travelling and are buried somewhere the player will never go. Their records still exist in story.json — that is where the answer key comes from — but their plates are not in this world, so nothing here states the year they died. g4 MOVED from x=-62 to x=-100 in the earned-manifest pass: at -62 it sat 6 m from the shortest walkable line between spawn and camp five, well inside its own 16 m read radius, so the player read it by walking past rather than by choosing to look. At -100 the walk passes 44 m away — 28 m clear of the radius — while the cairn stays in unobstructed line of sight from 71% of that walk. Seeing a marker and deciding to go to it is the whole point of an unmarked grave; being handed it is not.",
     "g3": {
       "x": -64,
       "z": 232,
       "radius": 16
     },
     "g4": {
-      "x": -62,
+      "x": -100,
       "z": -112,
       "radius": 16
     },
@@ -712,6 +713,6 @@
       "opacity": 0.72
     }
   },
-  "buildStamp": "build 2026-07-30 · split clock v1",
+  "buildStamp": "build 2026-07-30 · earned manifest v1",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

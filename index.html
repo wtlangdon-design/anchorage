@@ -211,11 +211,14 @@ body.touch #task.open{max-height:78vh;overflow-y:auto}
 
 <div id="hud">
   <div class="panel" id="task">
-    <div class="hdr"><span>Survey manifest</span><span id="clockv"></span></div>
-    <div class="row cols" style="opacity:.45;font-size:8.5px;letter-spacing:.1em">
+    <!-- The heading, the column titles, the clock and the footer are all hidden
+         until Vantaa's last entry hands the survey over; ui/hud.js owns that. The
+         markup below is the granted state, so ids exist for it to switch. -->
+    <div class="hdr"><span>Meridian chain</span><span id="clockv"></span></div>
+    <div class="row cols" id="critcols" style="opacity:.45;font-size:8.5px;letter-spacing:.1em">
       <div>FINDING</div><div class="dd">DIST</div><div class="tt">LOST IN</div></div>
     <div id="critlist"></div>
-    <div class="sub">Meridian chain</div>
+    <div class="sub" id="chainsub">Meridian chain</div>
     <div id="camplist"></div>
     <div id="tasknote"></div>
   </div>

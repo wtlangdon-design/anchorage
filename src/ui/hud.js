@@ -18,8 +18,11 @@ export function initHud(cfg, storyArg, deps){
   dawnX = deps.dawnX; tempAt = deps.tempAt; lostAtT = deps.lostAtT;
 
   document.getElementById("keys").innerHTML = story.ui.keyHints;
-  document.querySelector("#task .hdr span").textContent = story.ui.manifestHeader;
   fpsEl = document.getElementById("fps");
+  // The heading starts on the ungranted state and renderManifest owns it from here.
+  // NOT a renderManifest() call: initHud runs before initStory, so storyMod.LAST is
+  // still null at this point and the chain half of that function would throw.
+  document.querySelector("#task .hdr span").textContent = story.ui.meridianChainHeader;
 }
 
 /* ---------- fps readout (F) ----------
@@ -60,8 +63,24 @@ export function bearingTo(x, z){
   return PTS[Math.round(a / (Math.PI / 4)) % 8];
 }
 
-/* ---------- manifest ---------- */
+/* ---------- manifest ----------
+   Two states, and the first one is most of the game's opening.
+   BEFORE the survey is handed over there is no manifest: the panel is headed
+   "Meridian chain" and carries only the chain, with no column titles, no clock and
+   no footer. Nothing is counting down because nothing has been located yet.
+   AFTER, the heading becomes the survey manifest, the six findings appear above the
+   chain with their countdowns, and the clock reads out. Both headings and both
+   states use strings story.json already has — nothing here is new prose. */
 export function renderManifest(){
+  const granted = manifest.isGranted();
+  const show = (id, on) => { const e = document.getElementById(id); if(e) e.style.display = on ? "" : "none"; };
+  document.querySelector("#task .hdr span").textContent =
+    granted ? story.ui.manifestHeader : story.ui.meridianChainHeader;
+  show("clockv", granted);
+  show("critcols", granted);
+  show("chainsub", granted);      // redundant while the panel's own heading says it
+  show("tasknote", granted);
+
   const list = manifest.list();
   const cl = document.getElementById("critlist");
   cl.innerHTML = list.map(c => {

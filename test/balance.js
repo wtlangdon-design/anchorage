@@ -1,7 +1,14 @@
 // balance.js — solvability check. Run: node test/balance.js  (or npm run balance)
 //
-// Prints, for each site and camp: distance from spawn, sprint time, walk time, and
-// time-until-lost. Then it decides reachability by an exhaustive bitmask search over
+// WHERE THE RUN STARTS. Mission time does not begin at spawn any more. The six
+// findings are Vantaa's, handed over in her last entry at the camp flagged
+// grantsSurvey, and reading that entry is what starts the clock. So the timed run
+// begins AT THAT CAMP with t=0, and the walk from spawn to it is free — it is
+// measured and printed below, but nothing expires during it. Measuring from spawn
+// (as this file used to) understates every deadline by the length of that walk.
+//
+// Prints, for each site and camp: distance from the grant point, sprint time, walk
+// time, and time-until-lost. Then it decides reachability by an exhaustive bitmask search over
 // every visiting order (Held-Karp), so the claims are real, not greedy artifacts.
 //
 // Asserts: (1) every objective is individually reachable; (2) the survey is solvable
@@ -30,6 +37,14 @@ initNoise(config.terrain.noiseSeed);
 const shadeAt = terrain.shadeAt;
 
 const spawn = config.player.spawn;
+const notMetaKey = k => !k.startsWith("_");
+const grantEntry = Object.keys(config.camps).filter(notMetaKey)
+  .map(k => [k, config.camps[k]]).find(([, c]) => c.grantsSurvey);
+// If no camp grants the survey, fall back to spawn — that is the pre-Phase-2
+// behaviour and the message below says so rather than silently measuring the
+// wrong thing.
+const origin = grantEntry ? { x: grantEntry[1].x, z: grantEntry[1].z } : spawn;
+const originName = grantEntry ? `camp ${grantEntry[0]}` : "spawn";
 const sprint = config.player.sprintSpeed;
 const walk = config.player.walkSpeed;
 const bandOffset = config.striders.bandOffset;
@@ -41,22 +56,34 @@ const sites = Object.entries(config.sites).filter(notMeta).map(([id, s]) => ({
   shade: s.followsBand ? 0 : shadeAt(s.x, s.z),
   deadline: s.followsBand ? Infinity : lostAtT(s.x, shadeAt(s.x, s.z))
 }));
-const camps = Object.entries(config.camps).filter(notMeta).map(([id, c]) => ({
-  id, x: c.x, z: c.z, dur: 0, band: false, shade: shadeAt(c.x, c.z),
-  deadline: lostAtT(c.x, shadeAt(c.x, c.z))
-}));
+// The granting camp is not an objective: the player is standing on it, having just
+// read it, at the instant the clock starts. Any OTHER camp still is one.
+const camps = Object.entries(config.camps).filter(notMeta)
+  .filter(([, c]) => !c.grantsSurvey)
+  .map(([id, c]) => ({
+    id, x: c.x, z: c.z, dur: 0, band: false, shade: shadeAt(c.x, c.z),
+    deadline: lostAtT(c.x, shadeAt(c.x, c.z))
+  }));
 const targetX = (o, t) => (o.band ? dawnX(t) + bandOffset : o.x);
 
 // ---- table ----
+{
+  const free = dist(spawn.x, spawn.z, origin.x, origin.z);
+  console.log(`THE UNTIMED LEG: spawn (${spawn.x}, ${spawn.z}) to ${originName} (${origin.x}, ${origin.z})`);
+  console.log(`  ${free.toFixed(0)} m — ${(free / walk).toFixed(0)}s at a walk, ${(free / sprint).toFixed(0)}s at a sprint.`);
+  console.log(`  Nothing expires during it. The clock starts when that record is read.`);
+  console.log(`  Backstop if the player never gets there: ${config.climate.grace.backstopSeconds}s of play.\n`);
+}
 function printRow(o) {
-  const d = dist(spawn.x, spawn.z, targetX(o, 0), o.z);
+  const d = dist(origin.x, origin.z, targetX(o, 0), o.z);
   const lost = o.deadline === Infinity ? "  never" : o.deadline.toFixed(0).padStart(7);
   const sh = o.shade > 0.5 ? "shaded" : o.shade > 0.05 ? " part " : " sun  ";
   console.log(`  ${o.id.padEnd(8)} dist ${d.toFixed(0).padStart(5)}m   sprint ${(d / sprint).toFixed(0).padStart(4)}s` +
               `   walk ${(d / walk).toFixed(0).padStart(4)}s   ${sh}   lost@ ${lost}s`);
 }
-console.log("SITES");  sites.forEach(printRow);
-console.log("CAMPS");  camps.forEach(printRow);
+console.log(`SITES  (distances from ${originName}, where the clock starts)`);
+sites.forEach(printRow);
+if (camps.length) { console.log("OTHER CAMPS"); camps.forEach(printRow); }
 console.log("");
 
 let failures = 0;
@@ -64,7 +91,7 @@ const ok = (name, cond, detail = "") => { if (!cond) { failures++; console.error
 
 // ---- (1) individual reachability, at sprint, including the survey hold ----
 for (const o of [...sites, ...camps]) {
-  const arrive = dist(spawn.x, spawn.z, targetX(o, 0), o.z) / sprint + o.dur;
+  const arrive = dist(origin.x, origin.z, targetX(o, 0), o.z) / sprint + o.dur;
   ok(`${o.id} individually reachable`, o.deadline === Infinity || arrive <= o.deadline,
      `arrive ${arrive.toFixed(0)}s vs lost ${o.deadline.toFixed(0)}s`);
 }
@@ -75,7 +102,7 @@ function maxCompletable(objs, speed) {
   const n = objs.length, FULL = 1 << n;
   const dp = Array.from({ length: FULL }, () => new Array(n).fill(Infinity));
   for (let i = 0; i < n; i++) {
-    const a = dist(spawn.x, spawn.z, targetX(objs[i], 0), objs[i].z) / speed;
+    const a = dist(origin.x, origin.z, targetX(objs[i], 0), objs[i].z) / speed;
     if (a <= objs[i].deadline) dp[1 << i][i] = a + objs[i].dur;
   }
   let best = 0, bestMask = 0;
@@ -108,7 +135,7 @@ ok("all six findings are answerable in one run (survey is solvable)",
 const all = [...sites, ...camps];
 const allWalk = maxCompletable(all, walk);
 const allSprint = maxCompletable(all, sprint);
-console.log(`\n  full manifest (${sites.length} sites + ${camps.length} camp${camps.length===1?"":"s"}): sprint ${allSprint.best}/${all.length}, walk ${allWalk.best}/${all.length}` +
+console.log(`\n  full manifest (${sites.length} sites${camps.length ? ` + ${camps.length} other camp${camps.length===1?"":"s"}` : ""}): sprint ${allSprint.best}/${all.length}, walk ${allWalk.best}/${all.length}` +
             (allWalk.missed.length ? `  (walk sacrifices: ${allWalk.missed.join(", ")})` : ""));
 // NOT an assertion any more, and deliberately so. "You cannot answer all six" is a
 // design goal, not a property the code can guarantee — it depends on world.scale,
@@ -117,7 +144,7 @@ console.log(`\n  full manifest (${sites.length} sites + ${camps.length} camp${ca
 // loudly instead, so the day it stops being true is the day you read it here.
 if (allWalk.best >= all.length) {
   console.log("\n  ** SLACK WARNING **");
-  console.log(`  Every objective on the manifest — all ${sites.length} findings AND all ${camps.length} placed camp${camps.length===1?"":"s"} — can`);
+  console.log(`  Every objective on the manifest — all ${sites.length} findings${camps.length ? ` AND all ${camps.length} other camp${camps.length===1?"":"s"}` : ""} — can`);
   console.log("  be reached at a walk. Nothing has to be abandoned, so the central choice the");
   console.log("  design is built on is not currently being forced by the clock.");
 } else {
@@ -127,7 +154,7 @@ if (allWalk.best >= all.length) {
 // ---- reported, not asserted: is the tension there at full sprint too? ----
 if (allSprint.best === all.length) {
   console.log(`\n  NOTE for the author: at continuous sprint every tracked objective (all ${sites.length}`);
-  console.log(`  findings AND all ${camps.length} placed camp${camps.length===1?"":"s"}) is reachable. The 'you cannot answer all six'`);
+  console.log(`  findings${camps.length ? ` AND all ${camps.length} other camp${camps.length===1?"":"s"}` : ""}) is reachable. The 'you cannot answer all six'`);
   console.log("  pressure is currently carried by pace and by the unmarked graves/shelter, not");
   console.log("  enforced by the site deadlines. Tightening dawnVelocity or the sunward site x");
   console.log("  positions would make the choice kinematic if that is the intent.");
@@ -145,7 +172,7 @@ if (allSprint.best === all.length) {
     margin: o.deadline === Infinity ? Infinity
       : o.deadline - (dist(spawn.x, spawn.z, targetX(o, 0), o.z) / walk + o.dur)
   })).filter(s => isFinite(s.margin)).sort((a, b) => a.margin - b.margin);
-  console.log(`\n  tightest objectives at a walk, straight from spawn:`);
+  console.log(`\n  tightest objectives at a walk, straight from ${originName}:`);
   for (const s of slack.slice(0, 3)) console.log(`     ${s.id.padEnd(8)} ${s.margin.toFixed(0).padStart(5)}s to spare`);
 
   let lo = 0.1, hi = walk;

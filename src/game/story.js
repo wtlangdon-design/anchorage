@@ -7,7 +7,7 @@
 // change: the reference's DOM writes (panel(), renderManifest()) become calls to
 // the ui functions handed in via deps.
 
-let S, manifest, showPanel, renderManifest, esc, toast, ui, shadeAt, openWorksheet;
+let S, manifest, showPanel, renderManifest, esc, toast, ui, shadeAt, openWorksheet, grantSurvey;
 let giftTemplate = "", giftAlreadyTemplate = "";
 
 export let CREW = [], CAMPS = [], GRAVES = [], LAST = null, CONFESSION = null;
@@ -25,6 +25,10 @@ export function initStory(config, story, deps){
   toast = deps.toast;
   shadeAt = deps.shadeAt || (() => 0);
   openWorksheet = deps.openWorksheet || null;
+  // Reading the camp that carries Vantaa's final entry is what hands the survey
+  // over. main.js wires this to "put the six findings on the manifest and start
+  // the clock"; story.js only knows that a record can give you one.
+  grantSurvey = deps.grantSurvey || null;
   ui = story.ui;
   giftTemplate = story.toasts.giftTemplate;
   giftAlreadyTemplate = story.toasts.giftAlreadyHaveTemplate;
@@ -39,6 +43,7 @@ export function initStory(config, story, deps){
     return {
       id, n: sc.name,
       x: cc.x, z: cc.z, r: cc.radius, gives: cc.gives,
+      grants: !!cc.grantsSurvey,
       t: sc.title, b: sc.body, gift: sc.gift,
       rev: sc.reveals.map(rv => [rv.crew, rv.note]),
       shade: shadeAt(cc.x, cc.z),   // how long this ground stays under the lethal line
@@ -211,8 +216,16 @@ export function readGrave(g){
 }
 
 // ref 825-835
+//
+// One camp does more than fill in a finding. The camp flagged grantsSurvey in
+// config carries the entry in which Vantaa hands over where to look — and that is
+// the moment the six sites appear on the manifest and the clock starts running.
+// Before it there is no manifest and nothing is expiring. Nothing here announces
+// that: the panel is the reveal, and the display behind it has simply changed by
+// the time the player closes it.
 export function readCamp(cp){
   cp.read = true;
+  if(cp.grants && grantSurvey) grantSurvey(cp);
   let gift = "";
   if(cp.gives){ const c = manifest.crit(cp.gives);
     if(!c.done){ manifest.complete(cp.gives, "meridian", c.name || "(Meridian archive)");

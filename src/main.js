@@ -140,7 +140,10 @@ function init() {
   story.initStory(config, story_data, {
     S, manifest,
     showPanel: panels.showPanel, renderManifest: hud.renderManifest, esc: hud.esc, toast: hud.toast,
-    shadeAt: terrain.shadeAt, openWorksheet: panels.openCrewSheet
+    shadeAt: terrain.shadeAt, openWorksheet: panels.openCrewSheet,
+    // Reading the camp flagged grantsSurvey starts the clock, and the clock
+    // starting is what grants the manifest — see the wiring below.
+    grantSurvey: () => clock.start("meridian")
   });
 
   endings.initEndings(config, story_data, {
@@ -186,6 +189,13 @@ function init() {
       toggleMute: sound.toggleMute
     }
   });
+
+  // THE CLOCK STARTING AND THE MANIFEST ARRIVING ARE ONE EVENT. Vantaa's last entry
+  // is where both come from, and routing the backstop through the same path is the
+  // point: a player who never reaches camp five must not end up with a running
+  // clock and nothing to spend it on.
+  clock.onClockStart(() => manifest.grant());
+  manifest.onGrant(() => hud.renderManifest());
 
   // a lost site fires this; the reference redrew the manifest and toasted (ref 1130-1131)
   manifest.onLost(c => {

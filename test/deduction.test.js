@@ -28,7 +28,10 @@ function fresh() {
     S, manifest,
     showPanel: (k, t, sub, b, extra, onClose) => { lastOnClose = onClose || null; },
     renderManifest: () => {}, esc: s => String(s), toast: () => {},
-    openWorksheet: () => { opened++; }
+    openWorksheet: () => { opened++; },
+    // wired exactly as main.js wires it: reading camp five is what puts the six
+    // findings on the manifest, so the archive tests below see a real manifest
+    grantSurvey: () => { manifest.grant(); }
   });
   return S;
 }
