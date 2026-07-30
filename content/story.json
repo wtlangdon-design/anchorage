@@ -1,85 +1,124 @@
 {
   "_readme": "Every word the game says. Edit anything in here freely — nothing in this file is code. Two rules: keep the double quotes at the start and end of each block of text, and if you need a line break inside a paragraph use <br><br>. Text in <em>...</em> comes out in the warm dawn colour. HTML attributes use single quotes on purpose so you never have to escape anything.",
-
   "briefing": {
-    "step1": {
-      "title": "The Anchorage",
-      "subtitle": "Deep survey · single operator · sector CS 4",
-      "body": [
-        "Nine ships. Forty thousand people, asleep. They launched before anyone had found them a destination — deliberately, so no committee could defer the programme the way the last one was deferred.",
-        "You are the part of that gamble that has to work."
-      ],
-      "surveyorLabel": "Surveyor",
-      "surveyorPlaceholder": "your name",
-      "vesselLabel": "Survey vessel",
-      "vesselPlaceholder": "name your ship",
-      "button": "Sign the commission",
-      "defaultSurveyorName": "Surveyor",
-      "defaultShipName": "Kittiwake"
-    },
-    "step2": {
-      "title": "Orbital manifest",
-      "subtitle": "Read this before you go down",
-      "intro": "Six findings make a recommendation. Orbital survey has located all six and timed them against the dawn line. <em>The heat takes them in this order:</em>",
-      "neverLostLabel": "follows the herd — never lost",
-      "lostAtPrefix": "lost at ",
-      "body": [
-        "Bearings to all six stay on your compass and your chart for the whole descent. You cannot reach all of them. The two on the sunward side go first and they go early. Decide now which questions you are willing to leave unanswered — the manifest stays on your display, counting down, for the whole descent.",
-        "One more thing. There was a survey here two hundred years ago. The <em>Meridian</em>, six crew, commanded by Ilse Vantaa. They filed a recommendation and no fleet ever came.",
-        "Their camps run north. So does everything else they left."
-      ],
-      "button": "Continue"
-    },
-    "step3": {
-      "title": "CS 4-9 b",
-      "subtitle": "Second planet · unnamed",
-      "body": "Eighty-eight day rotation. Gravity 1.3 g. A habitable band three hundred kilometres wide, moving west at fifteen and a half kilometres an hour, forever.",
-      "placeholder": "name the world",
-      "hint": "This is the name the fleet will read.",
-      "button": "Step outside",
-      "defaultPlanetName": "Meridian's World"
-    }
+    "_note": "The opening, as an ordered list. Add, cut, reorder or rewrite freely — the game reads this array and nothing else. One beat must keep \"kind\":\"naming\" or the world can never be named and the game cannot start. \"kind\":\"commission\" is the screen with the name and ship fields. Everything else is \"kind\":\"text\".",
+    "beats": [
+      {
+        "id": "commission",
+        "kind": "commission",
+        "title": "The Anchorage",
+        "subtitle": "Deep survey · single operator · sector CS 4",
+        "body": [],
+        "surveyorLabel": "Surveyor",
+        "surveyorPlaceholder": "your name",
+        "defaultSurveyorName": "Surveyor",
+        "vesselLabel": "Survey vessel",
+        "vesselPlaceholder": "name your ship",
+        "defaultShipName": "Kittiwake",
+        "button": "Sign the commission"
+      },
+      {
+        "id": "fleet",
+        "kind": "text",
+        "body": [
+          "Nine ships. Forty thousand people, asleep. They launched before anyone had found them a destination — deliberately, so no committee could defer the programme the way the last one was deferred.",
+          "You are the part of that gamble that has to work."
+        ],
+        "button": "Continue"
+      },
+      {
+        "id": "meridian",
+        "kind": "text",
+        "subtitle": "Read this before you go down",
+        "body": [
+          "One more thing. There was a survey here two hundred years ago. The <em>Meridian</em>, six crew, commanded by Ilse Vantaa. They filed a recommendation and no fleet ever came.",
+          "Their camps run north. So does everything else they left."
+        ],
+        "button": "Continue"
+      },
+      {
+        "id": "descent",
+        "kind": "text",
+        "unwritten": true,
+        "_write_here": "YOURS TO WRITE. The descent: the crevice seen from above, and the fact that something down there is still under power. Delete \"unwritten\" and add a \"body\": [ \"...\", \"...\" ] array of paragraphs. Until then the game shows a visible marker in its place.",
+        "button": "Continue"
+      },
+      {
+        "id": "naming",
+        "kind": "naming",
+        "title": "CS 4-9 b",
+        "subtitle": "Second planet · unnamed",
+        "body": "Eighty-eight day rotation. Gravity 1.3 g. A habitable band three hundred kilometres wide, moving west at fifteen and a half kilometres an hour, forever.",
+        "placeholder": "name the world",
+        "hint": "This is the name the fleet will read.",
+        "defaultPlanetName": "Meridian's World",
+        "button": "Step outside"
+      }
+    ]
   },
-
   "sites": {
     "soil": {
       "name": "Soil chemistry",
       "place": "Ash field",
       "finding": "Ash-derived, mineral-rich, poor in fixed nitrogen. Crops would need help for a generation and then they would not.",
-      "suggestions": ["The Grey", "Long Ash", "Tillage"]
+      "suggestions": [
+        "The Grey",
+        "Long Ash",
+        "Tillage"
+      ]
     },
     "water": {
       "name": "Surface water",
       "place": "Hydrology",
       "finding": "Meltwater, low salinity, drinkable after filtration. It runs for a day in ninety and then it is ice again.",
-      "suggestions": ["Dawnwater", "The Brief", "Kettle"]
+      "suggestions": [
+        "Dawnwater",
+        "The Brief",
+        "Kettle"
+      ]
     },
     "rad": {
       "name": "Radiation",
       "place": "Vantage",
       "finding": "Magnetosphere weak but sufficient. Surface dose survivable unshielded; a roof solves the rest.",
-      "suggestions": ["The Spine", "First Sight", "Long Look"]
+      "suggestions": [
+        "The Spine",
+        "First Sight",
+        "Long Look"
+      ]
     },
     "bio": {
       "name": "Biosphere",
       "place": "Fauna — herd",
       "finding": "Six tonnes each, walking. No stomach flora hostile to us, no airborne prion analogue. We could live alongside this.",
-      "suggestions": ["Striders", "Walkers", "Longshanks", "Pilgrims"]
+      "suggestions": [
+        "Striders",
+        "Walkers",
+        "Longshanks",
+        "Pilgrims"
+      ]
     },
     "site": {
       "name": "Settlement site",
       "place": "Basin",
       "finding": "A basin, sheltered, with a floor that holds water eleven days after each dawn. If it is anywhere, it is here.",
-      "suggestions": ["The Bowl", "Harbour", "Anchorage"]
+      "suggestions": [
+        "The Bowl",
+        "Harbour",
+        "Anchorage"
+      ]
     },
     "season": {
       "name": "Seasonal extremes",
       "place": "Frost margin",
       "finding": "The night side reaches sixty below and holds it for weeks. Anything we build has to be able to walk, or to sleep.",
-      "suggestions": ["The Cold Edge", "Nightfall", "The Hold"]
+      "suggestions": [
+        "The Cold Edge",
+        "Nightfall",
+        "The Hold"
+      ]
     }
   },
-
   "camps": {
     "c1": {
       "name": "Camp one",
@@ -87,8 +126,14 @@
       "body": "Marker one, logged 41:06:22 local, all six present and well.<br><br>We are calling the planet nothing yet — Vantaa says naming it before the survey is finished is bad discipline, and she is right, and everyone has a name for it anyway.<br><br>The band is generous. We can live here. I want that in the record plainly before I start qualifying it in the report.<br><br>Soil series complete and filed. Ash-derived, mineral-rich, poor in fixed nitrogen. A generation of work and then none.<br><br>— T. Ruiz, for the commander",
       "gift": "Ruiz's soil series, complete, two hundred years before you got here.",
       "reveals": [
-        { "crew": "ruiz", "note": "Wrote the early logs. Meticulous timekeeping, to the second." },
-        { "crew": "vantaa", "note": "Commanded the Meridian survey. Six crew, no relief, no return." }
+        {
+          "crew": "ruiz",
+          "note": "Wrote the early logs. Meticulous timekeeping, to the second."
+        },
+        {
+          "crew": "vantaa",
+          "note": "Commanded the Meridian survey. Six crew, no relief, no return."
+        }
       ]
     },
     "c2": {
@@ -97,8 +142,14 @@
       "body": "Third move. We have the rhythm of it: strike at hour six, walk until the grass thins, make camp in the green again.<br><br>Ruiz took the sledge past the dawn line to the frost and brought back numbers nobody wanted. Sixty below on the night side and it holds for weeks. Whatever gets built here has to be able to move, or to sleep through it.<br><br>Okonkwo has not slept properly since planetfall. She says the light does not change enough to tell her body anything, and that she has started to find the fixed sun difficult to be under. Lindqvist has her on a schedule and a lamp. It is not working yet.<br><br>— T. Ruiz",
       "gift": "Ruiz's cold-side telemetry, taken past the line at some cost.",
       "reveals": [
-        { "crew": "okonkwo", "note": "Biologist. Stopped being able to sleep almost immediately. The light never changes here." },
-        { "crew": "lind", "note": "Physician. Also ran the relay — six people, everyone doubled up." }
+        {
+          "crew": "okonkwo",
+          "note": "Biologist. Stopped being able to sleep almost immediately. The light never changes here."
+        },
+        {
+          "crew": "lind",
+          "note": "Physician. Also ran the relay — six people, everyone doubled up."
+        }
       ]
     },
     "c3": {
@@ -107,7 +158,10 @@
       "body": "Earth acknowledged.<br><br>That is the word. <em>Acknowledged. Recommendation received and filed. Colony programme deferred pending review. Review to be scheduled.</em><br><br>Vantaa read it to all of us standing up, in full, twice, and then said we would continue the survey, because the survey is what we are for. Nobody argued. Nobody said anything at all.<br><br>Radiation series finished and filed with the rest of it. Demir has kept the reactor inside tolerance four years past its rating and does not talk about how.<br><br>— T. Ruiz",
       "gift": "The radiation series — filed, complete, and read by no one.",
       "reveals": [
-        { "crew": "demir", "note": "Engineer. Kept a reactor alive years past its rating." }
+        {
+          "crew": "demir",
+          "note": "Engineer. Kept a reactor alive years past its rating."
+        }
       ]
     },
     "c4": {
@@ -116,7 +170,10 @@
       "body": "<span style='opacity:.55;font-size:13px'>[ transcription note: hand unsteady from here on. dates internally inconsistent — this entry is logged as day 4,860 and also as day 4,680. ]</span><br><br>We have moved this camp eleven times and not at all in nineteen years.<br><br>Ruiz worked out that at fifty-five degrees the line moves slower than a person walks, and once you know a thing like that you cannot un-know it. We came north. Then further north. The grass is thin and the light never really changes and nobody has proposed going back.<br><br>Raman is drawing again, which is good. She has drawn the valley below the camp eleven times this month. They are all slightly different and she says they are all correct.<br><br>Hydrology closed out. It was closed out a long time ago.<br><br>— I. Vantaa",
       "gift": "The hydrology record, closed out and left where someone might find it.",
       "reveals": [
-        { "crew": "raman", "note": "Cartographer. Drew the same valley eleven times in a month and said each was correct." }
+        {
+          "crew": "raman",
+          "note": "Cartographer. Drew the same valley eleven times in a month and said each was correct."
+        }
       ]
     },
     "c5": {
@@ -125,11 +182,13 @@
       "body": "I am the last one and I have stopped pretending the survey continues.<br><br>Something I never put in a report: the ashwaiters do not migrate. They burrow in behind the herd and wait out the whole ninety days in the dark, and when the grass comes round again they are exactly where they were. I used to think that was a horror. I have come to think it is the only honest way to live here, and I am aware of what that says about me.<br><br>We found a world. It was a good world. That part we did correctly.<br><br>If you are reading this then someone came after all, and you are standing in my camp with a survey of your own to finish. Do not do what I did. Send it, and then keep walking.<br><br>— Ilse Vantaa",
       "gift": null,
       "reveals": [
-        { "crew": "vantaa", "note": "Wrote a final entry stating she was the last of the six alive." }
+        {
+          "crew": "vantaa",
+          "note": "Wrote a final entry stating she was the last of the six alive."
+        }
       ]
     }
   },
-
   "graves": {
     "g1": {
       "crew": "okonkwo",
@@ -167,7 +226,6 @@
       "reveal": "Buried by a steady hand, after writing that she was the last one alive."
     }
   },
-
   "shelter": {
     "name": "Unlogged camp",
     "title": "Unlogged camp — no designation",
@@ -179,16 +237,38 @@
     },
     "afterReadToast": "Your six findings say yes. Their forty years say yes, and in thirty years you will not be yourselves. Press <b>T</b> when you know what to send."
   },
-
   "crew": [
-    { "id": "vantaa",  "name": "Cdr. Ilse Vantaa",  "role": "Commander" },
-    { "id": "ruiz",    "name": "Tomas Ruiz",        "role": "Geology, telemetry" },
-    { "id": "okonkwo", "name": "Adaeze Okonkwo",    "role": "Biology" },
-    { "id": "demir",   "name": "Yusuf Demir",       "role": "Engineering" },
-    { "id": "raman",   "name": "Priya Raman",       "role": "Cartography" },
-    { "id": "lind",    "name": "Mara Lindqvist",    "role": "Physician, relay" }
+    {
+      "id": "vantaa",
+      "name": "Cdr. Ilse Vantaa",
+      "role": "Commander"
+    },
+    {
+      "id": "ruiz",
+      "name": "Tomas Ruiz",
+      "role": "Geology, telemetry"
+    },
+    {
+      "id": "okonkwo",
+      "name": "Adaeze Okonkwo",
+      "role": "Biology"
+    },
+    {
+      "id": "demir",
+      "name": "Yusuf Demir",
+      "role": "Engineering"
+    },
+    {
+      "id": "raman",
+      "name": "Priya Raman",
+      "role": "Cartography"
+    },
+    {
+      "id": "lind",
+      "name": "Mara Lindqvist",
+      "role": "Physician, relay"
+    }
   ],
-
   "fleetTransmission": {
     "_DO_NOT_EDIT_THIS_NOTE": "This block is the placeholder. It is the one part of the game that is not to be written, polished, or expanded by anyone but the author. The marker line below stays until she replaces the whole block herself.",
     "kicker": "Received · Anchorage relay · delayed 6 y 4 m",
@@ -202,7 +282,6 @@
     ],
     "button": "Close the channel"
   },
-
   "endings": {
     "prompt": {
       "title": "What do you send?",
@@ -250,7 +329,6 @@
       "restartButton": "Run it again"
     }
   },
-
   "failure": {
     "title": "Survey terminated",
     "water": "Water gone. The band moved on without you, the way it moves on without everything.",
@@ -259,10 +337,13 @@
     "coda": "The fleet is still coming. It does not know yet.",
     "restartButton": "Begin again"
   },
-
   "ui": {
     "manifestHeader": "Survey manifest",
-    "manifestColumns": { "finding": "FINDING", "distance": "DIST", "lost": "LOST IN" },
+    "manifestColumns": {
+      "finding": "FINDING",
+      "distance": "DIST",
+      "lost": "LOST IN"
+    },
     "meridianChainHeader": "Meridian chain",
     "manifestNoteTemplate": "{done} of 6 answered{lost} · press T to transmit",
     "manifestLostTemplate": " · {n} lost",
@@ -290,7 +371,6 @@
     "crewUnknownName": "— — —",
     "crewUnknownNote": "Nothing known.",
     "crewFooter": "Manifest lists six. Three are buried here.",
-
     "_note_worksheet": "The crew worksheet. The player sets a fate for each of the six and commits; the game never says which one is wrong, only that the set does not hold. {n} and {label} are filled in by the game — keep them.",
     "crewWorksheetIntro": "The manifest gives you six names. What became of them is not on it. Set down only what the evidence will carry.",
     "crewFateUnknown": "— not established —",
@@ -317,7 +397,6 @@
     "logKindRecord": "Meridian record",
     "logKindConfession": "Recovered confession"
   },
-
   "toasts": {
     "viewHint": "Press <b>C</b> to switch between the visor and over the shoulder.",
     "visorOn": "Visor view.",
@@ -331,12 +410,10 @@
     "giftTemplate": "{name} — answered from their records. You did not have to reach it.",
     "giftAlreadyHaveTemplate": "Their {name} file is here too. You already have your own."
   },
-
   "soundfield": {
     "null": "SOUNDFIELD NULL — SOMETHING IS NOT MOVING",
     "herd": "HERD — HEAVY, CONTINUOUS"
   },
-
   "errors": {
     "threeFailedToLoad": "Could not load the 3D library from the network. Try reloading."
   }
