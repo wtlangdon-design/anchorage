@@ -127,6 +127,17 @@ function growth(mat, tipColour, sway){
     mat.emissive = new THREE.Color(0x7a1c4e);
     return mat;
   }
+
+  // Foliage is a flat plane with ONE horizontal normal, and the ground decals point
+  // straight down. Under a low raking sun that means almost no diffuse light, so the
+  // plants rendered black however bright their colour was — which is exactly what the
+  // pink test proved, because pink also set emissive and emissive needs no normal.
+  // A little self-illumination is also just how foliage reads: leaves scatter light
+  // through themselves rather than only bouncing it off the front.
+  if(J.emissiveStrength > 0){
+    const c = mat.color.clone().multiplyScalar(J.emissiveStrength);
+    mat.emissive = c;
+  }
   mat.onBeforeCompile = sh => {
     sh.uniforms.uDawn = { value: 0 };
     sh.uniforms.uT = { value: 0 };
@@ -190,7 +201,10 @@ function litterGeometry(){
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(
     [-0.5, 0, -0.5, 0.5, 0, -0.5, 0.5, 0, 0.5, -0.5, 0, 0.5], 3));
-  g.setIndex([0, 1, 2, 0, 2, 3]); g.computeVertexNormals();
+  // Wound the other way this produced a normal of (0,-1,0) — a flat decal lying on
+  // the ground with its face pointing INTO it, so it took no light from above and
+  // rendered black. Reversed, the normal is (0,+1,0).
+  g.setIndex([0, 2, 1, 0, 3, 2]); g.computeVertexNormals();
   return g;
 }
 
