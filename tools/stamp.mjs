@@ -31,6 +31,17 @@ for (const f of walk(join(root, "src")).filter(f => f.endsWith(".js"))) {
     (_, a, path, __, d) => `${a}${path}?v=${v}${d}`);
   if (after !== before) { writeFileSync(f, after); n++; }
 }
+// content/*.json is loaded with fetch(), not import — and fetch responses are cached
+// exactly like scripts are. Missing these meant the CODE went fresh while the CONFIG
+// stayed stale, so a lighting change sat in a cached config.json for four builds.
+for (const f of walk(join(root, "src")).filter(f => f.endsWith(".js"))) {
+  const before = readFileSync(f, "utf8");
+  const after = before.replace(
+    /(fetch\(\s*["'])([^"'?]+\.json)(\?v=[^"']*)?(["'])/g,
+    (_, a, path, __, d) => `${a}${path}?v=${v}${d}`);
+  if (after !== before) { writeFileSync(f, after); n++; }
+}
+
 // and the entry point in index.html
 {
   const p = join(root, "index.html");
