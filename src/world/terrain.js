@@ -105,6 +105,13 @@ let LX, LZ, SEGX, SEGZ, P, SH;
    at runtime there are no segments, only arrays. */
 let TX0 = 0, TSTEP = 1, TINV = 1, TN = 0;
 let CZ, HW, RT, BS, FR;      // centre z, half-width, ridge top, floor base, floor relief
+// THE DETOURS. A pocket hangs off ONE side of the corridor, so it cannot live in the
+// symmetric half-width: PD carries its depth SIGNED BY SIDE (positive reaches into
+// +z, negative into -z, zero means no pocket here) and PR carries how many metres
+// the pocket's floor climbs per metre of depth, which is what makes one of them a
+// climb rather than a walk. Two more flat arrays, no extra work per call beyond one
+// compare and one multiply.
+let PD, PR;
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -121,6 +128,7 @@ function layout(pcfg){
       kind: s.kind, id: s.id, character: s.character || "",
       x0: x, x1: x + s.length, length: s.length,
       halfWidth: s.halfWidth, centre: s.centre, ridgeTop: s.ridgeTop,
+      pocket: s.pocket || null,
       relief: typeof s.floorRelief === "number" ? s.floorRelief : 1,
       baseIn: base, sill, sillRun, drop, dropRun, dropTail: s.dropTail || 0,
       baseOut: base + sill - drop,
@@ -163,6 +171,7 @@ function bake(pcfg, segs){
   TN = Math.ceil((x1 - TX0) / TSTEP) + 2;
   CZ = new Float32Array(TN); HW = new Float32Array(TN); RT = new Float32Array(TN);
   BS = new Float32Array(TN); FR = new Float32Array(TN);
+  PD = new Float32Array(TN); PR = new Float32Array(TN);
 
   // The near end opens out to the ash: the floor widens all the way to the
   // containment toe, so the corridor has a mouth rather than a wall and the heat
@@ -205,6 +214,21 @@ function bake(pcfg, segs){
     BS[i] = x < first.x0 ? floorOf(first, first.x0)
           : x > last.x1  ? floorOf(last, last.x1)
           : floorOf(g, x);
+    // The pocket, if this segment has one. Shoulders of `blend` so it has a mouth
+    // rather than appearing as a rectangle, and a plateau between them so its head
+    // is a flat dead end you can stand in.
+    PD[i] = 0; PR[i] = 0;
+    const pkt = g.pocket;
+    if(pkt){
+      const cx = g.x0 + g.length * pkt.at, halfLen = pkt.length * 0.5;
+      const off = Math.abs(x - cx);
+      if(off < halfLen){
+        const sh = Math.min(pcfg.blend, halfLen);
+        const t = off > halfLen - sh ? (halfLen - off) / sh : 1;
+        PD[i] = (pkt.side < 0 ? -1 : 1) * pkt.depth * smooth(t);
+        PR[i] = pkt.rise || 0;
+      }
+    }
   }
   return segs;
 }
@@ -214,9 +238,14 @@ export function pathPlan(x){
   let u = (x - TX0) * TINV;
   if(u < 0) u = 0; else if(u > TN - 1) u = TN - 1;
   const i = u | 0, j = i < TN - 1 ? i + 1 : i, f = u - i;
-  return { centre: lerp(CZ[i], CZ[j], f), halfWidth: lerp(HW[i], HW[j], f),
+  const pd = lerp(PD[i], PD[j], f), hw = lerp(HW[i], HW[j], f);
+  return { centre: lerp(CZ[i], CZ[j], f), halfWidth: hw,
            ridgeTop: lerp(RT[i], RT[j], f), floor: lerp(BS[i], BS[j], f),
-           relief: lerp(FR[i], FR[j], f) };
+           relief: lerp(FR[i], FR[j], f),
+           pocketDepth: pd, pocketRise: lerp(PR[i], PR[j], f),
+           // the floor's edge on each side, pocket included
+           edgePlus: lerp(CZ[i], CZ[j], f) + hw + (pd > 0 ? pd : 0),
+           edgeMinus: lerp(CZ[i], CZ[j], f) - hw + (pd < 0 ? pd : 0) };
 }
 
 export function initTerrain(cfg, story, deps){
@@ -367,10 +396,24 @@ export function heightAt(x, z){
   // the ground jumps by ridgeLip the instant you pass the floor's edge, so the
   // grade of that step is ridgeLip/stride whatever the stride is, and the smaller
   // the step the more steeply it is refused. Nothing that drifts can soften it.
-  const az = z >= cz ? z - cz : cz - z;
-  const rt2 = (az - hw) * P.invRidgeRun;
+  const side = z >= cz ? 1 : -1;
+  const az = side > 0 ? z - cz : cz - z;
+  // A detour reaches off one side only, so it widens this side's floor and nobody
+  // else's. Inside it the floor may climb with depth — that is what turns one of the
+  // six into a climb rather than a walk.
+  const pd = PD[i] + (PD[j] - PD[i]) * f;
+  let hwSide = hw, floorY = base;
+  if(pd !== 0 && (pd > 0) === (side > 0)){
+    const depth = pd > 0 ? pd : -pd;
+    hwSide = hw + depth;
+    if(az > hw){
+      const pr = PR[i] + (PR[j] - PR[i]) * f;
+      if(pr !== 0) floorY += pr * (az - hw);
+    }
+  }
+  const rt2 = (az - hwSide) * P.invRidgeRun;
   const rf = rt2 > 0 ? (rt2 >= 1 ? 1 : Math.sqrt(rt2)) : 0;
-  let h = base + (rt2 > 0 ? P.ridgeLip + rf * rt : 0);
+  let h = floorY + (rt2 > 0 ? P.ridgeLip + rf * rt : 0);
 
   // ---- the outer wall: fixed toe, absolute crest, stacked on the ridge -----
   // Stacked and not maxed, for the reason the crevice learned the hard way: a max
@@ -381,7 +424,7 @@ export function heightAt(x, z){
   if(ot > 0){
     const crest = P.outerY * (1 + P.outerVary *
       clampS(fbm(x * P.outerF, 0.31, 2) * P.outerGain));
-    const top = base + rt;
+    const top = floorY + rt;
     if(crest > top) h += face(ot, P.outerTF, P.outerTH) * (crest - top);
   }
 

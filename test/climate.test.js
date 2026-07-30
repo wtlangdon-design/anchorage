@@ -19,6 +19,7 @@ function near(a, b, eps = EPS) { return Math.abs(a - b) <= eps; }
 
 // the world is a strip; the clock only varies along the journey, so this is lengthX
 const SIZE = config.world.lengthX || config.world.size;
+const MAXTEMP = config.climate.maxTemp;
 
 // 1. lostAtT agrees with tempAt: at t = lostAtT(x), x is exactly at the lethal temperature.
 for (const x of [-1700, -1300, -1000, -620, 0, 150, 430, 1200]) {
@@ -66,13 +67,22 @@ console.log("\n  shade:");
   ok("shade never makes ground hotter", hotter === 0, `${hotter} cases, worst +${worst.toFixed(3)}`);
 
   // 2. full shade must be strictly cooler than full sun wherever the sun reaches
-  let notCooler = [];
+  //    AND the ceiling is not already in the way. climate.js clamps at maxTemp, and
+  //    since the thermal gradient steepened for the one-way corridor (k 0.05 -> 0.116)
+  //    that ceiling is reached a few hundred metres behind the dawn line rather than a
+  //    couple of kilometres. Ground pinned at maxTemp is equally lethal shaded or not,
+  //    which is the clamp doing its job — so those points are excluded rather than
+  //    counted as a failure. Everything below the ceiling still has to be cooler.
+  let notCooler = [], atCeiling = 0;
   for (const x of xs) for (const t of ts) {
     const b = dawnX(t) - x;
     if (b <= 0) continue;                       // night side: no sun to take away
+    if (tempAt(x, t, 0) >= MAXTEMP - EPS) { atCeiling++; continue; }
     if (!(tempAt(x, t, 1) < tempAt(x, t, 0) - EPS)) notCooler.push(`x=${x},t=${t}`);
   }
-  ok("full shade is strictly cooler than full sun on the lit side", notCooler.length === 0, notCooler.join(" "));
+  ok("full shade is strictly cooler than full sun wherever the sun reaches and the ceiling is not",
+     notCooler.length === 0, notCooler.join(" "));
+  console.log(`     (${atCeiling} of the sampled points are already pinned at maxTemp ${MAXTEMP} C)`);
 
   // 3. shade must not resurrect the night side or break the clamps
   for (const x of [2000, 5000]) {

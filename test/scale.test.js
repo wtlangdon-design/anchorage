@@ -195,14 +195,19 @@ for (const bad of [undefined, 0, -1, NaN, "0.5"]) {
      `${Math.min(...w)}-${Math.max(...w)} m`);
   // the lip, measured: one step off the floor's edge must be a wall at any stride
   const limit = c.player.maxClimbGrade;
+  // Measured at the REAL floor edge on both sides, which is pocket-aware: a detour
+  // widens one side only, and stepping into a pocket is stepping onto floor.
   let worst = Infinity, worstAt = null;
   for (const g of chambers) {
-    const x = (g.x0 + g.x1) / 2, p = terrain.pathPlan(x);
-    for (const stride of [0.07, 0.35, 0.5]) {
-      const on = terrain.heightAt(x, p.centre + p.halfWidth - 0.01);
-      const off = terrain.heightAt(x, p.centre + p.halfWidth + stride);
-      const grade = (off - on) / stride;
-      if (grade < worst) { worst = grade; worstAt = `${g.id} at a ${stride} m stride`; }
+    for (const frac of [0.25, 0.5, 0.75]) {
+      const x = g.x0 + g.length * frac, p = terrain.pathPlan(x);
+      for (const [edge, dir] of [[p.edgePlus, 1], [p.edgeMinus, -1]])
+        for (const stride of [0.07, 0.35, 0.5]) {
+          const on = terrain.heightAt(x, edge - dir * 0.01);
+          const off = terrain.heightAt(x, edge + dir * stride);
+          const grade = (off - on) / stride;
+          if (grade < worst) { worst = grade; worstAt = `${g.id} ${dir > 0 ? "+z" : "-z"} at a ${stride} m stride`; }
+        }
     }
   }
   ok("stepping off the floor onto the ridge is refused everywhere",
