@@ -69,6 +69,36 @@ export function canopyAt(x, z){
   return c < 0 ? 0 : c > 1 ? 1 : c;
 }
 
+/* ------------------------------------------------------------- what you hear ---
+   Two more pure queries, for the soundfield. They are here rather than in the
+   audio module because they are facts about the planet, not about the mix, and
+   because growthAt has to agree with the growth shader below to the decimal — if
+   the insects are loud where the plants are drawn black, the world is lying. */
+
+// How alive the growth is at this x, 0..1. Exactly what the vertex shader computes:
+// nothing ahead of growthRise, rising to full at the dawn line, browning after
+// growthFull, gone by growthBurn. `behind` is metres BEHIND the dawn line, so it is
+// negative ahead of it.
+export function growthAt(x, dawnLineX){
+  if(!J) return 0;
+  const behind = dawnLineX - x;
+  const rise = clamp01((behind - J.growthRise) / Math.max(0.001, -J.growthRise));
+  const age = clamp01((behind - J.growthFull) / Math.max(1, J.growthBurn - J.growthFull));
+  return rise * (1 - age);
+}
+
+// How wet the ground is here, 0..1. The SAME test the water layer places ponds by —
+// how far this ground dips below the trail's own floor line — so the sound of water
+// and the sight of it cannot disagree. Off the trail the bank rises, so it dries out.
+export function wetnessAt(x, z){
+  if(!J || !plan) return 0;
+  const p = plan(x);
+  const depth = (p.floor - J.water.pondBelow) - heightAt(x, z);
+  return clamp01(depth / J.water.wetDepth);
+}
+
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+
 /* ---------------------------------------------------------------- shaders ---
    GLSL wants "1.0", never "1" — config numbers go through these. */
 const f = n => Number(n).toFixed(5);

@@ -9,16 +9,22 @@
 // an explicit t, so callers here pass S.t.
 
 let config, story, S, manifest, storyMod, dawnX, tempAt, lostAtT, getDens;
+let canopyAt, growthAt, wetnessAt;
 let cmp, cx, sfc, s2;
 
 export function initCompass(cfg, storyArg, deps){
   config = cfg; story = storyArg;
   S = deps.S; manifest = deps.manifest; storyMod = deps.storyMod;
   dawnX = deps.dawnX; tempAt = deps.tempAt; lostAtT = deps.lostAtT; getDens = deps.getDens;
+  // the jungle's three pure queries, for the soundfield strip. Optional: a build
+  // with no vegetation still draws a strip, it just has nothing in it but the herd.
+  canopyAt = deps.canopyAt; growthAt = deps.growthAt; wetnessAt = deps.wetnessAt;
 
   cmp = document.getElementById("cmp"); cx = cmp.getContext("2d");
   sfc = document.getElementById("sf");  s2 = sfc.getContext("2d");
 }
+
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
 function fit(c){ const w = c.clientWidth, h = c.clientHeight, d = Math.min(devicePixelRatio, 2);
   if(c.width !== w * d){ c.width = w * d; c.height = h * d; } return [w, h, d]; }
@@ -75,8 +81,11 @@ export function drawCompass(){
 }
 
 // What drawSound() worked out this frame, kept so world/sound.js can hear exactly
-// what the strip drew rather than computing the herd a second time and drifting.
-const field = { herdAngle: 0, herdAmp: 0, herdDistance: Infinity };
+// what the strip drew rather than computing the world a second time and drifting.
+// The three jungle levels are here for the same reason the herd always was: if the
+// bars say the insects are deafening and the ears say silence, one of them is lying.
+const field = { herdAngle: 0, herdAmp: 0, herdDistance: Infinity, herdAhead: true,
+                canopy: 0, growth: 0, wet: 0 };
 export function soundfield(){ return field; }
 
 export function drawSound(){
@@ -90,6 +99,15 @@ export function drawSound(){
   const hd = Math.hypot(hx - S.px, hz - S.pz);
   src.push({ a: Math.atan2(-(hz - S.pz), hx - S.px), amp: Math.max(0, 1 - hd / config.striders.audibleRange) * .95 });
   field.herdAngle = src[0].a; field.herdAmp = src[0].amp; field.herdDistance = hd;
+  // The trail runs +x, so ahead-or-behind is a comparison of x and nothing more.
+  // This is a fact about the world, not about the camera: it must not change when
+  // the player turns their head.
+  field.herdAhead = hx >= S.px;
+
+  // The jungle, where the player is standing. Three cheap queries a frame.
+  field.canopy = canopyAt ? canopyAt(S.px, S.pz) : 0;
+  field.growth = growthAt ? growthAt(S.px, dawnX(S.t)) : 0;
+  field.wet = wetnessAt ? wetnessAt(S.px, S.pz) : 0;
   let nul = 0;
   getDens().forEach(dn => { if(tempAt(dn.x, S.t) < config.ashwaiters.activeAboveTemp) return;
     const dd = Math.hypot(dn.x - S.px, dn.z - S.pz);
@@ -98,7 +116,22 @@ export function drawSound(){
   // the bars are animation, so they ride the wall clock and keep breathing through
   // the grace period; where the herd and the dens ARE is mission time, above
   const at = S.animT === undefined ? S.t : S.animT;
-  for(let i = 0; i < 70; i++){ const x = i / 70 * w, a = (.13 + .08 * Math.sin(at * .9 + i * .7)) * amb;
+  // THE BARS ARE THE JUNGLE NOW. They used to be a fixed idle shimmer; a strip that
+  // reads the same on burnt ground as under a closed canopy is decoration. The floor
+  // is the three beds the ears are actually mixing, so walking out of the growth and
+  // into the burn visibly empties the strip — and the null still flattens it to
+  // nothing, because every term is multiplied by amb.
+  const bed = clamp01(config.compass.bedFloor +
+    config.compass.bedCanopy * field.canopy +
+    config.compass.bedInsects * field.growth * (.4 + .6 * field.canopy) +
+    config.compass.bedWater * field.wet);
+  for(let i = 0; i < 70; i++){
+    // the insects are the fast, narrow term and the canopy is the slow, wide one, so
+    // the bars ripple when the growth is up and heave when it is only wind
+    const x = i / 70 * w;
+    const fast = .5 + .5 * Math.sin(at * 5.7 + i * 1.9);
+    const slow = .5 + .5 * Math.sin(at * .9 + i * .7);
+    const a = bed * (.55 + .45 * (field.growth * fast + (1 - field.growth) * slow)) * amb;
     s2.fillStyle = `rgba(143,198,212,${.16 * amb + .02})`; s2.fillRect(x, h / 2 - a * h / 2, w / 70 - 1, a * h); }
   src.forEach(sc => { let dd = ((sc.a - S.camYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
     // A source BEHIND you used to be dropped, which threw away the only thing the

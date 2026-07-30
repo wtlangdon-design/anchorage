@@ -5,7 +5,7 @@
   "type": "module",
   "description": "The Anchorage — a browser survey game. Static files, no build step; this manifest exists only to run the tests and the balance check under Node.",
   "scripts": {
-    "test": "node test/climate.test.js && node test/clock.test.js && node test/gait.test.js && node test/manifest.test.js && node test/scale.test.js && node test/deduction.test.js && node test/chart.test.js && node test/briefing.test.js && node test/mobile.test.js",
+    "test": "node test/climate.test.js && node test/clock.test.js && node test/gait.test.js && node test/manifest.test.js && node test/scale.test.js && node test/deduction.test.js && node test/chart.test.js && node test/briefing.test.js && node test/mobile.test.js && node test/sound.test.js",
     "balance": "node test/balance.js"
   }
 }

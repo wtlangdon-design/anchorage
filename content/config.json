@@ -580,14 +580,15 @@
   "striders": {
     "_note": "The herd walks the CORRIDOR. bandOffset is how far ahead of (positive) or behind (negative) the dawn line the middle of the herd stays — they follow the grass, which is at grass.bandOffset, so keep the two near each other. spreadX is how far the herd strings out along the journey; lateralFraction is how much of the corridor's half-width they use across it, so they fit a 28 m pass and a 80 m chamber without any per-place tuning. THEY ARE GOING THE SAME WAY YOU ARE, for the same reason. That is the whole point: the biosphere is surveyed by catching up to them, not by crossing them. audibleRange and closeRange feed the soundfield strip, which is how you know whether they are ahead or behind you in a corridor where you cannot see past the next pass.",
     "count": 90,
-    "bandOffset": -140,
+    "bandOffset": 200,
     "spreadX": 260,
     "bobRate": 0.85,
     "bobAmplitude": 0.42,
     "audibleRange": 900,
     "closeRange": 320,
     "lateralFraction": 0.72,
-    "reachAtEnd": 40
+    "reachAtEnd": 40,
+    "_note_bandOffset": "Metres from the dawn line to the middle of the herd. POSITIVE IS AHEAD OF THE LINE, which is where animals that have to outrun a burn actually walk. It used to be negative, which put the whole herd inside the fire. At 200 they come up the trail behind you shortly after the handover, overtake you, and lead for the rest of the run: measured, a walker who stops to survey has them ahead for 71% of the journey. Raising it past about 380 puts them ahead at the handover itself, and that costs the walker a finding — the biosphere window closes too early. Do not move it without running npm run balance."
   },
   "ashwaiters": {
     "_note": "Currently a damage radius, not a creature. Known issue 2 in HANDOFF.",
@@ -754,7 +755,12 @@
     "visibleArc": 1.25,
     "tickSpacingDegrees": 10,
     "labelGapPx": 46,
-    "_note_labels": "labelGapPx: minimum pixels between two compass labels. When sites cluster on one bearing, the nearer one keeps its text and the others show only an arrow."
+    "_note_labels": "labelGapPx: minimum pixels between two compass labels. When sites cluster on one bearing, the nearer one keeps its text and the others show only an arrow.",
+    "_note_bed": "The soundfield strip's idle level. It is not idle any more: the bars are the floor of the three ambient beds, so the strip empties as you walk out of the growth and into the burn and fills again under a closed canopy. bedFloor is what you get with nothing around you at all. The ashwaiter null multiplies the whole thing, so full null is a flat line — that is the point.",
+    "bedFloor": 0.055,
+    "bedCanopy": 0.16,
+    "bedInsects": 0.3,
+    "bedWater": 0.13
   },
   "deduction": {
     "_note": "The Meridian worksheet. minPerCommit is how many fates must be entered before the record will accept them — the point of it being more than one is that a player cannot test a single guess at a time and walk the answer out of the game. Three is the Obra Dinn number.",
@@ -785,7 +791,7 @@
     }
   },
   "audio": {
-    "_note": "Everything you hear is made from filtered noise at run time — there are no sound files. Gains are 0..1 and they add up, so raising several at once is how you get distortion. The wind is meant to sit under everything and only be noticed when it stops. Mute is V.",
+    "_note": "Everything you hear is made from filtered noise at run time — there are no sound files. Gains are 0..1 and they add up, so raising several at once is how you get distortion. FOUR BEDS now, and they are the jungle: 'wind' is the canopy moving over your head, 'insects' is the stridulating mass in the growth around you, 'water' is what is standing in the low ground, and 'herd' is the animals ahead of you on the trail. All four pass through one duck gain that the ashwaiter null pulls to zero — see 'null'. Mute is V.",
     "masterGain": 0.9,
     "noiseSeconds": 3,
     "smoothing": {
@@ -794,10 +800,12 @@
       "herd": 0.6,
       "null": 0.14,
       "mute": 0.08,
-      "pan": 0.25
+      "pan": 0.25,
+      "insects": 0.7,
+      "water": 0.5
     },
     "wind": {
-      "_note": "The floor. 'gain' is the level on flat, cool ground; elevation and heat add to it. Gusts are two slow sines beating against each other so the bed never loops audibly.",
+      "_note": "THE CANOPY. Not open-sky wind any more: this is air moving through a roof of leaves eighteen metres up, so it is the loudest thing you hear under a closed canopy and it thins out where the canopy breaks. 'gain' is the level with no canopy at all; canopyGain is what a fully closed roof adds. Elevation and heat still add to it. Gusts are two slow sines beating against each other so the bed never loops audibly.",
       "gain": 0.05,
       "lowpassHz": 430,
       "lowpassQ": 0.6,
@@ -810,15 +818,24 @@
       "heatRange": 40,
       "heatGain": 0.03,
       "gustRate": 0.055,
-      "gustDepth": 0.35
+      "gustDepth": 0.35,
+      "canopyGain": 0.085,
+      "canopyLowpassAdd": -120,
+      "canopyCurve": 0.8,
+      "gustBeatRatio": 10.7,
+      "gustBeatPhase": 1.3
     },
     "herd": {
-      "_note": "Low-passed noise, panned by the same bearing the soundfield strip draws. 'curve' above 1 keeps it felt rather than heard until you are close: at half range it is a quarter as loud. Range itself comes from striders.audibleRange.",
+      "_note": "THE HERD, AHEAD OF YOU ON THE TRAIL. They trampled this path ninety days ago and they are walking it again now, in front of you, and the only way to know how far is to listen. Three cues, and they are all distance: level (curve above 1 keeps them felt rather than heard until you are close), brightness (lowpassSpreadHz opens up as you close, so far away is a rumble and near is hooves), and pulse — inside 'pulseFrom' metres the mass starts to come apart into individual animals. behindLowpassMul is the one cue that is direction rather than distance: a stereo panner cannot separate dead-ahead from dead-behind, but muffling can. Range comes from striders.audibleRange.",
       "gain": 0.32,
       "curve": 1.8,
       "lowpassHz": 85,
       "lowpassSpreadHz": 70,
-      "lowpassQ": 0.7
+      "lowpassQ": 0.7,
+      "behindLowpassMul": 0.55,
+      "pulseFrom": 380,
+      "pulseRate": 1.9,
+      "pulseDepth": 0.34
     },
     "foot": {
       "_note": "One burst per footfall, fired off the gait phase so it lands with the foot rather than on a timer. 1.3g is in these numbers: low filter, slow decay, weight. 'phaseOffset' slides the hit earlier or later in the stride.",
@@ -842,6 +859,29 @@
     "null": {
       "_note": "The ashwaiter silence. At full null everything is multiplied by zero — actual silence, not a quiet mix. 'curve' above 1 makes the drop bite earlier as you approach the den.",
       "curve": 1.6
+    },
+    "insects": {
+      "_note": "THE INSECTS. The floor of a jungle soundfield and the one bed that tells you where you are in the day: they are silent ahead of the growth, deafening in it, and they go out as it browns. Level is jungle.growthAt (the same curve the plants are drawn with) times the local canopy, so a break in the roof is quieter as well as hotter. 'stridulateRate' is the tremolo in Hz — a mass of animals rubbing, not one — and 'stridulateDepth' is how much of the level it swings. Band-passed high and narrow, which is what makes it read as insects and not as hiss.",
+      "gain": 0.115,
+      "curve": 1.25,
+      "bandHz": 3400,
+      "bandQ": 1.6,
+      "highpassHz": 1400,
+      "bandSpreadHz": 900,
+      "canopyFloor": 0.45,
+      "canopyGain": 0.55,
+      "stridulateRate": 5.7,
+      "stridulateDepth": 0.28
+    },
+    "water": {
+      "_note": "THE WATER. Water arrives at dawn, so there is standing water in every hollow behind the line. Level is jungle.wetnessAt — the same test the ponds are placed by — so you hear it exactly where it is. Band-passed mid-high with a little movement on the filter, which is as close to running water as filtered noise gets.",
+      "gain": 0.14,
+      "curve": 0.85,
+      "lowpassHz": 2100,
+      "lowpassQ": 0.8,
+      "highpassHz": 620,
+      "moveHz": 260,
+      "moveRate": 0.19
     }
   },
   "timing": {
@@ -965,7 +1005,7 @@
       "colour": "0x5b5330"
     },
     "_growthNote": "Distances in metres behind the dawn line. Ahead of it (negative) the growth has not come up: scaled down to growthMinScale. From the line back to growthFull it is at full height and greenest. From growthFull back to growthBurn it browns. Past growthBurn it is in the burn: black, collapsed, and the ground there is already lethal.",
-    "growthRise": -90,
+    "growthRise": -1000,
     "growthFull": 260,
     "growthBurn": 560,
     "growthMinScale": 0.18,
@@ -985,12 +1025,14 @@
       "lift": 0.06,
       "opacity": 0.62,
       "colour": "0x2c3a2e",
-      "reach": 6
+      "reach": 6,
+      "wetDepth": 1.6
     },
     "_meshNote": "EVERY LAYER IS ONE DRAW CALL. 26k plants in six InstancedMeshes, against 598 individually-drawn rocks before this pass and 300 after it. If you raise a count, you are buying instances, not draw calls — that is the trade this module exists to make.",
     "offBoost": 0.46,
-    "offFull": 34
+    "offFull": 34,
+    "_note_growth": "WHERE THE ONE DAY SITS, in metres BEHIND the dawn line. Negative is ahead of it. These have to be set against where the player actually STANDS relative to that line, which is not obvious: the lethal edge trails the dawn line by about 550 m, so a player running from the heat spends the whole timed run somewhere between 380 m ahead of the line and a few hundred behind it, depending entirely on how much they stop to survey. growthRise was -90 at first, which put the entire visible world inside the 18% stubble zone for anyone who kept walking. At -1000 the growth comes up across the player's whole range instead: young and thin ahead of them, full right behind the line, browning after growthFull, black by growthBurn — which lands in the same place the ground turns lethal. Sprint hard enough and you outrun the growth into bare ground, which is real and is meant to be."
   },
-  "buildStamp": "build 2026-07-30 · the jungle",
+  "buildStamp": "build 2026-07-30 · sound and the herd",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }

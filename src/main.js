@@ -163,7 +163,10 @@ function init() {
   });
 
   compass.initCompass(config, story_data, {
-    S, manifest, storyMod: story, dawnX, tempAt, lostAtT, getDens: fauna.getDens
+    S, manifest, storyMod: story, dawnX, tempAt, lostAtT, getDens: fauna.getDens,
+    // the soundfield strip reads the jungle directly; world/sound.js then reads the
+    // strip, so the bars and the ears cannot drift apart
+    canopyAt: jungle.canopyAt, growthAt: jungle.growthAt, wetnessAt: jungle.wetnessAt
   });
 
   chart.initChart(config, story_data, { S, manifest, storyMod: story, heightAt: terrain.heightAt, dawnX });
