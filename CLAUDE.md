@@ -17,8 +17,8 @@ you have not reached become permanently unreachable.** You cannot answer all six
 questions. Choosing which to abandon is the game.
 
 Two hundred years ago the survey ship *Meridian* did this same job here. Their
-camps run north, and following them is how you recover findings the clock took
-from you. Their story is the spine: five graves for six crew, logs that show a
+camps run west along the trail, ahead of you, and following them is how you
+recover findings the clock took from you. Their story is the spine: five graves for six crew, logs that show a
 decline nobody in them noticed, and a reveal that recontextualises the ending.
 
 ## Design invariants — do not change these without being asked

@@ -93,14 +93,18 @@ console.log("THE LEGACY SHIM (no story.briefing.beats yet)");
   ok("beat 2 is the fleet, both paragraphs, still in the right order",
      /Nine ships/.test(r.screens[1]) && /gamble that has to work/.test(r.screens[1])
      && r.screens[1].indexOf("Nine ships") < r.screens[1].indexOf("gamble that has to work"));
+  // Deliberately not pinned to the wording — the writer rewrites this prose and the
+  // test should care that the Meridian beat is third, not which nouns are in it.
   ok("beat 3 is the Meridian",
-     /two hundred years ago/.test(r.screens[2]) && /camps run north/.test(r.screens[2]));
+     /two hundred years ago/.test(r.screens[2]) && /camps run/.test(r.screens[2]));
   // This used to assert the descent beat was an unwritten marker. It is written
   // now, so the assertion that matters is the opposite one: the beat carries real
   // prose and no marker is showing. The marker machinery is still tested below,
   // against a synthetic beat, so it cannot rot.
+  // Written, not "written in these words" — the point is that no marker shows and
+  // there is real prose there.
   ok("beat 4 is the descent, and it is written",
-     /the ground splits/.test(r.screens[3]) && !/not written yet/.test(r.screens[3]));
+     !/not written yet/.test(r.screens[3]) && r.screens[3].replace(/<[^>]+>/g, "").length > 200);
   ok("no beat in the authored opening is an unwritten slot",
      !r.screens.some(s => /not written yet/.test(s)));
   ok("beat 5 is the naming beat", /id="i-p"/.test(r.screens[4]));

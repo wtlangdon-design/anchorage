@@ -32,7 +32,7 @@
         "subtitle": "Read this before you go down",
         "body": [
           "One more thing. There was a survey here two hundred years ago. The <em>Meridian</em>, six crew, commanded by Ilse Vantaa. They filed a recommendation and no fleet ever came.",
-          "Their camps run north. So does everything else they left."
+          "Their camps run west along the trail, ahead of you. So does everything else they left."
         ],
         "button": "Continue"
       },
@@ -40,8 +40,9 @@
         "id": "descent",
         "kind": "text",
         "body": [
-          "You come in low over the ash. For two hundred kilometres it is flat and pale and the same, and then the ground splits — a crevice, six hundred metres end to end, walls steep enough to hold shadow on the floor while the sun crosses. It is the only shade on this hemisphere. It is why you are landing here and not anywhere else.",
-          "There is a light in it. Small, steady, and two hundred years old. Nothing in the <em>Meridian</em>'s filed record accounts for a light."
+          "You come in low. Behind the dawn line the ground is bare and black, ninety days of ash going cold. Ahead of it, in the twilight, a strip of green two thousand kilometres long is coming up as you watch — and it will be full canopy by the time you are down, and ash again by the time you leave. Nothing here stands still long enough to be mapped twice.",
+          "There is one way into it. The herd tramples a trail west through the new growth every ninety days, and it is the only ground on this planet a person can walk. You are landing on the trail because there is nowhere else to land.",
+          "There is a light on that trail. Small, steady, and two hundred years old. Nothing in the <em>Meridian</em>'s filed record accounts for a light."
         ],
         "button": "Continue"
       },
@@ -63,10 +64,10 @@
   "sites": {
     "soil": {
       "name": "Soil chemistry",
-      "place": "Ash field",
-      "finding": "Ash-derived, mineral-rich, poor in fixed nitrogen. Crops would need help for a generation and then they would not.",
+      "place": "The burn",
+      "finding": "Ash-derived, and freshly — this ground burns to nothing every ninety days and comes back. Mineral-rich, poor in fixed nitrogen. Crops would need help for a generation and then they would not.",
       "suggestions": [
-        "The Grey",
+        "The Burn",
         "Long Ash",
         "Tillage"
       ]
@@ -78,17 +79,17 @@
       "suggestions": [
         "Dawnwater",
         "The Brief",
-        "Kettle"
+        "Runnel"
       ]
     },
     "rad": {
       "name": "Radiation",
-      "place": "Vantage",
+      "place": "Canopy break",
       "finding": "Magnetosphere weak but sufficient. Surface dose survivable unshielded; a roof solves the rest.",
       "suggestions": [
-        "The Spine",
-        "First Sight",
-        "Long Look"
+        "The Break",
+        "Skylight",
+        "Open Roof"
       ]
     },
     "bio": {
@@ -104,10 +105,10 @@
     },
     "site": {
       "name": "Settlement site",
-      "place": "Basin",
-      "finding": "A basin, sheltered, with a floor that holds water eleven days after each dawn. If it is anywhere, it is here.",
+      "place": "Clearing",
+      "finding": "A clearing, sheltered, with a floor that holds water eleven days after each dawn. If it is anywhere, it is here.",
       "suggestions": [
-        "The Bowl",
+        "The Clearing",
         "Harbour",
         "Anchorage"
       ]
@@ -143,7 +144,7 @@
     "c2": {
       "name": "Camp two",
       "title": "Camp two — Meridian, day 1,205",
-      "body": "Third move. We have the rhythm of it: strike at hour six, walk until the grass thins, make camp in the green again.<br><br>Ruiz took the sledge past the dawn line to the frost and brought back numbers nobody wanted. Sixty below on the night side and it holds for weeks. Whatever gets built here has to be able to move, or to sleep through it.<br><br>Okonkwo has not slept properly since planetfall. She says the light does not change enough to tell her body anything, and that she has started to find the fixed sun difficult to be under. Lindqvist has her on a schedule and a lamp. It is not working yet.<br><br>— T. Ruiz",
+      "body": "Third move. We have the rhythm of it: strike at hour six, walk until the growth thins, make camp in the green again.<br><br>Ruiz took the sledge past the dawn line to the frost and brought back numbers nobody wanted. Sixty below on the night side and it holds for weeks. Whatever gets built here has to be able to move, or to sleep through it.<br><br>Okonkwo has not slept properly since planetfall. She says the light does not change enough to tell her body anything, and that she has started to find the fixed sun difficult to be under. Lindqvist has her on a schedule and a lamp. It is not working yet.<br><br>— T. Ruiz",
       "gift": "Ruiz's cold-side telemetry, taken past the line at some cost.",
       "reveals": [
         {
@@ -171,7 +172,7 @@
     "c4": {
       "name": "Camp four",
       "title": "Camp four — Meridian, day 4,860 (?)",
-      "body": "<span style='opacity:.55;font-size:13px'>[ transcription note: hand unsteady from here on. dates internally inconsistent — this entry is logged as day 4,860 and also as day 4,680. ]</span><br><br>We have moved this camp eleven times and not at all in nineteen years.<br><br>Ruiz worked out that at fifty-five degrees the line moves slower than a person walks, and once you know a thing like that you cannot un-know it. We came north. Then further north. The grass is thin and the light never really changes and nobody has proposed going back.<br><br>Raman is drawing again, which is good. She has drawn the valley below the camp eleven times this month. They are all slightly different and she says they are all correct.<br><br>Hydrology closed out. It was closed out a long time ago.<br><br>— I. Vantaa",
+      "body": "<span style='opacity:.55;font-size:13px'>[ transcription note: hand unsteady from here on. dates internally inconsistent — this entry is logged as day 4,860 and also as day 4,680. ]</span><br><br>We have moved this camp eleven times and not at all in nineteen years.<br><br>Ruiz worked out that where the canopy closes over completely the burn goes across the top of it and the ground underneath never catches, and once you know a thing like that you cannot un-know it. We walked to the thickest of it and stopped. Then further in. The growth is thin under a roof like that and the light never really changes and nobody has proposed going back.<br><br>Raman is drawing again, which is good. She has drawn the clearing below the camp eleven times this month. They are all slightly different and she says they are all correct.<br><br>Hydrology closed out. It was closed out a long time ago.<br><br>— I. Vantaa",
       "gift": "The hydrology record, closed out and left where someone might find it.",
       "reveals": [
         {
@@ -183,7 +184,7 @@
     "c5": {
       "name": "Camp five",
       "title": "Camp five — Meridian, final entry",
-      "body": "I am the last one and I have stopped pretending the survey continues.<br><br>Something I never put in a report: the ashwaiters do not migrate. They burrow in behind the herd and wait out the whole ninety days in the dark, and when the grass comes round again they are exactly where they were. I used to think that was a horror. I have come to think it is the only honest way to live here, and I am aware of what that says about me.<br><br>We found a world. It was a good world. That part we did correctly.<br><br>If you are reading this then someone came after all, and you are standing in my camp with a survey of your own to finish. Do not do what I did. Send it, and then keep walking.<br><br>— Ilse Vantaa",
+      "body": "I am the last one and I have stopped pretending the survey continues.<br><br>Something I never put in a report: the ashwaiters do not migrate. They burrow in behind the herd and wait out the whole ninety days in the dark, and when the growth comes round again they are exactly where they were. I used to think that was a horror. I have come to think it is the only honest way to live here, and I am aware of what that says about me.<br><br>We found a world. It was a good world. That part we did correctly.<br><br>If you are reading this then someone came after all, and you are standing in my camp with a survey of your own to finish. Do not do what I did. Send it, and then keep walking.<br><br>— Ilse Vantaa",
       "gift": null,
       "reveals": [
         {
@@ -212,7 +213,7 @@
       "crew": "raman",
       "title": "P. RAMAN",
       "label": "year 24",
-      "body": "The lettering has gone irregular, the spacing wrong, as though cut by someone working from memory of how letters go.<br><br><em>She drew everything. At the end she drew the same valley eleven times.</em>",
+      "body": "The lettering has gone irregular, the spacing wrong, as though cut by someone working from memory of how letters go.<br><br><em>She drew everything. At the end she drew the same clearing eleven times.</em>",
       "reveal": "Died in year twenty-four."
     },
     "g4": {
@@ -233,7 +234,7 @@
   "shelter": {
     "name": "Unlogged camp",
     "title": "Unlogged camp — no designation",
-    "body": "One shelter, out past the last of the grass, on ground that has not been warm in a hundred and eighty years. It is not on any Meridian manifest.<br><br>There is a relay terminal inside, still under power, and a single record left open on it.",
+    "body": "One shelter, out past the last of the growth, on ground that has not been warm in a hundred and eighty years. It is not on any Meridian manifest.<br><br>There is a relay terminal inside, still under power, and a single record left open on it.",
     "confession": {
       "title": "M. Lindqvist — personal record, undated",
       "body": "I was the physician and I ran the relay, because there were six of us and everyone did two jobs.<br><br>I had the medical series before anyone. Okonkwo first, then all of us: sleep architecture coming apart, circadian phase running free, and after the first decade something worse and slower underneath it. Ninety-day light. Our biology has no answer to it and neither did I. It does not kill you. It takes you apart over thirty years and you are the last to notice, and by the time you would notice you are not the one doing the noticing.<br><br>I was holding the survey recommendation for transmission on day 2,900. Six lives on one side. Forty thousand on the other, asleep, with no fuel to go anywhere else once they were pointed here.<br><br>I changed one word. The recommendation went out as <em>withdrawn</em>.<br><br>Then I wrote the reply myself, because it would take nineteen years to arrive and I could not have Ilse reading the real one. <em>Deferred pending review.</em> She believed in that committee for the rest of her life. She died angry at an office that had never received anything to be angry about.<br><br>I buried them all. I have been alone eleven years now and I am, as far as I can tell, still myself, which I no longer trust as evidence of anything.<br><br>If you are reading this you are a surveyor and you have your own recommendation to send, and you have just found out that the world is good and that it will take your people apart slowly and they will not notice.<br><br>I am not going to tell you what to do. I have already found out what it costs to decide that for other people.<br><br>— M. Lindqvist",
@@ -312,7 +313,7 @@
       "body": [
         "The recommendation goes out with the medical series attached and a sentence you write yourself, which is that the world is good and it will cost them something slow.",
         "They come. They have six years in flight to plan for it, and they use them. They build below ground and they rotate crews into shielded sleep on a schedule that a physician two hundred years dead worked out and never got to send. The first generation is hard. The second one is born to it, and the drift is smaller in them, and smaller again after that.",
-        "<em>They name the basin after you, and the settlement after her.</em>"
+        "<em>The name you gave that clearing is the name on the charts, and the settlement carries hers.</em>"
       ]
     },
     "withdraw": {
@@ -416,7 +417,8 @@
   },
   "soundfield": {
     "null": "SOUNDFIELD NULL — SOMETHING IS NOT MOVING",
-    "herd": "HERD — HEAVY, CONTINUOUS"
+    "herd": "HERD — HEAVY, CONTINUOUS",
+    "insects": "INSECTS — GOING OUT"
   },
   "errors": {
     "threeFailedToLoad": "Could not load the 3D library from the network. Try reloading."
