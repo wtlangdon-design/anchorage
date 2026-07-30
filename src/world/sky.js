@@ -215,8 +215,12 @@ export function buildGlare(){
 
 // Render-only: the particle positions are all still there, we draw fewer.
 export function applyDowngrade(mult){
+  // A missing multiplier used to become NaN, and an instance count of NaN draws
+  // NOTHING. That blanked the whole jungle on phones. Absent means "no reduction".
+  const _m = Number.isFinite(mult) ? Math.max(0, Math.min(1, mult)) : 1;
+
   if(!dust || !dust.geometry) return;
-  const n = Math.max(1, Math.floor(config.render.dustCount * mult));
+  const n = Math.max(1, Math.floor(config.render.dustCount * _m));
   dust.geometry.setDrawRange(0, n);
 }
 

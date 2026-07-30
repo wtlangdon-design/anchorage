@@ -93,6 +93,10 @@ export function setWind(t){
 // Render-only: the blades were all generated, we simply stop drawing some of
 // them. Generation is untouched, so the world is identical on every device.
 export function applyDowngrade(mult){
-  const m = typeof mult === "number" ? mult : config.render.downgrade.grassMultiplier;
+  // A missing multiplier used to become NaN, and an instance count of NaN draws
+  // NOTHING. That blanked the whole jungle on phones. Absent means "no reduction".
+  const _m = Number.isFinite(mult) ? Math.max(0, Math.min(1, mult)) : 1;
+
+  const m = typeof _m === "number" ? _m : config.render.downgrade.grassMultiplier;
   grass.count=Math.max(1,Math.floor(grass.count*m));grass.instanceMatrix.needsUpdate=true;
 }

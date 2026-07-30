@@ -32,7 +32,7 @@
 // exactly like every other world module. Do not reorder the layers.
 
 let THREE, scene, rand, heightAt, fbm, config, plan;
-let J, LX;
+let J, LX, LZ;
 const layers = [];          // every InstancedMesh, so the downgrade can thin them
 const shaders = [];         // every compiled shader, so the dawn uniform can be set
 
@@ -42,6 +42,11 @@ export function initJungle(cfg, story, deps){
   config = cfg;
   J = config.jungle;
   LX = config.world.lengthX || config.world.size;
+  // The z half-width. This was missing, and the out-of-bounds test below compared a
+  // z coordinate against LX — the world's LENGTH, 2800 — so it never fired and the
+  // vegetation was scattered past the terrain edge and over the tops of the walls,
+  // outside the corridor the player walks in. That is why the trail looked bare.
+  LZ = (config.world.widthZ || config.world.size) / 2;
 }
 
 /* ---------------------------------------------------------------- canopy ---
@@ -249,7 +254,7 @@ export function buildJungle(){
       const side = r1 < 0.5 ? 1 : -1;
       const edge = side > 0 ? p.edgePlus : p.edgeMinus;
       const z = edge + side * (4 + r2 * Tk.spread);
-      if(Math.abs(z) > LX) return null;
+      if(Math.abs(z) > LZ) return null;
       const h = Tk.minHeight + r3 * Tk.heightRange;
       return { x, z, y: heightAt(x, z) - 0.5, rotY: r4 * 6.28,
                sx: Tk.minRadius + r3 * Tk.radiusRange, sy: h };
@@ -349,7 +354,11 @@ export function setGrowth(dawnLineX, animT){
 // Render-only, as with the grass: every plant was generated and still shades and
 // still burns, we simply stop drawing some of them.
 export function applyDowngrade(mult){
-  for(const l of layers) l.mesh.count = Math.max(1, Math.floor(l.full * mult));
+  // A missing multiplier used to become NaN, and an instance count of NaN draws
+  // NOTHING. That blanked the whole jungle on phones. Absent means "no reduction".
+  const _m = Number.isFinite(mult) ? Math.max(0, Math.min(1, mult)) : 1;
+
+  for(const l of layers) l.mesh.count = Math.max(1, Math.floor(l.full * _m));
 }
 
 export function stats(){ return { layers: layers.map(l => ({ name: l.name, count: l.full })), placed: PLACED }; }

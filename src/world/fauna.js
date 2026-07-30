@@ -78,7 +78,11 @@ export function updateStriders(t, animT){
 // Render-only, as with the grass: every strider was generated and still walks in
 // the simulation, the herd is just drawn thinner.
 export function applyDowngrade(mult){
-  const n = Math.max(1, Math.floor(config.striders.count * mult));
+  // A missing multiplier used to become NaN, and an instance count of NaN draws
+  // NOTHING. That blanked the whole jungle on phones. Absent means "no reduction".
+  const _m = Number.isFinite(mult) ? Math.max(0, Math.min(1, mult)) : 1;
+
+  const n = Math.max(1, Math.floor(config.striders.count * _m));
   strider.forEach(im => { im.count = n; });
 }
 

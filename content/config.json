@@ -925,6 +925,7 @@
     "force": null,
     "maxPixelRatio": 1.5,
     "grassMultiplier": 0.3,
+    "jungleMultiplier": 0.45,
     "striderMultiplier": 0.4,
     "dustMultiplier": 0.25,
     "textureScale": 0.5,
@@ -940,7 +941,7 @@
     },
     "lookSensitivity": 0.006,
     "pitchSensitivity": 0.005,
-    "jungleMultiplier": 0.45
+    "_jungleNote": "jungleMultiplier is a render-only reduction: the jungle is generated in full and fewer instances are drawn. Raise toward 1.0 for a denser jungle on a phone, lower it if the frame rate suffers; it is five draw calls either way."
   },
   "props": {
     "_note": "Water and frost surfaces. water.depth is how far the surface sits above the LOWEST ground inside its radius — raise it and the pool spreads and deepens, lower it and it shrinks to nothing. frost.lift is how far the sheet floats above the ground it lies on.",
@@ -963,10 +964,11 @@
       "heightRange": 9,
       "minRadius": 5.0,
       "radiusRange": 4.5,
-      "spread": 150,
+      "spread": 26,
       "lean": 0.22,
       "colour": "0x3d5c28",
-      "tipColour": "0x6f8f3c"
+      "tipColour": "0x6f8f3c",
+      "_spreadNote": "spread is how far off the trail centreline the canopy may sit, doubled. It was 150, which put the roof at |z| ~ 143 — on top of the outer walls at |z| 140, not over the trail. Keep it near the trail width or there is no roof and no shade."
     },
     "trunk": {
       "count": 2600,
@@ -974,9 +976,10 @@
       "heightRange": 10,
       "minRadius": 0.22,
       "radiusRange": 0.5,
-      "spread": 150,
+      "spread": 34,
       "lean": 0.1,
-      "colour": "0x4a3f2e"
+      "colour": "0x4a3f2e",
+      "_spreadNote": "How far beyond the trail edge trunks may stand. Was 150, which threw them past the terrain edge at |z| 170 entirely."
     },
     "understory": {
       "count": 9000,
@@ -1033,6 +1036,6 @@
     "offFull": 34,
     "_note_growth": "WHERE THE ONE DAY SITS, in metres BEHIND the dawn line. Negative is ahead of it. These have to be set against where the player actually STANDS relative to that line, which is not obvious: the lethal edge trails the dawn line by about 550 m, so a player running from the heat spends the whole timed run somewhere between 380 m ahead of the line and a few hundred behind it, depending entirely on how much they stop to survey. growthRise was -90 at first, which put the entire visible world inside the 18% stubble zone for anyone who kept walking. At -1000 the growth comes up across the player's whole range instead: young and thin ahead of them, full right behind the line, browning after growthFull, black by growthBurn — which lands in the same place the ground turns lethal. Sprint hard enough and you outrun the growth into bare ground, which is real and is meant to be."
   },
-  "buildStamp": "build 2026-07-30 · the jungle actually renders",
+  "buildStamp": "build 2026-07-30 · jungle inside the walls",
   "_note_buildStamp": "Shown small under the manifest. Bump this on every push — if the game on screen shows an older stamp than the newest push, the browser is serving a cached copy."
 }
